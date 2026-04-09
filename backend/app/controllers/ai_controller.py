@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.services.ai_service import AIService
-from app.services.scoring_service import ScoringService
+from backend.app.services.ai_service import AIService
+from backend.app.services.scoring_service import ScoringService
 from bson import ObjectId
 from pydantic import BaseModel
 
@@ -32,3 +32,4 @@ class AIController:
         )
         
         return {"message": "Answer recorded", "score": score}
+

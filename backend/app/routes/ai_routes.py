@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.controllers.ai_controller import AIController, AIAnswerSubmit
-from app.dependencies.database import get_database
-from app.dependencies.auth import get_current_user
+from backend.app.controllers.ai_controller import AIController, AIAnswerSubmit
+from backend.app.dependencies.database import get_database
+from backend.app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/api/interview", tags=["AI Interview"])
 
@@ -21,3 +21,4 @@ async def submit_answer(
     user: dict = Depends(get_current_user)
 ):
     return await AIController.submit_answer(data, db)
+

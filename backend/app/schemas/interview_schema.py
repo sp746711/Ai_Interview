@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict
-from app.models.interview_model import ResumeData, TestData, AIInterviewData
+from backend.app.models.interview_model import ResumeData, TestData, AIInterviewData
 
 class InterviewStart(BaseModel):
     role: str
@@ -19,3 +19,4 @@ class InterviewResult(BaseModel):
     resume: ResumeData
     test: TestData
     ai_interview: AIInterviewData
+

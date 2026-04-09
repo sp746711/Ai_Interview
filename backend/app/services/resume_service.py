@@ -1,6 +1,6 @@
 from fastapi import UploadFile
-from app.utils.pdf_parser import extract_text_from_pdf
-from app.utils.text_cleaner import extract_skills_from_text
+from backend.app.utils.pdf_parser import extract_text_from_pdf
+from backend.app.utils.text_cleaner import extract_skills_from_text
 import shutil
 import os
 import uuid
@@ -31,3 +31,4 @@ class ResumeService:
             "score": min(score, 100),
             "skills": skills_found
         }
+

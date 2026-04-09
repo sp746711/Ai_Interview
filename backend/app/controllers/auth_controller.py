@@ -1,8 +1,8 @@
 from fastapi import HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.user_schema import UserCreate, UserLogin
-from app.models.user_model import UserModel
-from app.core.security import get_password_hash, verify_password, create_access_token
+from backend.app.schemas.user_schema import UserCreate, UserLogin
+from backend.app.models.user_model import UserModel
+from backend.app.core.security import get_password_hash, verify_password, create_access_token
 
 class AuthController:
     @staticmethod
@@ -29,3 +29,4 @@ class AuthController:
         
         access_token = create_access_token(data={"sub": db_user["email"], "user_id": str(db_user["_id"])})
         return {"access_token": access_token, "token_type": "bearer"}
+

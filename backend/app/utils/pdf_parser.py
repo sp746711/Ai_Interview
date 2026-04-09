@@ -1,5 +1,5 @@
 import fitz  # PyMuPDF
-from app.logs.logger import get_logger
+from backend.app.logs.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -13,3 +13,4 @@ def extract_text_from_pdf(file_path: str) -> str:
     except Exception as e:
         logger.error(f"Error parsing PDF {file_path}: {str(e)}")
         raise e
+

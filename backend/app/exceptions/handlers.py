@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from app.logs.logger import get_logger
+from backend.app.logs.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -25,3 +25,4 @@ def add_exception_handlers(app: FastAPI):
             status_code=500,
             content={"success": False, "error": "Internal server error"},
         )
+

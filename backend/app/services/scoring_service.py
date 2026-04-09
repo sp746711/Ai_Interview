@@ -1,4 +1,4 @@
-from app.utils.similarity import calculate_similarity
+from backend.app.utils.similarity import calculate_similarity
 
 class ScoringService:
     @staticmethod
@@ -22,3 +22,4 @@ class ScoringService:
     @staticmethod
     def calculate_final_score(resume_score: int, test_score_percent: int, ai_score: int) -> int:
         return int((resume_score * 0.3) + (test_score_percent * 0.3) + (ai_score * 0.4))
+

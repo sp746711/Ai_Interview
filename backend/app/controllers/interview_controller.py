@@ -1,9 +1,9 @@
 from fastapi import HTTPException, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.interview_schema import InterviewStart
-from app.models.interview_model import InterviewModel, ResumeData
-from app.services.resume_service import ResumeService
-from app.services.scoring_service import ScoringService
+from backend.app.schemas.interview_schema import InterviewStart
+from backend.app.models.interview_model import InterviewModel, ResumeData
+from backend.app.services.resume_service import ResumeService
+from backend.app.services.scoring_service import ScoringService
 from bson import ObjectId
 
 class InterviewController:
@@ -50,3 +50,4 @@ class InterviewController:
         interview["final_score"] = final_score
         interview["id"] = str(interview["_id"])
         return interview
+

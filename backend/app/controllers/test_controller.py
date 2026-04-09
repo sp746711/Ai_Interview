@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.test_schema import TestSubmit
-from app.services.scoring_service import ScoringService
+from backend.app.schemas.test_schema import TestSubmit
+from backend.app.services.scoring_service import ScoringService
 from bson import ObjectId
 
 class TestController:
@@ -34,3 +34,4 @@ class TestController:
         )
         
         return {"score": score_percent, "message": "Test submitted successfully"}
+

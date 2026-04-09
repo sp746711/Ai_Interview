@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from app.schemas.test_schema import TestSubmit
-from app.controllers.test_controller import TestController
-from app.dependencies.database import get_database
-from app.dependencies.auth import get_current_user
+from backend.app.schemas.test_schema import TestSubmit
+from backend.app.controllers.test_controller import TestController
+from backend.app.dependencies.database import get_database
+from backend.app.dependencies.auth import get_current_user
 
 router = APIRouter(prefix="/api/test", tags=["Test"])
 
@@ -23,3 +23,4 @@ async def submit_test(
     user: dict = Depends(get_current_user)
 ):
     return await TestController.submit_test(data, db)
+

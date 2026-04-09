@@ -1,6 +1,6 @@
 from motor.motor_asyncio import AsyncIOMotorClient
-from app.core.config import settings
-from app.logs.logger import get_logger
+from backend.app.core.config import settings
+from backend.app.logs.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -24,3 +24,4 @@ async def close_mongo_connection():
 
 def get_db():
     return db_config.db
+

@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.db.mongodb import connect_to_mongo, close_mongo_connection
-from app.routes import auth_routes, interview_routes, test_routes, ai_routes
-from app.exceptions.handlers import add_exception_handlers
-from app.middleware.auth_middleware import AuthMiddleware
+from backend.app.db.mongodb import connect_to_mongo, close_mongo_connection
+from backend.app.routes import auth_routes, interview_routes, test_routes, ai_routes
+from backend.app.exceptions.handlers import add_exception_handlers
+from backend.app.middleware.auth_middleware import AuthMiddleware
 
 app = FastAPI(
     title="AI Mock Interview Platform",
@@ -42,3 +42,4 @@ app.include_router(ai_routes.router)
 @app.get("/", tags=["Health"])
 async def health_check():
     return {"status": "ok", "message": "AI Mock Interview Platform Backend is running"}
+
