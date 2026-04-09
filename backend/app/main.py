@@ -12,7 +12,7 @@ app = FastAPI(
 )
 
 # Middleware
-app.add_middleware(AuthMiddleware)
+# app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[

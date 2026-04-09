@@ -16,14 +16,15 @@ class AIInterviewData(BaseModel):
 
 class InterviewModel(BaseModel):
     user_id: str
-    interview_type: str = ""
-    role: str = ""
-    difficulty: str = ""
-    duration: int = 15
-    resume: ResumeData = Field(default_factory=ResumeData)
-    test: TestData = Field(default_factory=TestData)
-    ai_interview: AIInterviewData = Field(default_factory=AIInterviewData)
-    final_score: int = 0
+    interview_type: str  # Technical / Non-Technical
+    resume_data: dict = {}
+    role: str = None
+    difficulty: str = None
+    duration: int = None
+    test_score: float = 0
+    interview_score: float = 0
+    responses: List[Dict[str, Any]] = []
+    final_score: float = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class InterviewInDB(InterviewModel):

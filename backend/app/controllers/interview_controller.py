@@ -22,13 +22,13 @@ class InterviewController:
         # In round 1, we might not have a specific role yet.
         # Fallback to "General Candidate" or use interview_type if role isn't populated
         resume_result = await ResumeService.process_resume(file, interview_type)
-        resume_data = ResumeData(score=resume_result["score"], skills=resume_result["skills"])
+        resume_data = {"score": resume_result["score"], "skills": resume_result["skills"]}
         
         await db["interviews"].update_one(
             {"_id": ObjectId(interview_id)},
             {"$set": {
                 "interview_type": interview_type,
-                "resume": resume_data.model_dump()
+                "resume_data": resume_data
             }}
         )
         return {"message": "Round 1 complete", "resume_score": resume_data.score}
@@ -55,9 +55,9 @@ class InterviewController:
         if not interview:
             raise HTTPException(status_code=404, detail="Interview not found")
         
-        resume_s = interview.get("resume", {}).get("score", 0)
-        test_s = interview.get("test", {}).get("score", 0)
-        ai_responses = interview.get("ai_interview", {}).get("responses", [])
+        resume_s = interview.get("resume_data", {}).get("score", 0)
+        test_s = interview.get("test_score", 0)
+        ai_responses = interview.get("responses", [])
         
         ai_s = sum([r.get("score", 0) for r in ai_responses]) / len(ai_responses) if ai_responses else 0
         

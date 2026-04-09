@@ -21,7 +21,10 @@ class TestController:
         if not interview:
             raise HTTPException(status_code=404, detail="Interview not found")
             
-        cursor = db["test_questions"].find({"role": interview["role"], "difficulty": interview["difficulty"]})
+        role = interview.get("role") or interview.get("interview_type", "technical")
+        difficulty = interview.get("difficulty", "easy")
+        
+        cursor = db["test_questions"].find({"role": role, "difficulty": difficulty})
         questions = await cursor.to_list(length=100)
         
         result = ScoringService.evaluate_test(data.answers, questions)
@@ -30,7 +33,7 @@ class TestController:
         test_data = {"score": score_percent, "answers": data.answers}
         await db["interviews"].update_one(
             {"_id": ObjectId(data.interview_id)},
-            {"$set": {"test": test_data}}
+            {"$set": {"test_score": score_percent}}
         )
         
         return {"score": score_percent, "message": "Test submitted successfully"}

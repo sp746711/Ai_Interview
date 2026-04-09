@@ -22,7 +22,7 @@ const Test = () => {
 
     const fetchQuestions = async () => {
       try {
-        const response = await api.get(`/test/questions?role=${currentInterview.role}&difficulty=${currentInterview.difficulty}`);
+        const response = await api.get(`/test/questions?role=${currentInterview.interview_type}&difficulty=easy`);
         // Ensure returning questions handle format correctly
         let qData = response.data.questions || [];
         // If it's a string, try parsing it
@@ -90,7 +90,7 @@ const Test = () => {
 
     try {
       await api.post('/test/submit', submitPayload);
-      navigate('/ai-interview');
+      navigate('/setup');
     } catch (err) {
       console.error(err);
       setError('Failed to submit test.');

@@ -28,7 +28,7 @@ class AIController:
         
         await db["interviews"].update_one(
             {"_id": ObjectId(data.interview_id)},
-            {"$push": {"ai_interview.responses": response_model}}
+            {"$push": {"responses": response_model}}
         )
         
         return {"message": "Answer recorded", "score": score}

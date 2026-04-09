@@ -6,10 +6,12 @@ import { Settings, Loader2 } from 'lucide-react';
 const Setup = () => {
   const [role, setRole] = useState('Software Engineer');
   const [difficulty, setDifficulty] = useState('medium');
+  const [duration, setDuration] = useState(15);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
+  const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,20 +19,29 @@ const Setup = () => {
     setError('');
 
     try {
-      const res = await api.post('/interview/start', { role, difficulty });
-      const { interview_id } = res.data;
-      
-      // Store current setup in localstorage to use across steps
-      localStorage.setItem('current_interview', JSON.stringify({
-        id: interview_id,
-        role,
-        difficulty
-      }));
+      if (currentInterview.id) {
+        // Round 3 setup
+        await api.post('/interview/setup', {
+          interview_id: currentInterview.id,
+          role,
+          difficulty,
+          duration
+        });
+        navigate('/ai-interview');
+      } else {
+        // Initial start
+        const res = await api.post('/interview/start', {});
+        const { interview_id } = res.data;
+        
+        localStorage.setItem('current_interview', JSON.stringify({
+          id: interview_id
+        }));
 
-      navigate('/round1');
+        navigate('/round1');
+      }
     } catch (err) {
       console.error(err);
-      setError('Failed to start interview. Please make sure the backend is running.');
+      setError('Failed to setup interview.');
       setLoading(false);
     }
   };
@@ -44,7 +55,7 @@ const Setup = () => {
           <div className="p-2 bg-primary-500/10 rounded text-primary-400">
             <Settings className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold">Interview Setup</h2>
+          <h2 className="text-2xl font-bold">{currentInterview.id ? 'AI Interview Setup' : 'Start Interview'}</h2>
         </div>
 
         {error && (
@@ -53,49 +64,75 @@ const Setup = () => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="label-text">Target Role</label>
-            <input
-              type="text"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="input-field"
-              placeholder="e.g., Frontend Developer"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="label-text">Difficulty Level</label>
-            <div className="grid grid-cols-3 gap-3 mt-2">
-              {['easy', 'medium', 'hard'].map((level) => (
-                <button
-                  key={level}
-                  type="button"
-                  onClick={() => setDifficulty(level)}
-                  className={`py-3 px-4 rounded-lg capitalize border font-medium transition-all duration-200
-                    ${difficulty === level 
-                      ? 'bg-primary-500/20 border-primary-500 text-primary-400' 
-                      : 'bg-dark-800/50 border-white/10 text-gray-400 hover:border-white/30'
-                    }`}
-                >
-                  {level}
-                </button>
-              ))}
+        {currentInterview.id ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="label-text">Target Role</label>
+              <input
+                type="text"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="input-field"
+                placeholder="e.g., Frontend Developer"
+                required
+              />
             </div>
-          </div>
 
-          <div className="pt-4 mt-8 border-t border-white/10 flex justify-end">
+            <div>
+              <label className="label-text">Difficulty Level</label>
+              <div className="grid grid-cols-3 gap-3 mt-2">
+                {['easy', 'medium', 'hard'].map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    onClick={() => setDifficulty(level)}
+                    className={`py-3 px-4 rounded-lg capitalize border font-medium transition-all duration-200
+                      ${difficulty === level 
+                        ? 'bg-primary-500/20 border-primary-500 text-primary-400' 
+                        : 'bg-dark-800/50 border-white/10 text-gray-400 hover:border-white/30'
+                      }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="label-text">Interview Duration (minutes)</label>
+              <input
+                type="number"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="input-field"
+                min="5"
+                max="60"
+                required
+              />
+            </div>
+
+            <div className="pt-4 mt-8 border-t border-white/10 flex justify-end">
+              <button 
+                type="submit" 
+                className="btn-primary w-full flex justify-center items-center gap-2"
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Start AI Interview'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="text-center">
+            <p className="text-gray-400 mb-6">Ready to begin your mock interview? Let's get started!</p>
             <button 
-              type="submit" 
+              onClick={handleSubmit}
               className="btn-primary w-full flex justify-center items-center gap-2"
               disabled={loading}
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Start Interview'}
             </button>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
