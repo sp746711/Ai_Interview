@@ -16,8 +16,10 @@ class AIInterviewData(BaseModel):
 
 class InterviewModel(BaseModel):
     user_id: str
-    role: str
-    difficulty: str
+    interview_type: str = ""
+    role: str = ""
+    difficulty: str = ""
+    duration: int = 15
     resume: ResumeData = Field(default_factory=ResumeData)
     test: TestData = Field(default_factory=TestData)
     ai_interview: AIInterviewData = Field(default_factory=AIInterviewData)
