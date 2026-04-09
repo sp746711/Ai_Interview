@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Clock, Loader2, AlertCircle } from 'lucide-react';
@@ -15,14 +15,14 @@ const Test = () => {
   const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
 
   useEffect(() => {
-    if (!currentInterview.id) {
-      navigate('/setup');
-      return;
-    }
-
     const fetchQuestions = async () => {
       try {
-        const response = await api.get(`/test/questions?role=${currentInterview.interview_type}&difficulty=easy`);
+        const stageRes = await api.get(`/interview/stage?interview_id=${currentInterview.id}`);
+        if (stageRes.data.stage !== 'test') {
+          navigate('/dashboard');
+          return;
+        }
+        const response = await api.get(`/test/questions?interview_type=${currentInterview.interview_type || 'technical'}&difficulty=easy`);
         // Ensure returning questions handle format correctly
         let qData = response.data.questions || [];
         // If it's a string, try parsing it
@@ -42,7 +42,7 @@ const Test = () => {
     };
 
     fetchQuestions();
-  }, []);
+  }, [navigate, currentInterview.id, currentInterview.interview_type]);
 
   // Timer logic
   useEffect(() => {
@@ -83,13 +83,17 @@ const Test = () => {
 
     questions.forEach((q, idx) => {
       const selectedOptIdx = answers[idx.toString()];
-      submitPayload.answers[q.question] = selectedOptIdx !== undefined 
-          ? q.options[parseInt(selectedOptIdx)] 
-          : "Not Answered";
+      const opts = Array.isArray(q.options) ? q.options : [];
+      const selectedValue = selectedOptIdx !== undefined ? opts[parseInt(selectedOptIdx, 10)] : null;
+      submitPayload.answers[String(q.question || `q_${idx}`)] = selectedValue ?? '';
     });
 
     try {
       await api.post('/test/submit', submitPayload);
+      localStorage.setItem(
+        'current_interview',
+        JSON.stringify({ ...currentInterview, stage: 'setup', difficulty: 'easy' })
+      );
       navigate('/setup');
     } catch (err) {
       console.error(err);
@@ -127,7 +131,10 @@ const Test = () => {
   }
 
   return (
-    <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex flex-col">
+    <div className="flex-1 p-4 md:p-8 max-w-4xl mx-auto w-full flex flex-col bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(99,102,241,0.12)]">
+      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden mb-4">
+        <div className="h-full w-2/3 bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all duration-700" />
+      </div>
       <div className="flex justify-between items-center bg-dark-800/80 p-4 rounded-xl border border-white/10 mb-8 sticky top-20 z-10 backdrop-blur-md">
         <div>
           <h2 className="text-xl font-bold">Round 2: Technical Test</h2>

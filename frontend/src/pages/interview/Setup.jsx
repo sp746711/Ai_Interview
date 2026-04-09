@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { Settings, Loader2 } from 'lucide-react';
@@ -13,32 +13,41 @@ const Setup = () => {
   const navigate = useNavigate();
   const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
 
+  useEffect(() => {
+    const validateStage = async () => {
+      if (!currentInterview?.id) {
+        navigate('/dashboard');
+        return;
+      }
+      try {
+        const res = await api.get(`/interview/stage?interview_id=${currentInterview.id}`);
+        if (res.data.stage !== 'setup') {
+          navigate('/dashboard');
+        }
+      } catch {
+        navigate('/dashboard');
+      }
+    };
+    validateStage();
+  }, [navigate, currentInterview?.id]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      if (currentInterview.id) {
-        // Round 3 setup
-        await api.post('/interview/setup', {
-          interview_id: currentInterview.id,
-          role,
-          difficulty,
-          duration
-        });
-        navigate('/ai-interview');
-      } else {
-        // Initial start
-        const res = await api.post('/interview/start', {});
-        const { interview_id } = res.data;
-        
-        localStorage.setItem('current_interview', JSON.stringify({
-          id: interview_id
-        }));
-
-        navigate('/round1');
-      }
+      await api.post('/interview/setup', {
+        interview_id: currentInterview.id,
+        role,
+        difficulty,
+        duration: Number(duration),
+      });
+      localStorage.setItem(
+        'current_interview',
+        JSON.stringify({ ...currentInterview, role, difficulty, duration: Number(duration), stage: 'ai' })
+      );
+      navigate('/ai-interview');
     } catch (err) {
       console.error(err);
       setError('Failed to setup interview.');
@@ -55,7 +64,7 @@ const Setup = () => {
           <div className="p-2 bg-primary-500/10 rounded text-primary-400">
             <Settings className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold">{currentInterview.id ? 'AI Interview Setup' : 'Start Interview'}</h2>
+          <h2 className="text-2xl font-bold">AI Interview Setup</h2>
         </div>
 
         {error && (
@@ -64,7 +73,14 @@ const Setup = () => {
           </div>
         )}
 
-        {currentInterview.id ? (
+        {!currentInterview.id || currentInterview.stage !== 'setup' ? (
+          <div className="text-center">
+            <p className="text-gray-400 mb-6">Please complete Round 1 and Round 2 first.</p>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary w-full">
+              Go to Dashboard
+            </button>
+          </div>
+        ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="label-text">Target Role</label>
@@ -121,17 +137,6 @@ const Setup = () => {
               </button>
             </div>
           </form>
-        ) : (
-          <div className="text-center">
-            <p className="text-gray-400 mb-6">Ready to begin your mock interview? Let's get started!</p>
-            <button 
-              onClick={handleSubmit}
-              className="btn-primary w-full flex justify-center items-center gap-2"
-              disabled={loading}
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Start Interview'}
-            </button>
-          </div>
         )}
       </div>
     </div>

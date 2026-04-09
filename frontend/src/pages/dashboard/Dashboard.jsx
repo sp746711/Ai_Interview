@@ -2,78 +2,125 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '../../components/dashboard/StatCard';
 import Table from '../../components/dashboard/Table';
-import { FileText, Star, Trophy, Plus } from 'lucide-react';
+import api from '../../services/api';
+import { FileText, Star, Trophy, Plus, Loader2, AlertCircle } from 'lucide-react';
 
 const Dashboard = () => {
+  const [stats, setStats] = useState({ total: 0, avg_score: 0, best_score: 0 });
   const [history, setHistory] = useState([]);
+  const [interviewType, setInterviewType] = useState('technical');
+  const [starting, setStarting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load history from localStorage or inject test data if requested
-    const saved = localStorage.getItem('interview_history');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Backend history has 0-100 score, but prompt asks for 1-10
-      // We will map 0-100 to 1-10 for display logic
-      const mapped = parsed.map(item => ({
-        date: item.date || new Date().toISOString(),
-        role: item.role || 'Software Engineer',
-        score: Math.round((item.final_score || 0) / 10),
-        actionUrl: `/feedback?id=${item.id}`
-      }));
-      setHistory(mapped);
-    } else {
-      // Fallback example data to demonstrate the UI
-      setHistory([
-        { date: '2024-04-05T10:00:00', role: 'Frontend Developer', score: 8, actionUrl: '/dashboard' },
-        { date: '2024-04-02T14:30:00', role: 'HR Manager', score: 7, actionUrl: '/dashboard' },
-        { date: '2024-03-28T09:15:00', role: 'Backend Developer', score: 9, actionUrl: '/dashboard' },
-        { date: '2024-03-25T16:45:00', role: 'Data Analyst', score: 6, actionUrl: '/dashboard' },
-      ]);
-    }
+    const fetchHistory = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await api.get('/interview/history');
+        const data = res.data;
+        setStats({
+          total: data.total || 0,
+          avg_score: data.avg_score || 0,
+          best_score: data.best_score || 0,
+        });
+        const mapped = (data.history || []).map((item) => ({
+          date: item.date || new Date().toISOString(),
+          role: item.role || 'Software Engineer',
+          score: Math.round((item.final_score || 0) / 10),
+          actionUrl: `/feedback?id=${item.id}`,
+        }));
+        setHistory(mapped);
+      } catch (err) {
+        console.error(err);
+        setError(err.response?.data?.detail || 'Failed to load interview history.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
   }, []);
 
-  const totalInterviews = history.length;
-  const avgScore = history.length > 0 
-    ? (history.reduce((acc, curr) => acc + curr.score, 0) / history.length).toFixed(1)
-    : 0;
-  const bestScore = history.length > 0 
-    ? Math.max(...history.map(h => h.score))
-    : 0;
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      const res = await api.post('/interview/start', { interview_type: interviewType });
+      localStorage.setItem(
+        'current_interview',
+        JSON.stringify({
+          id: res.data.interview_id,
+          interview_type: interviewType,
+          stage: 'round1',
+        })
+      );
+      navigate('/round1');
+    } catch (error) {
+      console.error('Failed to start interview', error);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up">
+    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in-up rounded-2xl p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 border border-white/10 shadow-[0_0_40px_rgba(59,130,246,0.15)]">
+      <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+        <div className="h-full w-1/3 bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all duration-700" />
+      </div>
+      {error && (
+        <div className="glass-card border border-red-500/30 text-red-300 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </div>
+      )}
       
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard 
           title="Total Interviews" 
-          value={totalInterviews.toString()} 
+          value={stats.total.toString()} 
           icon={FileText} 
           gradientClass="bg-gradient-to-br from-blue-500 to-blue-700"
         />
         <StatCard 
           title="Average Score" 
-          value={avgScore.toString()} 
+          value={stats.avg_score.toString()} 
           icon={Star} 
           gradientClass="bg-gradient-to-br from-purple-500 to-purple-700"
         />
         <StatCard 
           title="Best Score" 
-          value={bestScore.toString()} 
+          value={stats.best_score.toString()} 
           icon={Trophy} 
           gradientClass="bg-gradient-to-br from-emerald-400 to-emerald-600"
         />
       </div>
 
       {/* Action Button Section */}
-      <div className="flex justify-center py-4">
-        <button 
-          onClick={() => navigate('/setup')}
+      <div className="flex flex-col items-center gap-4 py-4">
+        <select
+          value={interviewType}
+          onChange={(e) => setInterviewType(e.target.value)}
+          className="input-field max-w-xs"
+        >
+          <option value="technical">Technical</option>
+          <option value="non-technical">Non-Technical</option>
+        </select>
+        <button
+          onClick={handleStart}
+          disabled={starting}
           className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.3)] hover:shadow-[0_0_30px_rgba(59,130,246,0.5)] transform hover:-translate-y-0.5 transition-all duration-300"
         >
           <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-          Start New Interview
+          {starting ? 'Starting...' : 'Start New Interview'}
         </button>
       </div>
 

@@ -7,8 +7,6 @@ const Landing = () => {
     <div className="flex-1 flex flex-col items-center justify-center -mt-16 sm:mt-0 p-4 relative">
       <div className="max-w-4xl w-full text-center space-y-8 z-10">
         
-        <h1>Landing Page Working</h1>
-        
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel border-primary-500/30 text-primary-400 text-sm font-medium mb-4 animate-fade-in-up">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>

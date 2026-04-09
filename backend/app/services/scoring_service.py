@@ -7,7 +7,11 @@ class ScoringService:
         total = len(test_questions)
         for q in test_questions:
             q_id = str(q.get("_id"))
-            if answers.get(q_id) == q.get("correct_answer"):
+            question_text = q.get("question")
+            submitted_answer = answers.get(q_id) or answers.get(question_text)
+            submitted_norm = str(submitted_answer or "").strip().lower()
+            correct_norm = str(q.get("correct_answer") or "").strip().lower()
+            if submitted_norm and submitted_norm == correct_norm:
                 score += 1
         
         return {"score": score, "total": total}

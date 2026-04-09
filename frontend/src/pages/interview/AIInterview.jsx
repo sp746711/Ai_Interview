@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Send, Bot, User, Loader2, ArrowRight } from 'lucide-react';
+import { Send, Bot, User, Loader2, ArrowRight, Camera, Mic } from 'lucide-react';
 
 const AIInterview = () => {
   const [messages, setMessages] = useState([]);
@@ -10,38 +10,148 @@ const AIInterview = () => {
   const [initializing, setInitializing] = useState(true);
   const [questionsAnswered, setQuestionsAnswered] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState('');
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [awaitingNext, setAwaitingNext] = useState(false);
+  const [cameraOn, setCameraOn] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [autoMoving, setAutoMoving] = useState(false);
   
   const MAX_QUESTIONS = 3;
   const navigate = useNavigate();
   const messagesEndRef = useRef(null);
+  const videoRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const speakingRef = useRef(false);
   
   const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
 
   useEffect(() => {
-    if (!currentInterview.id) {
-      navigate('/setup');
-      return;
+    const init = async () => {
+      if (!currentInterview.id) {
+        navigate('/dashboard');
+        return;
+      }
+      try {
+        const stageRes = await api.get(`/interview/stage?interview_id=${currentInterview.id}`);
+        if (stageRes.data.stage !== 'ai') {
+          navigate('/dashboard');
+          return;
+        }
+        await startCamera();
+        setInitializing(false);
+      } catch {
+        navigate('/dashboard');
+      }
+    };
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      setVoiceSupported(true);
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.continuous = false;
+      recognition.onresult = (event) => {
+        const transcript = event.results?.[0]?.[0]?.transcript || '';
+        setInputVal((prev) => `${prev} ${transcript}`.trim());
+        setMessages((prev) => [...prev, { type: 'user', content: `[Voice] ${transcript}` }]);
+      };
+      recognition.onend = () => setRecording(false);
+      recognitionRef.current = recognition;
     }
 
-    fetchNextQuestion();
-  }, []);
+    init();
+    return () => {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current && recording) {
+        recognitionRef.current.stop();
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, [navigate]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
 
+  useEffect(() => {
+    if (!currentQuestion || questionsAnswered >= MAX_QUESTIONS) return;
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          goToNextQuestion(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [currentQuestion, questionsAnswered]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCameraOn(true);
+    } catch (error) {
+      console.error('Unable to access webcam', error);
+    }
+  };
+
+  const toggleVoiceInput = () => {
+    if (!recognitionRef.current) return;
+    if (recording) {
+      recognitionRef.current.stop();
+      setRecording(false);
+      return;
+    }
+    setRecording(true);
+    recognitionRef.current.start();
+  };
+
+  const startInterview = async () => {
+    if (messages.length > 0) return;
+    await fetchNextQuestion();
+  };
+
+  const speak = (text) => {
+    if (!text || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    speakingRef.current = true;
+    utterance.onend = () => {
+      speakingRef.current = false;
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
   const fetchNextQuestion = async () => {
+    if (questionsAnswered >= MAX_QUESTIONS) return;
     setLoading(true);
     try {
       const res = await api.post(`/interview/question?interview_id=${currentInterview.id}`);
-      const aiResponse = res.data.question;
+      const aiResponse = res.data.question || "Let's continue with the interview.";
       
       setCurrentQuestion(aiResponse);
       setMessages(prev => [...prev, { type: 'ai', content: aiResponse }]);
+      speak(aiResponse);
+      setTimeLeft(60);
+      setAwaitingNext(false);
     } catch (err) {
       console.error(err);
       setMessages(prev => [...prev, { type: 'ai', content: "I'm having trouble connecting to the server. Please try again." }]);
@@ -51,22 +161,25 @@ const AIInterview = () => {
     }
   };
 
-  const handleSend = async (e) => {
-    e?.preventDefault();
-    if (!inputVal.trim() || loading || questionsAnswered >= MAX_QUESTIONS) return;
-
+  const submitCurrentAnswer = async (autoSubmit = false) => {
     const userText = inputVal.trim();
+    if (!autoSubmit && !userText) return;
+    if (loading || questionsAnswered >= MAX_QUESTIONS || !currentQuestion) return;
     setInputVal('');
-    setMessages(prev => [...prev, { type: 'user', content: userText }]);
+    setMessages(prev => [...prev, { type: 'user', content: userText || '[No answer submitted]' }]);
     setLoading(true);
 
     try {
-      // Submit answer
-      await api.post('/interview/answer', {
+      const evalRes = await api.post('/interview/answer', {
         interview_id: currentInterview.id,
         question: currentQuestion,
-        answer: userText
+        answer: userText || ''
       });
+      const evalData = evalRes.data || {};
+      setMessages(prev => [
+        ...prev,
+        { type: 'ai', content: `Score: ${evalData.score ?? 0}/10. ${evalData.feedback || ''}` },
+      ]);
 
       setQuestionsAnswered(prev => prev + 1);
 
@@ -75,9 +188,14 @@ const AIInterview = () => {
           type: 'ai', 
           content: "Thank you! That completes our AI interview section. Please proceed to see your feedback." 
         }]);
+        localStorage.setItem(
+          'current_interview',
+          JSON.stringify({ ...currentInterview, stage: 'feedback' })
+        );
         setLoading(false);
       } else {
-        await fetchNextQuestion();
+        setAwaitingNext(true);
+        setLoading(false);
       }
 
     } catch (err) {
@@ -87,17 +205,57 @@ const AIInterview = () => {
     }
   };
 
-  if (initializing) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-neon-blue mb-4" />
-        <p className="text-gray-400">Connecting to AI Interviewer...</p>
-      </div>
-    );
-  }
+  const handleSend = async (e) => {
+    e?.preventDefault();
+    await submitCurrentAnswer(false);
+  };
+
+  const goToNextQuestion = async (autoSubmit = false) => {
+    if (autoMoving || loading) return;
+    setAutoMoving(true);
+    try {
+      if (!awaitingNext && questionsAnswered < MAX_QUESTIONS && currentQuestion) {
+        await submitCurrentAnswer(autoSubmit);
+      }
+      if (questionsAnswered + 1 < MAX_QUESTIONS) {
+        await fetchNextQuestion();
+      }
+    } finally {
+      setAutoMoving(false);
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full p-4 md:p-8 h-[calc(100vh-80px)]">
+    <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto w-full p-4 md:p-8 h-[calc(100vh-80px)] bg-gradient-to-br from-slate-950 via-indigo-950/50 to-slate-900 rounded-3xl border border-white/10">
+      <div className="lg:col-span-2 w-full bg-white/10 rounded-full h-2 overflow-hidden">
+        <div className="h-full w-full bg-gradient-to-r from-cyan-400 to-indigo-500 transition-all duration-700" />
+      </div>
+      <div className="glass-panel rounded-2xl p-4 bg-dark-900/60 border border-white/10 shadow-[0_0_30px_rgba(56,189,248,0.12)]">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold flex items-center gap-2"><Camera className="w-4 h-4" /> Live Preview</h3>
+          <button
+            onClick={toggleVoiceInput}
+            disabled={!voiceSupported}
+            className="btn-secondary text-xs flex items-center gap-1"
+          >
+            <Mic className="w-4 h-4" /> {recording ? 'Stop Voice' : 'Record Voice'}
+          </button>
+        </div>
+        <video ref={videoRef} autoPlay muted className="w-full h-[360px] object-cover rounded-xl bg-black/50" />
+        <div className="mt-4">
+          {!cameraOn && (
+            <button onClick={startCamera} className="btn-primary w-full">
+              Enable Webcam
+            </button>
+          )}
+          {messages.length === 0 && (
+            <button onClick={startInterview} className="btn-primary w-full mt-3">
+              {initializing ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'Start Interview'}
+            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col">
       <div className="glass-panel p-4 rounded-t-2xl border-b border-white/5 flex justify-between items-center bg-dark-800/90 z-10">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
@@ -106,6 +264,9 @@ const AIInterview = () => {
           </h2>
           <p className="text-xs text-gray-400 mt-1">
             Question {Math.min(questionsAnswered + 1, MAX_QUESTIONS)} of {MAX_QUESTIONS}
+          </p>
+          <p className={`text-xs mt-1 ${timeLeft <= 10 ? 'text-red-400' : 'text-cyan-300'}`}>
+            Time left: {timeLeft}s
           </p>
         </div>
         {questionsAnswered >= MAX_QUESTIONS && (
@@ -169,6 +330,11 @@ const AIInterview = () => {
       </div>
 
       <div className="glass-panel p-4 rounded-b-2xl border-t border-white/5 bg-dark-800/90 relative z-10">
+        {awaitingNext && questionsAnswered < MAX_QUESTIONS && (
+          <button onClick={() => goToNextQuestion(true)} className="btn-primary mb-3">
+            Next Question
+          </button>
+        )}
         <form onSubmit={handleSend} className="relative">
           <textarea
             value={inputVal}
@@ -192,6 +358,7 @@ const AIInterview = () => {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );

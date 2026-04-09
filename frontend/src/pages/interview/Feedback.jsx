@@ -77,7 +77,7 @@ const Feedback = () => {
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="glass-card max-w-lg text-center w-full">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Result Unvailable</h2>
+          <h2 className="text-2xl font-bold mb-2">Result Unavailable</h2>
           <p className="text-gray-400 mb-8">{error}</p>
           <button onClick={() => navigate('/dashboard')} className="btn-primary w-full">
             Back to Dashboard
@@ -139,7 +139,7 @@ const Feedback = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 blur-[80px] -z-10 rounded-full" />
         
         <div>
-          <h1 className="text-3xl font-bold mb-2 break-all">Interview Result: {result.role}</h1>
+          <h1 className="text-3xl font-bold mb-2 break-all">Interview Result: {result.role || result.interview_type}</h1>
           <div className="flex gap-4 text-sm text-gray-400 mb-6">
             <span className="capitalize bg-dark-800 px-3 py-1 rounded">Difficulty: {result.difficulty}</span>
           </div>
@@ -172,7 +172,7 @@ const Feedback = () => {
           </div>
           <h3 className="font-bold text-lg mb-1">Resume Screening</h3>
           <p className="text-xs text-gray-400 mb-6">ATS Match & Skills</p>
-          <ScoreRing score={result.resume?.score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.resume?.score || 0)} />
+          <ScoreRing score={result.resume_score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.resume_score || 0)} />
         </div>
 
         {/* Round 2 */}
@@ -182,7 +182,7 @@ const Feedback = () => {
           </div>
           <h3 className="font-bold text-lg mb-1">Technical Test</h3>
           <p className="text-xs text-gray-400 mb-6">Multiple Choice Assessment</p>
-          <ScoreRing score={result.test?.score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.test?.score || 0)} />
+          <ScoreRing score={result.test_score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.test_score || 0)} />
         </div>
 
         {/* Round 3 */}
@@ -192,9 +192,30 @@ const Feedback = () => {
           </div>
           <h3 className="font-bold text-lg mb-1">AI Interview</h3>
           <p className="text-xs text-gray-400 mb-6">Communication & Reasoning</p>
-          <ScoreRing score={result.ai_interview?.average_score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.ai_interview?.average_score || 0)} />
+          <ScoreRing score={result.interview_score || 0} size={100} strokeWidth={8} colorCls={getScoreColor(result.interview_score || 0)} />
         </div>
 
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-card">
+          <h3 className="font-semibold mb-3">Strengths</h3>
+          <ul className="text-gray-300 space-y-2 text-sm">
+            {(result.strengths || []).map((item, idx) => <li key={idx}>- {item}</li>)}
+          </ul>
+        </div>
+        <div className="glass-card">
+          <h3 className="font-semibold mb-3">Weaknesses</h3>
+          <ul className="text-gray-300 space-y-2 text-sm">
+            {(result.weaknesses || []).map((item, idx) => <li key={idx}>- {item}</li>)}
+          </ul>
+        </div>
+        <div className="glass-card">
+          <h3 className="font-semibold mb-3">Suggestions</h3>
+          <ul className="text-gray-300 space-y-2 text-sm">
+            {(result.suggestions || []).map((item, idx) => <li key={idx}>- {item}</li>)}
+          </ul>
+        </div>
       </div>
 
       <div className="flex justify-center mt-8">

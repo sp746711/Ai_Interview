@@ -14,6 +14,10 @@ async def connect_to_mongo():
     logger.info("Connecting to MongoDB...")
     db_config.client = AsyncIOMotorClient(settings.MONGO_URI)
     db_config.db = db_config.client[settings.DATABASE_NAME]
+    existing = await db_config.db.list_collection_names()
+    for collection_name in ("users", "interviews", "tests"):
+        if collection_name not in existing:
+            await db_config.db.create_collection(collection_name)
     logger.info("Connected to MongoDB")
 
 async def close_mongo_connection():

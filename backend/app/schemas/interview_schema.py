@@ -1,10 +1,16 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict
-from backend.app.models.interview_model import ResumeData, TestData, AIInterviewData
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
 
 class InterviewStart(BaseModel):
-    # No params needed to just start a blank interview flow
-    pass
+    interview_type: str = Field(default="technical")
+
+
+class InterviewRound1(BaseModel):
+    interview_id: str
+    interview_type: str = Field(default="technical")
+
 
 class InterviewSetup(BaseModel):
     interview_id: str
@@ -12,17 +18,21 @@ class InterviewSetup(BaseModel):
     difficulty: str
     duration: int
 
+
 class InterviewStartResponse(BaseModel):
     interview_id: str
     message: str
 
+
 class InterviewResult(BaseModel):
     id: str
     user_id: str
-    role: str
-    difficulty: str
-    final_score: int
-    resume: ResumeData
-    test: TestData
-    ai_interview: AIInterviewData
+    interview_type: str
+    role: Optional[str] = None
+    difficulty: Optional[str] = None
+    duration: Optional[int] = None
+    resume_score: int = 0
+    test_score: int = 0
+    interview_score: int = 0
+    final_score: int = 0
 

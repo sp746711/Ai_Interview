@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { UploadCloud, File, AlertCircle, Loader2 } from 'lucide-react';
@@ -10,6 +10,25 @@ const Round1 = () => {
   const [scoreData, setScoreData] = useState(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const validateStage = async () => {
+      const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
+      if (!currentInterview?.id) {
+        navigate('/dashboard');
+        return;
+      }
+      try {
+        const res = await api.get(`/interview/stage?interview_id=${currentInterview.id}`);
+        if (res.data.stage !== 'round1') {
+          navigate('/dashboard');
+        }
+      } catch {
+        navigate('/dashboard');
+      }
+    };
+    validateStage();
+  }, [navigate]);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -29,8 +48,9 @@ const Round1 = () => {
     }
 
     const currentInterview = JSON.parse(localStorage.getItem('current_interview'));
-    if (!currentInterview || !currentInterview.id) {
+    if (!currentInterview || !currentInterview.id || currentInterview.stage !== 'round1') {
       setError('Interview ID not found. Please start over.');
+      navigate('/dashboard');
       return;
     }
 
@@ -39,15 +59,19 @@ const Round1 = () => {
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('interview_id', currentInterview.id);
+    formData.append('interview_type', currentInterview.interview_type || 'technical');
 
     try {
-      const res = await api.post(`/interview/round1?interview_id=${currentInterview.id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const res = await api.post('/interview/round1', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       setScoreData(res.data);
+      localStorage.setItem(
+        'current_interview',
+        JSON.stringify({ ...currentInterview, stage: 'test' })
+      );
     } catch (err) {
       console.error(err);
       setError('Upload failed. Please try again.');
@@ -116,7 +140,7 @@ const Round1 = () => {
           <div className="animate-fade-in-up">
             <div className="text-center mb-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-500/10 border-4 border-primary-500 mb-4">
-                <span className="text-2xl font-bold text-primary-400">{scoreData.score}%</span>
+                <span className="text-2xl font-bold text-primary-400">{scoreData.resume_score}%</span>
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">Resume Analyzed!</h3>
               <p className="text-gray-400">Here's what our AI found.</p>
