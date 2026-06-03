@@ -30,3 +30,27 @@ class AuthController:
         access_token = create_access_token(data={"sub": db_user["email"], "user_id": str(db_user["_id"])})
         return {"access_token": access_token, "token_type": "bearer"}
 
+@staticmethod
+async def login(user: UserLogin, db: AsyncIOMotorDatabase):
+    db_user = await db["users"].find_one({"email": user.email})
+
+    if not db_user or not verify_password(user.password, db_user["hashed_password"]):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(
+        data={
+            "sub": db_user["email"],
+            "user_id": str(db_user["_id"])
+        }
+    )
+
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "name": db_user["name"],
+        "email": db_user["email"]
+    }
