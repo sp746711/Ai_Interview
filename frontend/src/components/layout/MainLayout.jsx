@@ -25,7 +25,7 @@ const MainLayout = () => {
         <Link to="/" className="flex items-center gap-2 group">
           <MonitorPlay className="w-6 h-6 text-primary-500 group-hover:text-neon-blue transition-colors" />
           <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 group-hover:from-neon-blue group-hover:to-neon-purple transition-all duration-300">
-            Skill Gen AI
+          MockMind AI
           </span>
         </Link>
         
