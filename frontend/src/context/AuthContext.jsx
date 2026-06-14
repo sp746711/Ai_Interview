@@ -44,11 +44,13 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { access_token, name } = response.data;
+      
+      console.log("LOGIN RESPONSE:", response.data);
 
       localStorage.setItem('token', access_token);
 
       const userData = {
-        name: name || email.split('@')[0],
+        name: name,
         email: email,
       };
 

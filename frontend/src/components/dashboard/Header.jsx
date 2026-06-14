@@ -5,7 +5,7 @@ import { ChevronDown, Bell } from 'lucide-react';
 const Header = () => {
   const { user } = useAuth();
   // Using explicit name Sujan as per prompt if user name missing
-  const displayName = user?.name || 'Sujan';
+  const displayName = user?.name || 'user';
 
   return (
     <header className="bg-white sticky top-0 z-10 px-8 py-5 flex justify-between items-center border-b border-gray-100 shadow-sm">
