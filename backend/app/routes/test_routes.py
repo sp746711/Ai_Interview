@@ -10,11 +10,10 @@ router = APIRouter(prefix="/api/test", tags=["Test"])
 @router.get("/questions")
 async def get_questions(
     interview_type: str,
-    difficulty: str,
     db: AsyncIOMotorDatabase = Depends(get_database),
     user: dict = Depends(get_current_user)
 ):
-    return await TestController.get_questions(interview_type, difficulty, db)
+    return await TestController.get_questions(interview_type, db)
 
 @router.post("/submit")
 async def submit_test(
@@ -23,4 +22,3 @@ async def submit_test(
     user: dict = Depends(get_current_user)
 ):
     return await TestController.submit_test(data, db)
-
