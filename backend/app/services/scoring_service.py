@@ -10,7 +10,7 @@ class ScoringService:
             question_text = q.get("question")
             submitted_answer = answers.get(q_id) or answers.get(question_text)
             submitted_norm = str(submitted_answer or "").strip().lower()
-            correct_norm = str(q.get("correct_answer") or "").strip().lower()
+            correct_norm = str(q.get("answer") or "").strip().lower()
             if submitted_norm and submitted_norm == correct_norm:
                 score += 1
         
