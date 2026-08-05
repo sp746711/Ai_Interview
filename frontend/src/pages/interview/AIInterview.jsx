@@ -452,6 +452,15 @@ const AIInterview = () => {
 
   const timerRef = useRef(null);
 
+  // Keep latest interview state available inside fullscreen event handlers.
+  const interviewStartedRef = useRef(false);
+  const intentionalFullscreenExitRef = useRef(false);
+  const escExitProcessingRef = useRef(false);
+
+  useEffect(() => {
+    interviewStartedRef.current = interviewStarted;
+  }, [interviewStarted]);
+
   /* =======================================================
      FULLSCREEN
      ======================================================= */
@@ -508,13 +517,96 @@ const AIInterview = () => {
   };
 
   useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(
-        Boolean(
-          document.fullscreenElement ||
-            document.webkitFullscreenElement
-        )
+    const handleFullscreenChange = async () => {
+      const fullscreenActive = Boolean(
+        document.fullscreenElement ||
+          document.webkitFullscreenElement
       );
+
+      setIsFullscreen(fullscreenActive);
+
+      if (fullscreenActive) return;
+
+      // Normal application-controlled fullscreen exit.
+      if (intentionalFullscreenExitRef.current) {
+        intentionalFullscreenExitRef.current = false;
+        return;
+      }
+
+      // If the interview is not active, leaving fullscreen needs no action.
+      if (!interviewStartedRef.current) return;
+
+      // Prevent duplicate fullscreenchange/webkitfullscreenchange processing.
+      if (escExitProcessingRef.current) return;
+      escExitProcessingRef.current = true;
+
+      try {
+        // ESC/browser fullscreen exit during an active interview = strict exit.
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+
+        if (recognitionRef.current) {
+          try {
+            recognitionRef.current.stop();
+          } catch {
+            // Recognition may already be stopped.
+          }
+        }
+
+        window.speechSynthesis?.cancel();
+        setAiSpeaking(false);
+        setRecording(false);
+
+        if (mediaStreamRef.current) {
+          mediaStreamRef.current
+            .getTracks()
+            .forEach((track) => track.stop());
+          mediaStreamRef.current = null;
+        }
+
+        setCameraOn(false);
+        setMicAvailable(false);
+
+        // Demo-phase persistence. Backend/MongoDB persistence can replace this later.
+        const interruptedInterview = {
+          interviewId:
+            currentInterview?.id ||
+            currentInterview?.interview_id ||
+            null,
+          role: selectedRole,
+          status: 'interrupted',
+          exitReason: 'fullscreen_exit',
+          completedQuestions: currentQuestionIndex,
+          currentQuestionNumber: currentQuestionIndex + 1,
+          currentQuestion,
+          currentAnswer:
+            textAnswer.trim() ||
+            voiceTranscript.trim() ||
+            '',
+          timeRemaining: timeLeft,
+          exitedAt: new Date().toISOString(),
+        };
+
+        localStorage.setItem(
+          'interrupted_interview',
+          JSON.stringify(interruptedInterview)
+        );
+
+        interviewStartedRef.current = false;
+        setInterviewStarted(false);
+
+        navigate('/dashboard', {
+          replace: true,
+          state: {
+            interviewInterrupted: true,
+            reason: 'fullscreen_exit',
+          },
+        });
+      } finally {
+        escExitProcessingRef.current = false;
+      }
     };
 
     document.addEventListener(
@@ -538,7 +630,17 @@ const AIInterview = () => {
         handleFullscreenChange
       );
     };
-  }, []);
+  }, [
+    navigate,
+    currentInterview?.id,
+    currentInterview?.interview_id,
+    selectedRole,
+    currentQuestionIndex,
+    currentQuestion,
+    textAnswer,
+    voiceTranscript,
+    timeLeft,
+  ]);
 
   /* =======================================================
      CAMERA
@@ -1010,6 +1112,7 @@ const AIInterview = () => {
 
     setCurrentQuestion('');
 
+    intentionalFullscreenExitRef.current = true;
     await exitFullscreen();
   };
 
@@ -1043,6 +1146,7 @@ const AIInterview = () => {
 
     setAiSpeaking(false);
 
+    intentionalFullscreenExitRef.current = true;
     await exitFullscreen();
 
     navigate('/dashboard');
