@@ -16,21 +16,21 @@ class TestController:
     async def get_questions(interview_type: str, db: AsyncIOMotorDatabase):
 
         aptitude = await db["aptitude_questions"].aggregate([
-            {"$sample": {"size": 5}}
-        ]).to_list(length=5)
+            {"$sample": {"size": 10}}
+        ]).to_list(length=10)
 
         reasoning = await db["reasoning_questions"].aggregate([
-            {"$sample": {"size": 5}}
-        ]).to_list(length=5)
+            {"$sample": {"size":10}}
+        ]).to_list(length=10)
 
         if interview_type.lower() == "technical":
             main_questions = await db["tests"].aggregate([
-                {"$sample": {"size": 10}}
-            ]).to_list(length=10)
+                {"$sample": {"size": 30}}
+            ]).to_list(length=30)
         else:
             main_questions = await db["verbal_questions"].aggregate([
-                {"$sample": {"size": 10}}
-            ]).to_list(length=10)
+                {"$sample": {"size": 30}}
+            ]).to_list(length=30)
 
         questions = aptitude + reasoning + main_questions
 

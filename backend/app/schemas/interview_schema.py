@@ -15,8 +15,6 @@ class InterviewRound1(BaseModel):
 class InterviewSetup(BaseModel):
     interview_id: str
     role: str
-    difficulty: str
-    duration: int
 
 
 class InterviewStartResponse(BaseModel):
@@ -35,4 +33,3 @@ class InterviewResult(BaseModel):
     test_score: int = 0
     interview_score: int = 0
     final_score: int = 0
-

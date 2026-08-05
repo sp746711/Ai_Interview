@@ -1,17 +1,66 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { Settings, Loader2 } from 'lucide-react';
+import { Settings, Loader2, ChevronDown } from 'lucide-react';
+
+/* =========================================================
+   TECHNICAL DOMAINS
+========================================================= */
+
+const TECHNICAL_ROLES = [
+  'Software Engineering',
+  'Data Analytics',
+  'Data Science',
+  'Artificial Intelligence & Machine Learning',
+  'Full-Stack Development',
+  'Frontend Development',
+  'Backend Development',
+  'Cloud Computing',
+  'DevOps Engineering',
+  'Cybersecurity',
+  'Data Engineering',
+  'Generative AI / LLM Engineering',
+];
+
+/* =========================================================
+   NON-TECHNICAL DOMAINS
+========================================================= */
+
+const NON_TECHNICAL_ROLES = [
+  'Human Resources (HR)',
+  'Sales & Business Development',
+  'Digital Marketing',
+  'Business Analysis',
+  'Project Management',
+  'Operations Management',
+];
 
 const Setup = () => {
-  const [role, setRole] = useState('Software Engineer');
-  const [difficulty, setDifficulty] = useState('medium');
-  const [duration, setDuration] = useState(15);
+  /* =======================================================
+     STATE
+  ======================================================= */
+
+  const [role, setRole] = useState('');
+  const [interviewType, setInterviewType] = useState('');
+
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [error, setError] = useState('');
-  
+
   const navigate = useNavigate();
-  const currentInterview = JSON.parse(localStorage.getItem('current_interview') || '{}');
+
+  /* =======================================================
+     CURRENT INTERVIEW
+  ======================================================= */
+
+  const currentInterview = JSON.parse(
+    localStorage.getItem('current_interview') || '{}'
+  );
+
+  /* =======================================================
+     VALIDATE INTERVIEW STAGE
+     AND GET INTERVIEW TYPE
+  ======================================================= */
 
   useEffect(() => {
     const validateStage = async () => {
@@ -19,126 +68,392 @@ const Setup = () => {
         navigate('/dashboard');
         return;
       }
+
       try {
-        const res = await api.get(`/interview/stage?interview_id=${currentInterview.id}`);
+        const res = await api.get(
+          `/interview/stage?interview_id=${currentInterview.id}`
+        );
+
+        /* User must complete Round 2 first */
+
         if (res.data.stage !== 'setup') {
           navigate('/dashboard');
+          return;
         }
-      } catch {
+
+        /*
+         Get interview type from backend.
+
+         Expected:
+         technical
+         OR
+         non-technical
+        */
+
+        const type = String(
+          res.data.interview_type ||
+            currentInterview.interview_type ||
+            ''
+        )
+          .trim()
+          .toLowerCase();
+
+        if (
+          type !== 'technical' &&
+          type !== 'non-technical'
+        ) {
+          setError(
+            'Unable to determine interview type.'
+          );
+
+          setPageLoading(false);
+          return;
+        }
+
+        setInterviewType(type);
+
+        /*
+         Do not automatically select a role.
+         User must choose one.
+        */
+
+        setRole('');
+
+        setPageLoading(false);
+
+      } catch (err) {
+        console.error(
+          'Failed to validate interview stage:',
+          err
+        );
+
         navigate('/dashboard');
       }
     };
+
     validateStage();
+
   }, [navigate, currentInterview?.id]);
+
+  /* =======================================================
+     SELECT DOMAIN LIST
+  ======================================================= */
+
+  const availableRoles =
+    interviewType === 'technical'
+      ? TECHNICAL_ROLES
+      : interviewType === 'non-technical'
+      ? NON_TECHNICAL_ROLES
+      : [];
+
+  /* =======================================================
+     START AI INTERVIEW
+  ======================================================= */
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!role) {
+      setError(
+        'Please select a target role / domain.'
+      );
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     try {
+      /*
+       IMPORTANT:
+
+       Difficulty and duration have been removed.
+
+       Backend will receive only:
+
+       interview_id
+       role
+      */
+
       await api.post('/interview/setup', {
         interview_id: currentInterview.id,
-        role,
-        difficulty,
-        duration: Number(duration),
+        role: role,
       });
+
+      /* ===============================================
+         UPDATE LOCAL STORAGE
+      =============================================== */
+
+      const updatedInterview = {
+        ...currentInterview,
+
+        interview_type: interviewType,
+
+        role: role,
+
+        stage: 'ai',
+      };
+
       localStorage.setItem(
         'current_interview',
-        JSON.stringify({ ...currentInterview, role, difficulty, duration: Number(duration), stage: 'ai' })
+        JSON.stringify(updatedInterview)
       );
+
+      /* ===============================================
+         MOVE TO AI INTERVIEW
+      =============================================== */
+
       navigate('/ai-interview');
+
     } catch (err) {
-      console.error(err);
-      setError('Failed to setup interview.');
+      console.error(
+        'Failed to setup interview:',
+        err
+      );
+
+      setError(
+        err?.response?.data?.detail ||
+          'Failed to setup interview.'
+      );
+
       setLoading(false);
     }
   };
 
+  /* =======================================================
+     PAGE LOADING
+  ======================================================= */
+
+  if (pageLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2
+          className="
+            w-8
+            h-8
+            animate-spin
+            text-primary-400
+          "
+        />
+      </div>
+    );
+  }
+
+  /* =======================================================
+     UI
+  ======================================================= */
+
   return (
     <div className="flex-1 flex items-center justify-center p-4">
-      <div className="glass-card max-w-lg w-full relative overflow-hidden">
-        <div className="absolute -top-20 -right-20 w-48 h-48 bg-primary-500/20 blur-[60px] -z-10 rounded-full" />
-        
-        <div className="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
-          <div className="p-2 bg-primary-500/10 rounded text-primary-400">
+
+      <div
+        className="
+          glass-card
+          max-w-lg
+          w-full
+          relative
+          overflow-hidden
+        "
+      >
+
+        {/* Background Glow */}
+
+        <div
+          className="
+            absolute
+            -top-20
+            -right-20
+            w-48
+            h-48
+            bg-primary-500/20
+            blur-[60px]
+            -z-10
+            rounded-full
+          "
+        />
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div
+          className="
+            flex
+            items-center
+            gap-3
+            mb-6
+            border-b
+            border-white/10
+            pb-4
+          "
+        >
+
+          <div
+            className="
+              p-2
+              bg-primary-500/10
+              rounded
+              text-primary-400
+            "
+          >
             <Settings className="w-6 h-6" />
           </div>
-          <h2 className="text-2xl font-bold">AI Interview Setup</h2>
+
+          <div>
+
+            <h2 className="text-2xl font-bold">
+              AI Interview Setup
+            </h2>
+
+            {interviewType && (
+              <p className="text-sm text-gray-400 mt-1">
+                {interviewType === 'technical'
+                  ? 'Technical Interview'
+                  : 'Non-Technical Interview'}
+              </p>
+            )}
+
+          </div>
+
         </div>
 
+        {/* =================================================
+            ERROR
+        ================================================= */}
+
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+          <div
+            className="
+              mb-6
+              p-4
+              rounded-lg
+              bg-red-500/10
+              border
+              border-red-500/20
+              text-red-400
+              text-sm
+            "
+          >
             {error}
           </div>
         )}
 
-        {!currentInterview.id || currentInterview.stage !== 'setup' ? (
-          <div className="text-center">
-            <p className="text-gray-400 mb-6">Please complete Round 1 and Round 2 first.</p>
-            <button onClick={() => navigate('/dashboard')} className="btn-primary w-full">
-              Go to Dashboard
-            </button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="label-text">Target Role</label>
-              <input
-                type="text"
+        {/* =================================================
+            SETUP FORM
+        ================================================= */}
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-6"
+        >
+
+          {/* ===============================================
+              TARGET ROLE / DOMAIN
+          =============================================== */}
+
+          <div>
+
+            <label className="label-text">
+              Target Role / Domain
+            </label>
+
+            <div className="relative mt-2">
+
+              <select
                 value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="input-field"
-                placeholder="e.g., Frontend Developer"
+                onChange={(e) => {
+                  setRole(e.target.value);
+                  setError('');
+                }}
+                className="
+                  input-field
+                  appearance-none
+                  pr-10
+                  cursor-pointer
+                "
                 required
-              />
-            </div>
-
-            <div>
-              <label className="label-text">Difficulty Level</label>
-              <div className="grid grid-cols-3 gap-3 mt-2">
-                {['easy', 'medium', 'hard'].map((level) => (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => setDifficulty(level)}
-                    className={`py-3 px-4 rounded-lg capitalize border font-medium transition-all duration-200
-                      ${difficulty === level 
-                        ? 'bg-primary-500/20 border-primary-500 text-primary-400' 
-                        : 'bg-dark-800/50 border-white/10 text-gray-400 hover:border-white/30'
-                      }`}
-                  >
-                    {level}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="label-text">Interview Duration (minutes)</label>
-              <input
-                type="number"
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className="input-field"
-                min="5"
-                max="60"
-                required
-              />
-            </div>
-
-            <div className="pt-4 mt-8 border-t border-white/10 flex justify-end">
-              <button 
-                type="submit" 
-                className="btn-primary w-full flex justify-center items-center gap-2"
-                disabled={loading}
               >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Start AI Interview'}
-              </button>
+
+                <option value="">
+                  Select Target Role / Domain
+                </option>
+
+                {availableRoles.map((item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                ))}
+
+              </select>
+
+              <ChevronDown
+                className="
+                  absolute
+                  right-3
+                  top-1/2
+                  -translate-y-1/2
+                  w-5
+                  h-5
+                  text-gray-400
+                  pointer-events-none
+                "
+              />
+
             </div>
-          </form>
-        )}
+
+          </div>
+
+          {/* =================================================
+              START INTERVIEW
+          ================================================= */}
+
+          <div
+            className="
+              pt-4
+              mt-8
+              border-t
+              border-white/10
+            "
+          >
+
+            <button
+              type="submit"
+              className="
+                btn-primary
+                w-full
+                flex
+                justify-center
+                items-center
+                gap-2
+              "
+              disabled={
+                loading ||
+                !role ||
+                !interviewType
+              }
+            >
+
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+
+                  Starting Interview...
+                </>
+              ) : (
+                'Start AI Interview'
+              )}
+
+            </button>
+
+          </div>
+
+        </form>
+
       </div>
+
     </div>
   );
 };
