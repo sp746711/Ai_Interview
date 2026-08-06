@@ -597,6 +597,9 @@ const AIInterview = () => {
         interviewStartedRef.current = false;
         setInterviewStarted(false);
 
+        // ESC/fullscreen exit restores the normal navbar.
+        setAIInterviewActive(false);
+
         navigate('/dashboard', {
           replace: true,
           state: {
@@ -898,11 +901,30 @@ const AIInterview = () => {
   };
 
   /* =======================================================
+     MAIN NAVBAR / INTERVIEW MODE
+     ======================================================= */
+
+  const setAIInterviewActive = (active) => {
+    if (active) {
+      sessionStorage.setItem('ai_interview_active', 'true');
+    } else {
+      sessionStorage.removeItem('ai_interview_active');
+    }
+
+    window.dispatchEvent(
+      new Event('ai-interview-state-change')
+    );
+  };
+
+  /* =======================================================
      START INTERVIEW
      ======================================================= */
 
   const startInterview = async () => {
     setError('');
+
+    // Hide MainLayout navbar only after Start Interview is clicked.
+    setAIInterviewActive(true);
 
     /*
      * Fullscreen request must happen from the user's click.
@@ -910,6 +932,7 @@ const AIInterview = () => {
     await enterFullscreen();
 
     setInterviewStarted(true);
+    interviewStartedRef.current = true;
 
     setInterviewComplete(false);
 
@@ -1087,6 +1110,7 @@ const AIInterview = () => {
   const finishInterview = async () => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = null;
     }
 
     if (
@@ -1106,11 +1130,16 @@ const AIInterview = () => {
 
     setRecording(false);
 
+    interviewStartedRef.current = false;
+
     setInterviewComplete(true);
 
     setInterviewStarted(false);
 
     setCurrentQuestion('');
+
+    // Normal completion restores the normal navbar.
+    setAIInterviewActive(false);
 
     intentionalFullscreenExitRef.current = true;
     await exitFullscreen();
@@ -1129,6 +1158,7 @@ const AIInterview = () => {
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
+      timerRef.current = null;
     }
 
     if (
@@ -1145,6 +1175,12 @@ const AIInterview = () => {
     window.speechSynthesis?.cancel();
 
     setAiSpeaking(false);
+    setRecording(false);
+
+    interviewStartedRef.current = false;
+
+    // Exit Interview restores the normal navbar.
+    setAIInterviewActive(false);
 
     intentionalFullscreenExitRef.current = true;
     await exitFullscreen();
@@ -1172,7 +1208,14 @@ const AIInterview = () => {
           .forEach((track) =>
             track.stop()
           );
+        mediaStreamRef.current = null;
       }
+
+      // Safety: if this page unmounts, restore MainLayout navbar.
+      sessionStorage.removeItem('ai_interview_active');
+      window.dispatchEvent(
+        new Event('ai-interview-state-change')
+      );
     };
   }, []);
 
