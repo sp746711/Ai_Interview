@@ -576,278 +576,160 @@ const Test = () => {
   useEffect(() => {
     if (loading) return;
 
-    /* ---------------------------------------------------
-       COPY
-       --------------------------------------------------- */
+    // One physical action must count as only one violation.
+    // Example: a tab switch can fire both blur and visibilitychange.
+    let lastViolationTime = 0;
+    let lastViolationGroup = '';
+
+    const registerDeduplicatedViolation = (
+      group,
+      type,
+      message,
+      counted = true
+    ) => {
+      const now = Date.now();
+
+      if (
+        counted &&
+        lastViolationGroup === group &&
+        now - lastViolationTime < 1000
+      ) {
+        return;
+      }
+
+      if (counted) {
+        lastViolationGroup = group;
+        lastViolationTime = now;
+      }
+
+      registerViolation(type, message, counted);
+    };
 
     const handleCopy = (event) => {
       event.preventDefault();
-
-      registerViolation(
+      registerDeduplicatedViolation(
+        'copy',
         'copy_attempt',
-
         'Copying assessment content is restricted.',
-
         true
       );
     };
-
-    /* ---------------------------------------------------
-       CUT
-       --------------------------------------------------- */
 
     const handleCut = (event) => {
       event.preventDefault();
-
-      registerViolation(
+      registerDeduplicatedViolation(
+        'cut',
         'cut_attempt',
-
         'Cutting assessment content is restricted.',
-
         true
       );
     };
 
-    /* ---------------------------------------------------
-       RIGHT CLICK
-       --------------------------------------------------- */
-
-    const handleContextMenu = (
-      event
-    ) => {
+    const handleContextMenu = (event) => {
       event.preventDefault();
-
-      registerViolation(
+      registerDeduplicatedViolation(
         'right_click',
-
+        'right_click',
         'Right-click is restricted during the assessment.',
-
         true
       );
     };
 
-    /* ---------------------------------------------------
-       DRAG
-       --------------------------------------------------- */
-
-    const handleDragStart = (
-      event
-    ) => {
+    const handleDragStart = (event) => {
       event.preventDefault();
-
-      registerViolation(
+      registerDeduplicatedViolation(
+        'drag',
         'drag_attempt',
-
         'Dragging assessment content is restricted.',
-
         true
       );
     };
 
-    /* ---------------------------------------------------
-       KEYBOARD
-       --------------------------------------------------- */
+    const handleKeyDown = (event) => {
+      const key = event.key.toLowerCase();
+      const ctrlOrCommand = event.ctrlKey || event.metaKey;
 
-    const handleKeyDown = (
-      event
-    ) => {
-      const key =
-        event.key.toLowerCase();
-
-      const ctrlOrCommand =
-        event.ctrlKey ||
-        event.metaKey;
-
-      /*
-       * Ctrl+C / Cmd+C
-       */
-
-      if (
-        ctrlOrCommand &&
-        key === 'c'
-      ) {
+      if (ctrlOrCommand && key === 'c') {
         event.preventDefault();
-
-        registerViolation(
+        registerDeduplicatedViolation(
+          'copy',
           'copy_shortcut',
-
           'Copy shortcut detected during the assessment.',
-
           true
         );
-
         return;
       }
 
-      /*
-       * Ctrl+X / Cmd+X
-       */
-
-      if (
-        ctrlOrCommand &&
-        key === 'x'
-      ) {
+      if (ctrlOrCommand && key === 'x') {
         event.preventDefault();
-
-        registerViolation(
+        registerDeduplicatedViolation(
+          'cut',
           'cut_shortcut',
-
           'Cut shortcut detected during the assessment.',
-
           true
         );
-
         return;
       }
 
-      /*
-       * Ctrl+A / Cmd+A
-       *
-       * Block selection but don't count it
-       * as a violation.
-       */
-
-      if (
-        ctrlOrCommand &&
-        key === 'a'
-      ) {
+      if (ctrlOrCommand && key === 'a') {
         event.preventDefault();
-
         return;
       }
 
-      /*
-       * PrintScreen
-       *
-       * Browsers cannot guarantee blocking
-       * operating-system screenshots.
-       *
-       * Detect/log where possible.
-       */
-
-      if (
-        event.key ===
-        'PrintScreen'
-      ) {
+      if (event.key === 'PrintScreen') {
         registerViolation(
           'printscreen_key',
-
           'A screenshot key event was detected.',
-
           false
         );
       }
     };
 
-    /* ---------------------------------------------------
-       TAB / VISIBILITY CHANGE
+    // First tab/window leave = Warning 1/2.
+    // Second tab/window leave = auto-submit Round 2 and continue to Round 3.
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        registerDeduplicatedViolation(
+          'focus_leave',
+          'tab_visibility_change',
+          'Leaving the assessment tab is restricted during Round 2.',
+          true
+        );
+      }
+    };
 
-       Log only.
-       --------------------------------------------------- */
-
-    const handleVisibilityChange =
-      () => {
+    const handleWindowBlur = () => {
+      setTimeout(() => {
         if (
-          document.visibilityState ===
-          'hidden'
+          document.visibilityState === 'hidden' ||
+          !document.hasFocus()
         ) {
-          registerViolation(
-            'tab_visibility_change',
-
-            'The assessment tab became inactive.',
-
-            false
+          registerDeduplicatedViolation(
+            'focus_leave',
+            'window_blur',
+            'Leaving the assessment window is restricted during Round 2.',
+            true
           );
         }
-      };
+      }, 100);
+    };
 
-    /* ---------------------------------------------------
-       WINDOW BLUR
-
-       Log only.
-       --------------------------------------------------- */
-
-    const handleWindowBlur =
-      () => {
-        registerViolation(
-          'window_blur',
-
-          'The assessment window lost focus.',
-
-          false
-        );
-      };
-
-    document.addEventListener(
-      'copy',
-      handleCopy
-    );
-
-    document.addEventListener(
-      'cut',
-      handleCut
-    );
-
-    document.addEventListener(
-      'contextmenu',
-      handleContextMenu
-    );
-
-    document.addEventListener(
-      'dragstart',
-      handleDragStart
-    );
-
-    document.addEventListener(
-      'keydown',
-      handleKeyDown
-    );
-
-    document.addEventListener(
-      'visibilitychange',
-      handleVisibilityChange
-    );
-
-    window.addEventListener(
-      'blur',
-      handleWindowBlur
-    );
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('cut', handleCut);
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('dragstart', handleDragStart);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
 
     return () => {
-      document.removeEventListener(
-        'copy',
-        handleCopy
-      );
-
-      document.removeEventListener(
-        'cut',
-        handleCut
-      );
-
-      document.removeEventListener(
-        'contextmenu',
-        handleContextMenu
-      );
-
-      document.removeEventListener(
-        'dragstart',
-        handleDragStart
-      );
-
-      document.removeEventListener(
-        'keydown',
-        handleKeyDown
-      );
-
-      document.removeEventListener(
-        'visibilitychange',
-        handleVisibilityChange
-      );
-
-      window.removeEventListener(
-        'blur',
-        handleWindowBlur
-      );
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('cut', handleCut);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      document.removeEventListener('dragstart', handleDragStart);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
     };
   }, [
     loading,
