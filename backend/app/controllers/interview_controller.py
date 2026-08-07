@@ -1,3 +1,5 @@
+import asyncio
+
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -6,6 +8,9 @@ from backend.app.models.interview_model import InterviewModel
 from backend.app.schemas.interview_schema import InterviewSetup, InterviewStart
 from backend.app.services.resume_service import ResumeService
 from backend.app.services.scoring_service import ScoringService
+from backend.app.services.resume_intelligence_service import (
+    analyze_resume_with_llm,
+)
 
 
 class InterviewController:
@@ -21,8 +26,225 @@ class InterviewController:
         except Exception:
             raise HTTPException(
                 status_code=400,
-                detail="Invalid interview id"
+                detail="Invalid interview id",
             )
+
+    # =========================================================
+    # BACKGROUND ROUND 1 QWEN ANALYSIS
+    # =========================================================
+
+    @staticmethod
+    async def _generate_round1_feedback(
+        interview_id: str,
+        db: AsyncIOMotorDatabase,
+    ):
+        """
+        Generate detailed Round 1 feedback in the background.
+
+        IMPORTANT:
+        - Does NOT block Round 1.
+        - Does NOT block Round 2.
+        - Does NOT block Round 3.
+        - Does NOT block GET /result.
+        - Successful result is cached in MongoDB.
+        """
+
+        try:
+            oid = ObjectId(interview_id)
+
+            interview = await db["interviews"].find_one(
+                {"_id": oid}
+            )
+
+            if not interview:
+                return
+
+            resume_data = interview.get("resume_data", {})
+
+            if not isinstance(resume_data, dict):
+                resume_data = {}
+
+            # -------------------------------------------------
+            # If already generated successfully, do nothing
+            # -------------------------------------------------
+
+            existing_feedback = resume_data.get(
+                "round1_feedback",
+                {},
+            )
+
+            if (
+                isinstance(existing_feedback, dict)
+                and existing_feedback
+                and not existing_feedback.get("generation_error")
+            ):
+                return
+
+            # -------------------------------------------------
+            # Resume information
+            # -------------------------------------------------
+
+            resume_text = str(
+                resume_data.get("resume_text", "")
+            ).strip()
+
+            detected_skills = resume_data.get(
+                "skills",
+                [],
+            )
+
+            if not isinstance(detected_skills, list):
+                detected_skills = []
+
+            # -------------------------------------------------
+            # Decide selected domain
+            # -------------------------------------------------
+
+            selected_domain = str(
+                resume_data.get(
+                    "selected_domain",
+                    interview.get(
+                        "interview_type",
+                        "technical",
+                    ),
+                )
+            ).strip()
+
+            target_role = str(
+                interview.get("role", "")
+            ).strip()
+
+            selected_domain_for_feedback = (
+                target_role
+                or selected_domain
+                or str(
+                    interview.get(
+                        "interview_type",
+                        "technical",
+                    )
+                ).strip()
+            )
+
+            # -------------------------------------------------
+            # Resume text missing
+            # -------------------------------------------------
+
+            if not resume_text:
+                feedback = {
+                    "selected_domain":
+                        selected_domain_for_feedback,
+
+                    "domain_match_percentage": 0,
+
+                    "best_fit_roles": [],
+
+                    "matching_skills": [],
+
+                    "missing_or_weak_evidence": [],
+
+                    "personalized_improvements": [],
+
+                    "resume_summary": (
+                        "Detailed resume feedback could not "
+                        "be generated because the stored "
+                        "resume text is unavailable."
+                    ),
+                }
+
+                await db["interviews"].update_one(
+                    {"_id": oid},
+                    {
+                        "$set": {
+                            "resume_data.round1_feedback":
+                                feedback,
+
+                            "resume_data.feedback_status":
+                                "completed",
+
+                            "resume_data.feedback_error":
+                                None,
+                        }
+                    },
+                )
+
+                return
+
+            # -------------------------------------------------
+            # Mark Qwen processing
+            # -------------------------------------------------
+
+            await db["interviews"].update_one(
+                {"_id": oid},
+                {
+                    "$set": {
+                        "resume_data.feedback_status":
+                            "processing",
+
+                        "resume_data.feedback_error":
+                            None,
+                    }
+                },
+            )
+
+            # -------------------------------------------------
+            # QWEN ANALYSIS
+            # -------------------------------------------------
+
+            feedback = await analyze_resume_with_llm(
+                resume_text=resume_text,
+                selected_domain=selected_domain_for_feedback,
+                detected_skills=detected_skills,
+            )
+
+            if not isinstance(feedback, dict):
+                raise RuntimeError(
+                    "Invalid response returned by resume AI."
+                )
+
+            # -------------------------------------------------
+            # Save complete successful Qwen result
+            # -------------------------------------------------
+
+            await db["interviews"].update_one(
+                {"_id": oid},
+                {
+                    "$set": {
+                        "resume_data.round1_feedback":
+                            feedback,
+
+                        "resume_data.feedback_status":
+                            "completed",
+
+                        "resume_data.feedback_error":
+                            None,
+                    }
+                },
+            )
+
+        except Exception as exc:
+
+            # -------------------------------------------------
+            # Background failure must not break interview flow
+            # -------------------------------------------------
+
+            try:
+                oid = ObjectId(interview_id)
+
+                await db["interviews"].update_one(
+                    {"_id": oid},
+                    {
+                        "$set": {
+                            "resume_data.feedback_status":
+                                "failed",
+
+                            "resume_data.feedback_error":
+                                str(exc),
+                        }
+                    },
+                )
+
+            except Exception:
+                pass
 
     # =========================================================
     # START INTERVIEW
@@ -32,7 +254,7 @@ class InterviewController:
     async def start_interview(
         user_id: str,
         data: InterviewStart,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         interview_type = str(
             data.interview_type or "technical"
@@ -41,7 +263,7 @@ class InterviewController:
         new_interview = InterviewModel(
             user_id=user_id,
             stage="round1",
-            interview_type=interview_type
+            interview_type=interview_type,
         )
 
         result = await db["interviews"].insert_one(
@@ -50,7 +272,7 @@ class InterviewController:
 
         return {
             "interview_id": str(result.inserted_id),
-            "message": "Interview started successfully"
+            "message": "Interview started successfully",
         }
 
     # =========================================================
@@ -62,7 +284,7 @@ class InterviewController:
         interview_id: str,
         interview_type: str,
         file: UploadFile,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         oid = InterviewController._parse_object_id(
             interview_id
@@ -75,32 +297,79 @@ class InterviewController:
         if not interview:
             raise HTTPException(
                 status_code=404,
-                detail="Interview not found"
+                detail="Interview not found",
             )
 
         if interview.get("stage") != "round1":
             raise HTTPException(
                 status_code=409,
-                detail="Round 1 already completed or invalid stage"
+                detail=(
+                    "Round 1 already completed "
+                    "or invalid stage"
+                ),
             )
 
-        # -----------------------------------------------------
-        # Analyze Resume
-        # -----------------------------------------------------
+        # =====================================================
+        # FAST RESUME PROCESSING
+        # =====================================================
+        #
+        # ResumeService:
+        # - extracts PDF text
+        # - calculates ATS score
+        # - detects skills
+        #
+        # Qwen should NOT block this request.
+        # =====================================================
 
-        resume_result = await ResumeService.process_resume(
-            file,
-            interview_type
-        )
+        try:
+            resume_result = await ResumeService.process_resume(
+                file,
+                interview_type,
+            )
+
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail=str(exc),
+            )
+
+        except Exception as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Resume analysis failed: {str(exc)}",
+            )
+
+        # =====================================================
+        # STORE ROUND 1 DATA
+        # =====================================================
 
         resume_data = {
-            "score": resume_result["score"],
-            "skills": resume_result["skills"]
-        }
+            "score": resume_result.get(
+                "score",
+                0,
+            ),
 
-        # -----------------------------------------------------
-        # Save Resume Result
-        # -----------------------------------------------------
+            "skills": resume_result.get(
+                "skills",
+                [],
+            ),
+
+            "resume_text": resume_result.get(
+                "resume_text",
+                "",
+            ),
+
+            "selected_domain": resume_result.get(
+                "selected_domain",
+                interview_type,
+            ),
+
+            "round1_feedback": {},
+
+            "feedback_status": "pending",
+
+            "feedback_error": None,
+        }
 
         await db["interviews"].update_one(
             {"_id": oid},
@@ -114,13 +383,43 @@ class InterviewController:
 
                     "stage": "test",
                 }
-            }
+            },
         )
+
+        # =====================================================
+        # START QWEN IN BACKGROUND
+        # =====================================================
+        #
+        # DO NOT await.
+        #
+        # Candidate immediately continues to Round 2 while
+        # Qwen generates detailed Round 1 feedback.
+        # =====================================================
+
+        asyncio.create_task(
+            InterviewController._generate_round1_feedback(
+                interview_id,
+                db,
+            )
+        )
+
+        # =====================================================
+        # RETURN ATS + SKILLS IMMEDIATELY
+        # =====================================================
 
         return {
             "message": "Round 1 complete",
-            "resume_score": resume_data["score"],
-            "skills_extracted": resume_data["skills"],
+
+            "resume_score":
+                resume_data["score"],
+
+            "skills_extracted":
+                resume_data["skills"],
+
+            "feedback_status":
+                "processing",
+
+            "stage": "test",
         }
 
     # =========================================================
@@ -130,7 +429,7 @@ class InterviewController:
     @staticmethod
     async def setup(
         data: InterviewSetup,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         oid = InterviewController._parse_object_id(
             data.interview_id
@@ -140,26 +439,17 @@ class InterviewController:
             {"_id": oid}
         )
 
-        # -----------------------------------------------------
-        # Validate Interview
-        # -----------------------------------------------------
-
         if not interview:
             raise HTTPException(
                 status_code=404,
-                detail="Interview not found"
+                detail="Interview not found",
             )
 
-        # Round 2 must be completed first
         if interview.get("stage") != "setup":
             raise HTTPException(
                 status_code=409,
-                detail="Complete test before setup"
+                detail="Complete test before setup",
             )
-
-        # -----------------------------------------------------
-        # Validate Selected Role / Domain
-        # -----------------------------------------------------
 
         role = str(
             data.role or ""
@@ -168,15 +458,23 @@ class InterviewController:
         if not role:
             raise HTTPException(
                 status_code=400,
-                detail="Please select a target role / domain"
+                detail="Please select a target role / domain",
             )
 
-        # -----------------------------------------------------
-        # Save Role
+        # =====================================================
+        # IMPORTANT FIX
+        # =====================================================
         #
-        # Difficulty and duration have been permanently removed
-        # from the new AI Interview Setup.
-        # -----------------------------------------------------
+        # Save the Round 3 selected role.
+        #
+        # DO NOT:
+        # - delete round1_feedback
+        # - reset feedback_status
+        # - reset feedback_error
+        # - run Qwen again
+        #
+        # The Round 1 Qwen result must remain stored.
+        # =====================================================
 
         await db["interviews"].update_one(
             {"_id": oid},
@@ -186,13 +484,11 @@ class InterviewController:
                     "stage": "ai",
                 },
 
-                # Remove old values if this interview/document
-                # contains fields from the previous design.
                 "$unset": {
                     "difficulty": "",
                     "duration": "",
                 },
-            }
+            },
         )
 
         return {
@@ -204,11 +500,19 @@ class InterviewController:
     # =========================================================
     # FINAL RESULT
     # =========================================================
+    #
+    # IMPORTANT:
+    #
+    # GET /result NEVER runs Qwen.
+    #
+    # It only reads already stored Round 1 feedback.
+    # Therefore feedback-page loading remains fast.
+    # =========================================================
 
     @staticmethod
     async def get_result(
         interview_id: str,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         oid = InterviewController._parse_object_id(
             interview_id
@@ -221,104 +525,210 @@ class InterviewController:
         if not interview:
             raise HTTPException(
                 status_code=404,
-                detail="Interview not found"
+                detail="Interview not found",
             )
 
-        # -----------------------------------------------------
-        # Resume Score
-        # -----------------------------------------------------
+        # =====================================================
+        # ROUND 1
+        # =====================================================
 
-        resume_s = interview.get(
+        resume_data = interview.get(
             "resume_data",
-            {}
-        ).get(
-            "score",
-            0
+            {},
         )
 
-        # -----------------------------------------------------
-        # Test Score
-        # -----------------------------------------------------
+        if not isinstance(resume_data, dict):
+            resume_data = {}
 
-        test_s = interview.get(
-            "test_score",
-            0
+        try:
+            resume_s = int(
+                resume_data.get("score", 0) or 0
+            )
+
+        except (TypeError, ValueError):
+            resume_s = 0
+
+        resume_skills = resume_data.get(
+            "skills",
+            [],
         )
 
-        # -----------------------------------------------------
-        # AI Interview Score
-        # -----------------------------------------------------
+        if not isinstance(resume_skills, list):
+            resume_skills = []
+
+        round1_feedback = resume_data.get(
+            "round1_feedback",
+            {},
+        )
+
+        if not isinstance(round1_feedback, dict):
+            round1_feedback = {}
+
+        feedback_status = resume_data.get(
+            "feedback_status",
+            "pending",
+        )
+
+        feedback_error = resume_data.get(
+            "feedback_error",
+        )
+
+        # =====================================================
+        # ROUND 2
+        # =====================================================
+
+        try:
+            test_s = int(
+                interview.get("test_score", 0) or 0
+            )
+
+        except (TypeError, ValueError):
+            test_s = 0
+
+        # =====================================================
+        # ROUND 3
+        # =====================================================
 
         ai_responses = interview.get(
             "responses",
-            []
+            [],
         )
 
+        if not isinstance(ai_responses, list):
+            ai_responses = []
+
+        valid_ai_scores = []
+
+        for response in ai_responses:
+
+            if not isinstance(response, dict):
+                continue
+
+            try:
+                score = float(
+                    response.get("score", 0) or 0
+                )
+
+                valid_ai_scores.append(score)
+
+            except (TypeError, ValueError):
+                continue
+
         ai_s = (
-            sum(
-                r.get("score", 0)
-                for r in ai_responses
-            ) / len(ai_responses)
-            if ai_responses
+            sum(valid_ai_scores)
+            / len(valid_ai_scores)
+
+            if valid_ai_scores
+
             else 0
         )
 
-        # -----------------------------------------------------
-        # Final Score
-        # -----------------------------------------------------
+        ai_s = int(round(ai_s))
+
+        # =====================================================
+        # FINAL SCORE
+        # =====================================================
 
         final_score = (
             ScoringService.calculate_final_score(
-                int(resume_s),
-                int(test_s),
-                int(ai_s)
+                resume_s,
+                test_s,
+                ai_s,
             )
         )
 
-        # -----------------------------------------------------
-        # Save Final Result
-        # -----------------------------------------------------
+        try:
+            final_score = int(final_score)
+
+        except (TypeError, ValueError):
+            final_score = 0
+
+        # =====================================================
+        # SAVE FINAL SCORES
+        # =====================================================
 
         await db["interviews"].update_one(
             {"_id": oid},
             {
                 "$set": {
-                    "interview_score": int(ai_s),
+                    "interview_score": ai_s,
                     "final_score": final_score,
-                    "stage": "feedback"
+                    "stage": "feedback",
                 }
-            }
+            },
         )
 
-        # -----------------------------------------------------
-        # Result Response
-        # -----------------------------------------------------
+        # =====================================================
+        # RESULT RESPONSE
+        # =====================================================
 
-        result = {
+        return {
             "id": str(interview["_id"]),
 
-            "user_id": interview["user_id"],
+            "user_id": interview.get(
+                "user_id"
+            ),
 
             "interview_type": interview.get(
                 "interview_type",
-                "technical"
+                "technical",
             ),
 
-            "role": interview.get("role"),
+            "role": interview.get(
+                "role"
+            ),
 
-            # Kept temporarily for compatibility with the
-            # existing result/frontend structure.
-            # These will normally return None now.
-            "difficulty": interview.get("difficulty"),
-            "duration": interview.get("duration"),
+            "difficulty": interview.get(
+                "difficulty"
+            ),
 
-            "resume_score": int(resume_s),
+            "duration": interview.get(
+                "duration"
+            ),
 
-            "test_score": int(test_s),
+            # =================================================
+            # ROUND 1
+            # =================================================
 
-            "interview_score": int(ai_s),
+            "resume_score":
+                resume_s,
 
-            "final_score": int(final_score),
+            "resume_skills":
+                resume_skills,
+
+            "round1_feedback":
+                round1_feedback,
+
+            "round1_feedback_status":
+                feedback_status,
+
+            "round1_feedback_error":
+                feedback_error,
+
+            # =================================================
+            # ROUND 2
+            # =================================================
+
+            "test_score":
+                test_s,
+
+            # =================================================
+            # ROUND 3
+            # =================================================
+
+            "interview_score":
+                ai_s,
+
+            # =================================================
+            # FINAL
+            # =================================================
+
+            "final_score":
+                final_score,
+
+            # =================================================
+            # EXISTING FRONTEND COMPATIBILITY
+            # =================================================
 
             "strengths": [
                 (
@@ -355,8 +765,6 @@ class InterviewController:
             ],
         }
 
-        return result
-
     # =========================================================
     # GET CURRENT INTERVIEW STAGE
     # =========================================================
@@ -365,7 +773,7 @@ class InterviewController:
     async def get_stage(
         interview_id: str,
         user_id: str,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         oid = InterviewController._parse_object_id(
             interview_id
@@ -374,31 +782,33 @@ class InterviewController:
         interview = await db["interviews"].find_one(
             {
                 "_id": oid,
-                "user_id": user_id
+                "user_id": user_id,
             }
         )
 
         if not interview:
             raise HTTPException(
                 status_code=404,
-                detail="Interview not found"
+                detail="Interview not found",
             )
 
         return {
-            "interview_id": interview_id,
+            "interview_id":
+                interview_id,
 
             "stage": interview.get(
                 "stage",
-                "round1"
+                "round1",
             ),
 
             "interview_type": interview.get(
                 "interview_type",
-                "technical"
+                "technical",
             ),
 
-            # Useful for Round 3
-            "role": interview.get("role"),
+            "role": interview.get(
+                "role"
+            ),
         }
 
     # =========================================================
@@ -408,12 +818,20 @@ class InterviewController:
     @staticmethod
     async def get_history(
         user_id: str,
-        db: AsyncIOMotorDatabase
+        db: AsyncIOMotorDatabase,
     ):
         cursor = (
             db["interviews"]
-            .find({"user_id": user_id})
-            .sort("created_at", -1)
+            .find(
+                {
+                    "user_id":
+                        user_id
+                }
+            )
+            .sort(
+                "created_at",
+                -1,
+            )
         )
 
         docs = await cursor.to_list(
@@ -424,12 +842,16 @@ class InterviewController:
 
         for item in docs:
 
-            final_score = int(
-                item.get(
-                    "final_score",
-                    0
+            try:
+                final_score = int(
+                    item.get(
+                        "final_score",
+                        0,
+                    ) or 0
                 )
-            )
+
+            except (TypeError, ValueError):
+                final_score = 0
 
             history.append(
                 {
@@ -445,28 +867,24 @@ class InterviewController:
                         item.get("role")
                         or item.get(
                             "interview_type",
-                            "technical"
+                            "technical",
                         )
                     ),
 
-                    # Kept temporarily for old frontend/history
-                    # compatibility.
-                    "difficulty": item.get(
-                        "difficulty"
-                    ),
+                    "difficulty":
+                        item.get(
+                            "difficulty"
+                        ),
 
-                    "final_score": final_score,
+                    "final_score":
+                        final_score,
 
                     "stage": item.get(
                         "stage",
-                        "round1"
+                        "round1",
                     ),
                 }
             )
-
-        # -----------------------------------------------------
-        # Dashboard Statistics
-        # -----------------------------------------------------
 
         scores = [
             item["final_score"]
@@ -478,7 +896,7 @@ class InterviewController:
         avg_score = (
             round(
                 sum(scores) / total,
-                1
+                1,
             )
             if total
             else 0
