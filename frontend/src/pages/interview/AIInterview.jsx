@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import {
   Bot,
   Check,
@@ -564,6 +563,8 @@ const AIInterview = () => {
   const preflightAudioContextRef = useRef(null);
   const micTestRecognitionRef = useRef(null);
   const greetingSpokenRef = useRef(false);
+  const micConfirmationSpokenRef = useRef(false);
+  const micConfirmationInProgressRef = useRef(false);
   const setupCompletionSpokenRef = useRef(false);
 
   /* =======================================================
@@ -814,55 +815,25 @@ const AIInterview = () => {
    * if initialization is already in progress or already completed.
    */
 
-  const startCamera = () => {
-    /*
-     * Reuse an already running stream.
-     * More importantly, reuse an in-flight getUserMedia() request.
-     * This prevents duplicate permission prompts and camera startup
-     * races when Round 3 preloads the camera and the user immediately
-     * clicks Start Interview.
-     */
+  const startCamera = (options = {}) => {
+    const { force = false } = options;
+
     const existingStream = mediaStreamRef.current;
 
-    if (existingStream) {
-      const liveTracks = existingStream
-        .getTracks()
-        .filter((track) => track.readyState === 'live');
-
-      if (liveTracks.length > 0) {
+    if (!force && existingStream) {
+      const videoTrack = existingStream.getVideoTracks()?.[0];
+      if (videoTrack && videoTrack.readyState === 'live') {
         if (videoRef.current) {
           videoRef.current.srcObject = existingStream;
+          videoRef.current.muted = true;
+          videoRef.current.playsInline = true;
           videoRef.current.play().catch(() => {});
         }
-
-        const videoTrack =
-          existingStream.getVideoTracks()?.[0];
-        const audioTrack =
-          existingStream.getAudioTracks()?.[0];
-
-        setCameraOn(
-          Boolean(
-            videoTrack &&
-              videoTrack.readyState === 'live' &&
-              videoTrack.enabled
-          )
-        );
-
-        setMicAvailable(
-          Boolean(
-            audioTrack &&
-              audioTrack.readyState === 'live' &&
-              audioTrack.enabled
-          )
-        );
-
+        setCameraOn(videoTrack.enabled);
         return Promise.resolve(existingStream);
       }
 
-      existingStream
-        .getTracks()
-        .forEach((track) => track.stop());
-
+      existingStream.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
 
@@ -870,90 +841,87 @@ const AIInterview = () => {
       return cameraInitPromiseRef.current;
     }
 
-    if (
-      !navigator.mediaDevices ||
-      !navigator.mediaDevices.getUserMedia
-    ) {
+    if (!navigator.mediaDevices?.getUserMedia) {
       setCameraOn(false);
-      setMicAvailable(false);
-      setError(
-        'Camera and microphone APIs are not available in this browser.'
-      );
+      setError('Camera access is not available in this browser.');
       return Promise.resolve(null);
     }
 
+    setError('');
+    setFaceStatus('checking');
+    setLightingStatus('checking');
+
+    // IMPORTANT: camera startup requests VIDEO ONLY. Microphone permission is
+    // tested separately by the real microphone verification flow. Combining
+    // camera + microphone here can make getUserMedia wait on either device and
+    // makes the whole Round 3 page feel frozen.
     const initPromise = (async () => {
+      let stream = null;
       try {
-        const stream =
-          await navigator.mediaDevices.getUserMedia({
+        stream = await Promise.race([
+          navigator.mediaDevices.getUserMedia({
             video: {
-              facingMode: 'user',
+              facingMode: { ideal: 'user' },
+              // Preview/readiness does not need HD. Lower startup constraints
+              // make webcam negotiation much faster and reduce CPU usage.
+              width: { ideal: 640, max: 1280 },
+              height: { ideal: 480, max: 720 },
+              frameRate: { ideal: 15, max: 24 },
             },
-            audio: {
-              echoCancellation: true,
-              noiseSuppression: true,
-              autoGainControl: true,
-            },
-          });
+          }),
+          new Promise((_, reject) =>
+            window.setTimeout(
+              () => reject(new Error('CAMERA_REQUEST_TIMEOUT')),
+              10000
+            )
+          ),
+        ]);
 
         mediaStreamRef.current = stream;
 
-        const videoTrack =
-          stream.getVideoTracks()?.[0];
-        const audioTrack =
-          stream.getAudioTracks()?.[0];
+        const videoTrack = stream.getVideoTracks()?.[0];
+        if (!videoTrack || videoTrack.readyState !== 'live') {
+          throw new Error('CAMERA_TRACK_NOT_LIVE');
+        }
 
-        setCameraOn(
-          Boolean(
-            videoTrack &&
-              videoTrack.readyState === 'live' &&
-              videoTrack.enabled
-          )
-        );
-
-        setMicAvailable(
-          Boolean(
-            audioTrack &&
-              audioTrack.readyState === 'live' &&
-              audioTrack.enabled
-          )
-        );
-
-        /*
-         * Attach immediately when the video element exists.
-         * The video is muted in JSX, so autoplay is allowed by Chrome.
-         */
-        const attachVideo = () => {
-          if (!videoRef.current) return;
-
+        if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
-        };
+          videoRef.current.muted = true;
+          videoRef.current.playsInline = true;
+          await videoRef.current.play().catch(() => {});
+        }
 
-        attachVideo();
-        requestAnimationFrame(attachVideo);
-
+        setCameraOn(videoTrack.enabled);
+        setMicAvailable(false);
         return stream;
       } catch (err) {
-        console.error(
-          'Camera/microphone error:',
-          err
-        );
-
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
         mediaStreamRef.current = null;
         setCameraOn(false);
-        setMicAvailable(false);
+        setFaceStatus('checking');
+        setLightingStatus('checking');
 
-        setError(
-          'Camera or microphone permission was not granted. Please allow camera and microphone access and try again.'
-        );
+        const name = err?.name || '';
+        let message = 'Camera could not be started. Please allow camera access and try again.';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          message = 'Camera permission is blocked. Allow camera access for localhost, then click Enable Camera again.';
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          message = 'No camera was found. Connect a camera and try again.';
+        } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+          message = 'The camera is being used by another application or tab. Close it and try again.';
+        } else if (err?.message === 'CAMERA_REQUEST_TIMEOUT') {
+          message = 'Camera startup timed out. Close other camera-using tabs/apps, then click Enable Camera again.';
+        }
 
+        console.error('Round 3 camera startup failed:', err);
+        setError(message);
         return null;
       }
     })();
 
     cameraInitPromiseRef.current = initPromise;
-
     initPromise.finally(() => {
       if (cameraInitPromiseRef.current === initPromise) {
         cameraInitPromiseRef.current = null;
@@ -968,17 +936,16 @@ const AIInterview = () => {
      ======================================================= */
 
   useEffect(() => {
-    /*
-     * Start camera/microphone after Round 3 has rendered. This allows the
-     * pre-interview preview to be ready before the user starts.
-     */
+    // Let the first paint complete before asking for the camera. This keeps
+    // the Round 3 page responsive while still starting the preview quickly.
     const timer = window.setTimeout(() => {
-      startCamera();
-    }, 0);
+      // Give React one or two frames to paint the complete Round 3 shell
+      // before touching camera hardware. This prevents the first screen from
+      // feeling frozen when the domain-selection route changes.
+      void startCamera();
+    }, 300);
 
-    return () => {
-      window.clearTimeout(timer);
-    };
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -1019,25 +986,35 @@ const AIInterview = () => {
      CAMERA TOGGLE
      ======================================================= */
 
-  const toggleCamera = () => {
+  const toggleCamera = async () => {
     const stream = mediaStreamRef.current;
 
     if (!stream) {
-      startCamera();
+      await startCamera({ force: true });
       return;
     }
 
-    const videoTrack =
-      stream.getVideoTracks()?.[0];
+    const videoTrack = stream.getVideoTracks()?.[0];
 
-    if (!videoTrack) {
-      startCamera();
+    if (!videoTrack || videoTrack.readyState !== 'live') {
+      await startCamera({ force: true });
       return;
     }
 
-    videoTrack.enabled = !videoTrack.enabled;
+    if (!videoTrack.enabled) {
+      videoTrack.enabled = true;
+      setCameraOn(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.play().catch(() => {});
+      }
+      return;
+    }
 
-    setCameraOn(videoTrack.enabled);
+    videoTrack.enabled = false;
+    setCameraOn(false);
   };
 
   /* =======================================================
@@ -1142,7 +1119,7 @@ const AIInterview = () => {
         finish
       );
 
-      window.setTimeout(finish, 1200);
+      window.setTimeout(finish, 350);
     }).finally(() => {
       speechReadyPromiseRef.current = null;
     });
@@ -1170,11 +1147,13 @@ const AIInterview = () => {
 
     if (sequence !== speechSequenceRef.current) return false;
 
+    // Keep the pause extremely short so the AI starts speaking
+    // immediately after the browser voice is available.
     await new Promise((resolve) => {
       speechTimerRef.current = window.setTimeout(() => {
         speechTimerRef.current = null;
         resolve();
-      }, 80);
+      }, 0);
     });
 
     if (sequence !== speechSequenceRef.current) return false;
@@ -1183,7 +1162,8 @@ const AIInterview = () => {
       const utterance = new SpeechSynthesisUtterance(question);
       utterance.lang = voice?.lang || 'en-US';
       if (voice) utterance.voice = voice;
-      utterance.rate = 0.88;
+      // Slightly faster, natural interview pace.
+      utterance.rate = 0.92;
       utterance.pitch = 1;
       utterance.volume = 1;
 
@@ -1230,34 +1210,56 @@ const AIInterview = () => {
   };
 
   /* =======================================================
-     ONE-TIME ROUND 3 WELCOME
-     Browsers may block autoplay speech; therefore we attempt it
-     once and also provide a first-user-interaction fallback.
+     FAST ROUND 3 AI GREETING
+     -------------------------------------------------------
+     The first greeting must not wait for camera, MediaPipe,
+     face detection, lighting, internet checks, or microphone
+     verification. The UI gets a chance to paint first, then
+     speech starts immediately.
+
+     Chrome can block autoplay speech. If that happens, the
+     first user interaction retries the greeting.
      ======================================================= */
   useEffect(() => {
     const greeting =
-      'Welcome to your AI interview. I am ready to conduct your interview. Please complete your camera, microphone, and environment checks, then click Start Interview. Good luck!';
+      'Welcome to your AI interview. I am ready to conduct your interview. Please complete your camera, microphone, and environment checks, then click Start Interview when you are ready. Good luck!';
 
     let disposed = false;
 
-    const speakGreetingOnce = async () => {
-      if (disposed || greetingSpokenRef.current || interviewStarted) return;
+    const speakGreetingImmediately = async () => {
+      if (
+        disposed ||
+        greetingSpokenRef.current ||
+        interviewStartedRef.current
+      ) {
+        return;
+      }
 
-      setAiGreetingText('Welcome to your AI interview. I am ready to conduct your interview. Please complete the setup checks, then click Start Interview when you are ready. Good luck!');
+      setAiGreetingText(
+        'Welcome to your AI interview. I am ready to conduct your interview. Please complete the setup checks, then click Start Interview when you are ready. Good luck!'
+      );
 
-      // Autoplay can be blocked by the browser. Only mark the greeting as
-      // spoken after speechSynthesis actually completes successfully.
+      // Do not wait for any preflight check here.
       const spoken = await speakQuestion(greeting);
-      if (!disposed && spoken) greetingSpokenRef.current = true;
+
+      if (!disposed && spoken) {
+        greetingSpokenRef.current = true;
+      }
     };
 
+    // Give React a tiny amount of time to paint the Round 3 UI.
     const timer = window.setTimeout(() => {
-      void speakGreetingOnce();
-    }, 700);
+      void speakGreetingImmediately();
+    }, 250);
 
-    // If autoplay was blocked, retry on the user's first interaction.
+    // Browser autoplay fallback.
     const fallback = () => {
-      void speakGreetingOnce();
+      if (
+        !greetingSpokenRef.current &&
+        !interviewStartedRef.current
+      ) {
+        void speakGreetingImmediately();
+      }
     };
 
     window.addEventListener('pointerdown', fallback);
@@ -1269,8 +1271,7 @@ const AIInterview = () => {
       window.removeEventListener('pointerdown', fallback);
       window.removeEventListener('keydown', fallback);
     };
-
-  }, [interviewStarted]);
+  }, []);
 
   /* =======================================================
      REPLAY QUESTION
@@ -1551,6 +1552,14 @@ const AIInterview = () => {
     }
 
     if (faceCheckBusyRef.current) return;
+
+    /*
+     * MediaPipe is the heaviest Round 3 preflight operation.
+     * Do not let it compete with AI speech, especially during
+     * the initial greeting and setup-complete instruction.
+     */
+    if (aiSpeaking) return;
+
     faceCheckBusyRef.current = true;
 
     try {
@@ -1565,6 +1574,13 @@ const AIInterview = () => {
        * usable landmarks.
        */
       if (!faceLandmarkerRef.current) {
+        // Lazy-load MediaPipe only when the camera is already live. This keeps
+        // the initial Round 3 bundle light and prevents WASM/model loading from
+        // delaying the first paint, camera preview, or AI greeting.
+        const { FaceLandmarker, FilesetResolver } = await import(
+          '@mediapipe/tasks-vision'
+        );
+
         const vision = await FilesetResolver.forVisionTasks(
           'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
         );
@@ -1743,24 +1759,101 @@ const AIInterview = () => {
     };
   }, []);
 
+  /* =======================================================
+     LIGHTWEIGHT PRE-FLIGHT LOOP
+     -------------------------------------------------------
+     Lighting is cheap, so it starts quickly. MediaPipe face
+     detection is deliberately delayed so the initial UI and
+     AI greeting are not competing with WASM/model loading.
+     ======================================================= */
   useEffect(() => {
-    const runChecks = () => {
-      checkLighting();
-      checkFace();
+    if (!cameraOn) {
+      return undefined;
+    }
+
+    let disposed = false;
+    let faceTimer = null;
+    let lightTimer = null;
+    let faceStartTimer = null;
+    let faceIdleId = null;
+
+    const runLighting = () => {
+      if (!disposed) {
+        checkLighting();
+      }
     };
 
-    runChecks();
-    const timer = window.setInterval(runChecks, 1400);
+    // Lighting is intentionally throttled. It is only a readiness signal,
+    // not a real-time video effect, so there is no reason to sample the
+    // camera every 1.8 seconds.
+    const lightingDelay = window.setTimeout(runLighting, 900);
+    lightTimer = window.setInterval(runLighting, 4000);
 
-    return () => window.clearInterval(timer);
-  }, [cameraOn]);
+    /*
+     * MediaPipe is the heaviest operation in Round 3. It is deliberately
+     * NOT loaded on route entry. Wait until the microphone has also been
+     * verified, because only then do we actually need the environment/face
+     * check. Then schedule the model load during browser idle time.
+     *
+     * This is the key fix for the 'page becomes smooth only after a few
+     * minutes' problem: the expensive WASM/model work no longer competes
+     * with the first Round 3 render, camera startup, TTS, or mic test.
+     */
+    if (micAvailable) {
+      const startFaceDetection = () => {
+        if (disposed) return;
+
+        void checkFace();
+
+        faceTimer = window.setInterval(() => {
+          if (!disposed && document.visibilityState === 'visible') {
+            void checkFace();
+          }
+        }, 4500);
+      };
+
+      const scheduleFaceDetection = () => {
+        if (disposed) return;
+        if ('requestIdleCallback' in window) {
+          faceIdleId = window.requestIdleCallback(startFaceDetection, {
+            timeout: 5000,
+          });
+        } else {
+          faceStartTimer = window.setTimeout(startFaceDetection, 1400);
+        }
+      };
+
+      // Let the microphone-complete confirmation and its React repaint finish
+      // before starting the heavy face model.
+      faceStartTimer = window.setTimeout(scheduleFaceDetection, 1200);
+    }
+
+    return () => {
+      disposed = true;
+      window.clearTimeout(faceStartTimer);
+      if (faceIdleId !== null && 'cancelIdleCallback' in window) {
+        window.cancelIdleCallback(faceIdleId);
+      }
+      window.clearTimeout(lightingDelay);
+
+      if (lightTimer) {
+        window.clearInterval(lightTimer);
+      }
+
+      if (faceTimer) {
+        window.clearInterval(faceTimer);
+      }
+    };
+  }, [cameraOn, micAvailable]);
 
   useEffect(() => {
     updateEnvironmentStatus();
   }, [faceStatus, lightingStatus]);
 
   useEffect(() => {
-    checkInternet();
+    // Connection status is informative; it must never compete with the first
+    // render/camera startup. Run it after the page has settled.
+    const initialCheck = window.setTimeout(checkInternet, 900);
 
     const handleOnline = () => checkInternet();
     const handleOffline = () => {
@@ -1771,9 +1864,10 @@ const AIInterview = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    const timer = window.setInterval(checkInternet, 10000);
+    const timer = window.setInterval(checkInternet, 15000);
 
     return () => {
+      window.clearTimeout(initialCheck);
       window.clearInterval(timer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
@@ -1802,7 +1896,10 @@ const AIInterview = () => {
       return undefined;
     }
 
-    if (aiSpeaking) return undefined;
+    // Wait for the microphone-complete confirmation to finish first.
+    // aiSpeaking normally covers this, while the ref also closes the tiny
+    // event-loop race between setState() and SpeechSynthesis.onstart.
+    if (aiSpeaking || micConfirmationInProgressRef.current) return undefined;
 
     setupCompletionSpokenRef.current = true;
 
@@ -1894,9 +1991,52 @@ const AIInterview = () => {
      browser speech recognition verifies the spoken phrase.
      ======================================================= */
   const startMicrophoneTest = async () => {
+    // Camera is intentionally opened separately for performance. The first
+    // microphone click acquires audio permission and attaches the live audio
+    // track to the existing camera stream.
     if (!micAvailable) {
-      setPreflightMessage('Microphone access is not available. Please allow microphone access first.');
-      return;
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error('MIC_API_UNAVAILABLE');
+        }
+
+        setMicTestStatus('prompting');
+        setPreflightMessage('Requesting microphone access…');
+
+        const audioStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        });
+
+        const audioTrack = audioStream.getAudioTracks()?.[0];
+        if (!audioTrack || audioTrack.readyState !== 'live') {
+          audioStream.getTracks().forEach((track) => track.stop());
+          throw new Error('MIC_TRACK_NOT_LIVE');
+        }
+
+        if (mediaStreamRef.current) {
+          // Avoid duplicate audio tracks when the user retries.
+          mediaStreamRef.current.getAudioTracks().forEach((track) => track.stop());
+          mediaStreamRef.current.addTrack(audioTrack);
+        } else {
+          mediaStreamRef.current = audioStream;
+        }
+
+        setMicAvailable(true);
+      } catch (err) {
+        console.error('Round 3 microphone permission failed:', err);
+        setMicTestStatus('failed');
+        setPreflightMessage(
+          err?.name === 'NotAllowedError'
+            ? 'Microphone permission is blocked. Allow microphone access for localhost, then try again.'
+            : 'Microphone could not be accessed. Check your microphone and try again.'
+        );
+        return;
+      }
     }
 
     const SpeechRecognition =
@@ -1916,6 +2056,8 @@ const AIInterview = () => {
     setMicTestStatus('prompting');
     setMicTestTranscript('');
     setPreflightMessage('');
+    micConfirmationSpokenRef.current = false;
+    micConfirmationInProgressRef.current = false;
 
     // IMPORTANT: AI finishes speaking first. Only then do we start
     // SpeechRecognition, so the browser cannot mistake the AI voice for
@@ -1970,9 +2112,24 @@ const AIInterview = () => {
         setPreflightMessage('Microphone verified successfully.');
         try { recognition.stop(); } catch {}
 
-        // The final setup-complete voice is handled centrally below.
-        // This prevents the microphone confirmation and the all-checks
-        // confirmation from speaking over each other.
+        // IMPORTANT: after the microphone test finishes, the AI robot must
+        // explicitly confirm it. speakQuestion() serializes this with any
+        // other TTS, so the robot never talks over the candidate.
+        if (!micConfirmationSpokenRef.current) {
+          micConfirmationSpokenRef.current = true;
+          micConfirmationInProgressRef.current = true;
+          setAiGreetingText(
+            'Microphone check complete. Your microphone and voice are working correctly.'
+          );
+          void speakQuestion(
+            'Microphone check complete. Your microphone and voice are working correctly.'
+          ).finally(() => {
+            micConfirmationInProgressRef.current = false;
+          });
+        }
+
+        // The final all-checks confirmation is handled centrally below.
+        // It waits until this confirmation has finished before speaking.
       }
     };
 
@@ -2577,6 +2734,28 @@ const AIInterview = () => {
     );
   }
 
+  useEffect(() => {
+    return () => {
+      if (speechTimerRef.current) {
+        window.clearTimeout(speechTimerRef.current);
+        speechTimerRef.current = null;
+      }
+      try { window.speechSynthesis?.cancel(); } catch {}
+      if (micTestRecognitionRef.current) {
+        try { micTestRecognitionRef.current.stop(); } catch {}
+        micTestRecognitionRef.current = null;
+      }
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
+        recognitionRef.current = null;
+      }
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+        mediaStreamRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <div
       className={`min-h-screen bg-[#020817] text-white ${
@@ -2792,7 +2971,7 @@ const AIInterview = () => {
                     key={label}
                     type="button"
                     onClick={label === 'Microphone' ? startMicrophoneTest : undefined}
-                    disabled={label === 'Microphone' && (micTestStatus === 'listening' || !micAvailable)}
+                    disabled={label === 'Microphone' && (micTestStatus === 'listening' || micTestStatus === 'prompting')}
                     className={`flex w-full items-center gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-3 text-left ${label === 'Microphone' ? 'cursor-pointer hover:border-violet-400/40 hover:bg-violet-500/5' : ''} disabled:cursor-not-allowed disabled:opacity-70`}
                   >
                     <Icon className={`h-6 w-6 shrink-0 ${ready ? 'text-emerald-400' : meta.className}`} />
