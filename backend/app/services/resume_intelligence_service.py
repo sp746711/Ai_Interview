@@ -12,8 +12,7 @@ import httpx
 OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen3:4b"
 
-# Background analysis can take some time on CPU.
-# It does NOT block Round 1 because your controller uses create_task().
+# Qwen may take some time on CPU for a full resume.
 OLLAMA_TIMEOUT = 180.0
 
 
@@ -59,7 +58,6 @@ async def check_ollama_connection() -> dict:
             }
 
     except Exception as exc:
-
         return {
             "connected": False,
             "model": OLLAMA_MODEL,
@@ -77,6 +75,10 @@ def _safe_int(
     value: Any,
     default: int = 0,
 ) -> int:
+    """
+    Convert a value to an integer percentage
+    and clamp it between 0 and 100.
+    """
 
     try:
         value = int(float(value))
@@ -92,6 +94,9 @@ def _safe_int(
 def _clean_text(
     value: Any,
 ) -> str:
+    """
+    Convert any value to clean text.
+    """
 
     if value is None:
         return ""
@@ -103,6 +108,9 @@ def _clean_string_list(
     value: Any,
     limit: int | None = None,
 ) -> list[str]:
+    """
+    Normalize a list of strings.
+    """
 
     if not isinstance(value, list):
         return []
@@ -110,7 +118,6 @@ def _clean_string_list(
     result = []
 
     for item in value:
-
         text = _clean_text(item)
 
         if not text:
@@ -135,6 +142,14 @@ def _clean_string_list(
 def _extract_json(
     raw_output: str,
 ) -> dict:
+    """
+    Extract valid JSON from Qwen output.
+
+    Supports:
+    - normal JSON
+    - JSON inside markdown fences
+    - JSON surrounded by additional text
+    """
 
     if not raw_output:
         raise RuntimeError(
@@ -144,11 +159,10 @@ def _extract_json(
     raw_output = raw_output.strip()
 
     # --------------------------------------------------------
-    # First attempt: direct JSON
+    # 1. Direct JSON
     # --------------------------------------------------------
 
     try:
-
         data = json.loads(raw_output)
 
         if isinstance(data, dict):
@@ -158,7 +172,7 @@ def _extract_json(
         pass
 
     # --------------------------------------------------------
-    # Remove Markdown fences if Qwen ignored instructions
+    # 2. Remove markdown fences
     # --------------------------------------------------------
 
     cleaned = raw_output
@@ -179,7 +193,6 @@ def _extract_json(
     cleaned = cleaned.strip()
 
     try:
-
         data = json.loads(cleaned)
 
         if isinstance(data, dict):
@@ -189,8 +202,7 @@ def _extract_json(
         pass
 
     # --------------------------------------------------------
-    # Final fallback:
-    # extract first complete-looking JSON object
+    # 3. Extract JSON object from surrounding text
     # --------------------------------------------------------
 
     start = cleaned.find("{")
@@ -201,13 +213,11 @@ def _extract_json(
         and end != -1
         and end > start
     ):
-
         possible_json = cleaned[
             start:end + 1
         ]
 
         try:
-
             data = json.loads(
                 possible_json
             )
@@ -230,6 +240,9 @@ def _extract_json(
 def _normalize_best_fit_roles(
     value: Any,
 ) -> list[dict]:
+    """
+    Normalize Qwen best-fit job-role recommendations.
+    """
 
     if not isinstance(value, list):
         return []
@@ -277,6 +290,9 @@ def _normalize_best_fit_roles(
 def _normalize_matching_skills(
     value: Any,
 ) -> list[dict]:
+    """
+    Normalize matching skills returned by Qwen.
+    """
 
     if not isinstance(value, list):
         return []
@@ -285,12 +301,15 @@ def _normalize_matching_skills(
 
     for item in value[:15]:
 
+        # ----------------------------------------------------
+        # Qwen returned simple string
+        # ----------------------------------------------------
+
         if isinstance(item, str):
 
             skill = item.strip()
 
             if skill:
-
                 result.append(
                     {
                         "skill": skill,
@@ -301,6 +320,10 @@ def _normalize_matching_skills(
                 )
 
             continue
+
+        # ----------------------------------------------------
+        # Expected dictionary format
+        # ----------------------------------------------------
 
         if not isinstance(item, dict):
             continue
@@ -333,6 +356,9 @@ def _normalize_matching_skills(
 def _normalize_weak_evidence(
     value: Any,
 ) -> list[dict]:
+    """
+    Normalize missing/weak resume evidence.
+    """
 
     if not isinstance(value, list):
         return []
@@ -341,12 +367,15 @@ def _normalize_weak_evidence(
 
     for item in value[:10]:
 
+        # ----------------------------------------------------
+        # Simple string fallback
+        # ----------------------------------------------------
+
         if isinstance(item, str):
 
             text = item.strip()
 
             if text:
-
                 result.append(
                     {
                         "area": text,
@@ -358,6 +387,10 @@ def _normalize_weak_evidence(
                 )
 
             continue
+
+        # ----------------------------------------------------
+        # Expected dictionary
+        # ----------------------------------------------------
 
         if not isinstance(item, dict):
             continue
@@ -393,23 +426,26 @@ async def analyze_resume_with_llm(
     detected_skills: list | None = None,
 ) -> dict:
     """
-    Analyze the actual resume using local Qwen through Ollama.
+    Analyze the actual resume using local Qwen3 through Ollama.
 
     IMPORTANT:
 
-    - ATS score is NOT calculated here.
-    - Existing Python resume analyzer handles ATS.
-    - This function performs semantic resume analysis only.
+    ATS score is NOT calculated here.
 
-    Returns:
+    The existing Python resume analyzer remains
+    responsible for:
 
-    selected_domain
-    domain_match_percentage
-    best_fit_roles
-    matching_skills
-    missing_or_weak_evidence
-    personalized_improvements
-    resume_summary
+    - ATS score
+    - detected resume skills
+
+    Qwen is responsible for:
+
+    - selected domain match
+    - best-fit job roles
+    - matching skills and evidence
+    - missing / weak evidence
+    - personalized improvements
+    - AI resume summary
     """
 
     # ========================================================
@@ -425,13 +461,11 @@ async def analyze_resume_with_llm(
     )
 
     if not resume_text:
-
         raise ValueError(
             "Resume text is required."
         )
 
     if not selected_domain:
-
         raise ValueError(
             "Selected domain is required."
         )
@@ -451,77 +485,82 @@ async def analyze_resume_with_llm(
     # ========================================================
     # LIMIT EXTREMELY LARGE RESUME TEXT
     # ========================================================
-    #
-    # A normal resume does not need unlimited text.
-    # This prevents Ollama from receiving unnecessary
-    # huge input and becoming very slow.
-    # ========================================================
 
     MAX_RESUME_CHARS = 18000
 
     if len(resume_text) > MAX_RESUME_CHARS:
-
         resume_text = resume_text[
             :MAX_RESUME_CHARS
         ]
 
     # ========================================================
-    # PROMPT
+    # QWEN PROMPT
     # ========================================================
 
     prompt = f"""
 You are a professional resume evaluator inside an AI mock interview platform.
 
-Analyze ONLY the resume supplied below.
+Analyze ONLY the candidate resume supplied below.
 
 TARGET ROLE OR DOMAIN:
+
 {selected_domain}
 
 IMPORTANT RULES:
 
-1. Use only evidence actually present in the resume.
+1. Use only information and evidence actually present in the resume.
 
 2. Never invent:
    - skills
    - projects
-   - experience
+   - work experience
    - certifications
    - education
    - achievements
    - tools
    - job history
 
-3. Analyze the candidate semantically.
+3. Analyze the resume semantically.
 
-4. Evaluate how strongly the resume supports the selected target:
-   "{selected_domain}"
+4. Evaluate how strongly the candidate's actual resume supports the selected target:
 
-5. Recommend 3 to 5 realistic best-fit job roles based on the resume.
+"{selected_domain}"
 
-6. For each best-fit role:
-   - provide role name
-   - match percentage
+5. Calculate a realistic domain match percentage from 0 to 100.
+
+6. Recommend 3 to 5 realistic best-fit job roles based ONLY on the actual resume.
+
+7. For every best-fit role provide:
+   - role name
+   - realistic match percentage
    - short evidence-based reason
 
-7. Identify matching skills and explain the resume evidence.
+8. Identify important matching skills.
 
-8. Identify important missing or weak evidence for the selected target.
+9. For every matching skill explain specific evidence from the resume.
 
-9. Give personalized resume improvements.
+10. Identify important missing or weak evidence for the selected target domain.
 
-10. Give a concise professional resume summary.
+11. Explain why each missing or weak area matters.
 
-11. Percentages must be integers from 0 to 100.
+12. Give personalized resume improvements specifically for this candidate.
 
-12. Do NOT calculate ATS score.
+13. Give a concise professional AI resume summary.
 
-13. Return JSON only.
+14. Percentages must be integers between 0 and 100.
 
-14. Do not use Markdown.
+15. Do NOT calculate ATS score.
 
-15. Do not put the response inside ```.
+16. Return valid JSON only.
 
-16. Do not add commentary before or after the JSON.
+17. Do NOT use Markdown.
+
+18. Do NOT put the response inside code fences.
+
+19. Do NOT add commentary before the JSON.
+
+20. Do NOT add commentary after the JSON.
+
 
 EXISTING PYTHON-DETECTED SKILLS:
 
@@ -529,6 +568,7 @@ EXISTING PYTHON-DETECTED SKILLS:
     detected_skills,
     ensure_ascii=False
 )}
+
 
 ACTUAL RESUME:
 
@@ -538,42 +578,44 @@ ACTUAL RESUME:
 
 ----- RESUME END -----
 
-Return EXACTLY this structure:
+
+Return EXACTLY this JSON structure:
 
 {{
-  "selected_domain": "{selected_domain}",
-  "domain_match_percentage": 0,
+    "selected_domain": "{selected_domain}",
 
-  "best_fit_roles": [
-    {{
-      "role": "Job role",
-      "match_percentage": 0,
-      "reason": "Evidence-based explanation"
-    }}
-  ],
+    "domain_match_percentage": 0,
 
-  "matching_skills": [
-    {{
-      "skill": "Skill",
-      "evidence": "Specific resume evidence"
-    }}
-  ],
+    "best_fit_roles": [
+        {{
+            "role": "Job role",
+            "match_percentage": 0,
+            "reason": "Evidence-based explanation"
+        }}
+    ],
 
-  "missing_or_weak_evidence": [
-    {{
-      "area": "Area",
-      "reason": "Why evidence is missing or weak"
-    }}
-  ],
+    "matching_skills": [
+        {{
+            "skill": "Skill",
+            "evidence": "Specific evidence from the resume"
+        }}
+    ],
 
-  "personalized_improvements": [
-    "Improvement 1",
-    "Improvement 2",
-    "Improvement 3"
-  ],
+    "missing_or_weak_evidence": [
+        {{
+            "area": "Area",
+            "reason": "Why this evidence is missing or weak"
+        }}
+    ],
 
-  "resume_summary":
-    "Professional semantic assessment of this resume."
+    "personalized_improvements": [
+        "Specific personalized improvement 1",
+        "Specific personalized improvement 2",
+        "Specific personalized improvement 3"
+    ],
+
+    "resume_summary":
+        "Professional semantic assessment of this resume."
 }}
 """.strip()
 
@@ -590,24 +632,40 @@ Return EXACTLY this structure:
 
         "format": "json",
 
-        # Keep model loaded so another request does not
-        # immediately require another cold model load.
+        # ====================================================
+        # IMPORTANT QWEN3 FIX
+        # ====================================================
+        #
+        # Qwen3 has a thinking/reasoning mode.
+        #
+        # During our direct Ollama test the generated JSON
+        # appeared inside "thinking" while "response"
+        # remained empty.
+        #
+        # We do NOT need chain-of-thought for this task.
+        # We need structured JSON in "response".
+        #
+        # Therefore thinking is disabled.
+        # ====================================================
+
+        "think": False,
+
+        # Keep model loaded to make subsequent requests faster.
         "keep_alive": "10m",
 
         "options": {
             "temperature": 0.1,
 
-            # Enough output for detailed JSON without
-            # letting the model generate endlessly.
+            # Enough output for detailed resume JSON.
             "num_predict": 1800,
 
-            # Suitable context for normal resumes.
+            # Suitable context window for normal resumes.
             "num_ctx": 8192,
         },
     }
 
     # ========================================================
-    # SEND REQUEST
+    # SEND REQUEST TO OLLAMA
     # ========================================================
 
     try:
@@ -670,7 +728,7 @@ Return EXACTLY this structure:
         ) from exc
 
     # ========================================================
-    # GET MODEL RESPONSE
+    # GET QWEN RESPONSE
     # ========================================================
 
     raw_output = _clean_text(
@@ -680,12 +738,87 @@ Return EXACTLY this structure:
         )
     )
 
+    # ========================================================
+    # QWEN3 COMPATIBILITY FALLBACK
+    # ========================================================
+    #
+    # Normally think=False causes the final structured JSON
+    # to appear inside:
+    #
+    #     ollama_response["response"]
+    #
+    # However, if a Qwen/Ollama version still places the
+    # generated content inside "thinking", we recover it
+    # instead of throwing the analysis away.
+    # ========================================================
+
+    if not raw_output:
+
+        thinking_output = (
+            ollama_response.get(
+                "thinking",
+                "",
+            )
+        )
+
+        # ----------------------------------------------------
+        # Thinking output already returned as dictionary
+        # ----------------------------------------------------
+
+        if isinstance(
+            thinking_output,
+            dict,
+        ):
+
+            raw_output = json.dumps(
+                thinking_output,
+                ensure_ascii=False,
+            )
+
+        # ----------------------------------------------------
+        # Thinking output returned as string
+        # ----------------------------------------------------
+
+        else:
+
+            raw_output = _clean_text(
+                thinking_output
+            )
+
+    # ========================================================
+    # NOTHING RETURNED
+    # ========================================================
+
     if not raw_output:
 
         raise RuntimeError(
-            "Ollama returned an empty "
-            "resume analysis."
+            "Qwen returned no usable resume analysis. "
+            "Both 'response' and 'thinking' were empty."
         )
+
+    # ========================================================
+    # TEMPORARY DEBUG OUTPUT
+    # ========================================================
+    #
+    # Keep this for now.
+    #
+    # This lets us see whether Qwen actually generated
+    # the five required Round 1 feedback sections.
+    #
+    # We can remove this after everything is working.
+    # ========================================================
+
+    print(
+        "\n"
+        "========== QWEN RESUME ANALYSIS =========="
+    )
+
+    print(raw_output)
+
+    print(
+        "=========================================="
+        "\n"
+    )
 
     # ========================================================
     # PARSE JSON
@@ -730,7 +863,7 @@ Return EXACTLY this structure:
     )
 
     # ========================================================
-    # MATCHING SKILLS
+    # MATCHING SKILLS & EVIDENCE
     # ========================================================
 
     analysis["matching_skills"] = (
@@ -770,7 +903,7 @@ Return EXACTLY this structure:
     )
 
     # ========================================================
-    # RESUME SUMMARY
+    # AI RESUME SUMMARY
     # ========================================================
 
     analysis["resume_summary"] = (
@@ -796,10 +929,14 @@ Return EXACTLY this structure:
             ],
 
         "best_fit_roles":
-            analysis["best_fit_roles"],
+            analysis[
+                "best_fit_roles"
+            ],
 
         "matching_skills":
-            analysis["matching_skills"],
+            analysis[
+                "matching_skills"
+            ],
 
         "missing_or_weak_evidence":
             analysis[
@@ -812,7 +949,31 @@ Return EXACTLY this structure:
             ],
 
         "resume_summary":
-            analysis["resume_summary"],
+            analysis[
+                "resume_summary"
+            ],
     }
+
+    # ========================================================
+    # DEBUG FINAL NORMALIZED RESULT
+    # ========================================================
+
+    print(
+        "\n"
+        "========== NORMALIZED RESUME ANALYSIS =========="
+    )
+
+    print(
+        json.dumps(
+            final_analysis,
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+
+    print(
+        "================================================"
+        "\n"
+    )
 
     return final_analysis
