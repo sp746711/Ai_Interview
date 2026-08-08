@@ -60,6 +60,12 @@ const Test = () => {
 
   const questionsRef = useRef([]);
 
+  const securityEventsRef = useRef([]);
+
+  const initializationRef = useRef(false);
+
+  const handleSubmitRef = useRef(null);
+
   const navigate = useNavigate();
 
   const currentInterview = JSON.parse(
@@ -78,29 +84,67 @@ const Test = () => {
     questionsRef.current = questions;
   }, [questions]);
 
+  useEffect(() => {
+    securityEventsRef.current = securityEvents;
+  }, [securityEvents]);
+
   /* ======================================================
      FETCH QUESTIONS
+
+     PERFORMANCE FIX:
+     - Prevent duplicate initialization.
+     - Stage and question requests run in parallel.
+     - Cancel stale work when the page unmounts.
      ====================================================== */
 
   useEffect(() => {
+    if (initializationRef.current) {
+      return;
+    }
+
+    initializationRef.current = true;
+
+    let cancelled = false;
+
     const fetchQuestions = async () => {
+      if (!currentInterview?.id) {
+        if (!cancelled) {
+          setError('Interview ID not found.');
+          setLoading(false);
+          navigate('/dashboard', { replace: true });
+        }
+        return;
+      }
+
       try {
-        const stageRes = await api.get(
-          `/interview/stage?interview_id=${currentInterview.id}`
+        // These requests are independent, so do not wait for one before starting the other.
+        const stagePromise = api.get(
+          `/interview/stage?interview_id=${encodeURIComponent(
+            currentInterview.id
+          )}`
         );
 
-        if (stageRes.data.stage !== 'test') {
-          navigate('/dashboard');
+        const questionsPromise = api.get(
+          `/test/questions?interview_type=${encodeURIComponent(
+            currentInterview.interview_type || 'technical'
+          )}&difficulty=easy`
+        );
+
+        const [stageRes, response] = await Promise.all([
+          stagePromise,
+          questionsPromise,
+        ]);
+
+        if (cancelled) {
           return;
         }
 
-        const response = await api.get(
-          `/test/questions?interview_type=${
-            currentInterview.interview_type || 'technical'
-          }&difficulty=easy`
-        );
+        if (stageRes?.data?.stage !== 'test') {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
 
-        let qData = response.data.questions || [];
+        let qData = response?.data?.questions || [];
 
         if (typeof qData === 'string') {
           try {
@@ -110,26 +154,33 @@ const Test = () => {
               'Could not parse stringified questions',
               qData
             );
-
             qData = [];
           }
         }
 
-        setQuestions(qData);
+        if (!Array.isArray(qData)) {
+          qData = [];
+        }
 
         questionsRef.current = qData;
-
+        setQuestions(qData);
         setLoading(false);
       } catch (err) {
-        console.error(err);
+        if (cancelled) {
+          return;
+        }
 
+        console.error('Round 2 initialization failed:', err);
         setError('Failed to fetch questions.');
-
         setLoading(false);
       }
     };
 
     fetchQuestions();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     navigate,
     currentInterview.id,
@@ -138,6 +189,11 @@ const Test = () => {
 
   /* ======================================================
      TIMER
+
+     PERFORMANCE FIX:
+     The old effect recreated the interval every second because
+     timeLeft was a dependency. This creates one interval while
+     the test is active.
      ====================================================== */
 
   useEffect(() => {
@@ -149,19 +205,24 @@ const Test = () => {
       return;
     }
 
-    if (timeLeft <= 0) {
-      handleSubmit(false);
-
-      return;
-    }
-
     const timerInt = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerInt);
+
+          if (handleSubmitRef.current) {
+            handleSubmitRef.current(false);
+          }
+
+          return 0;
+        }
+
+        return prev - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timerInt);
   }, [
-    timeLeft,
     loading,
     submitting,
     securityTerminated,
@@ -436,6 +497,9 @@ const Test = () => {
     }
   };
 
+  // Always expose the latest submit function to the stable timer/security handlers.
+  handleSubmitRef.current = handleSubmit;
+
   /* ======================================================
      SECURITY VIOLATION
      ====================================================== */
@@ -473,11 +537,16 @@ const Test = () => {
             new Date().toISOString(),
         };
 
+        const updatedSecurityEvents = [
+          ...securityEventsRef.current,
+          event,
+        ];
+
+        securityEventsRef.current =
+          updatedSecurityEvents;
+
         setSecurityEvents(
-          (previous) => [
-            ...previous,
-            event,
-          ]
+          updatedSecurityEvents
         );
 
         /*
@@ -532,8 +601,7 @@ const Test = () => {
            */
 
           const finalEvents = [
-            ...securityEvents,
-            event,
+            ...securityEventsRef.current,
           ];
 
           /*
@@ -542,7 +610,8 @@ const Test = () => {
            */
 
           setTimeout(() => {
-            handleSubmit(
+            if (handleSubmitRef.current) {
+              handleSubmitRef.current(
               true,
               {
                 status: 'flagged',
@@ -559,13 +628,13 @@ const Test = () => {
                 events:
                   finalEvents,
               }
-            );
+              );
+            }
           }, 1200);
         }
       },
       [
         loading,
-        securityEvents,
       ]
     );
 

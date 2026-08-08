@@ -2,6 +2,21 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bot,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleCheck,
+  ClipboardCheck,
+  Clock3,
+  Expand,
+  Globe2,
+  Info,
+  Lightbulb,
+  LockKeyhole,
+  MessageSquare,
+  ShieldCheck,
+  UserRound,
+  Wifi,
   Camera,
   CheckCircle2,
   CircleHelp,
@@ -34,15 +49,21 @@ import {
    - Preserve camera / mic / TTS / voice / timer / controls
    ========================================================= */
 
-const MAX_QUESTIONS = 5;
+const MAX_QUESTIONS = 10;
 const QUESTION_TIME = 60;
+const TOTAL_INTERVIEW_TIME = 45 * 60;
 
 const DEMO_QUESTIONS = [
-  'Tell me about yourself and your experience related to cloud computing.',
-  'How have you used cloud computing in one of your projects?',
-  'What is the difference between scalability and elasticity in cloud computing?',
-  'How would you design a highly available cloud application?',
-  'What security considerations would you consider when deploying an application to the cloud?',
+  'Tell me about yourself and your experience related to this role.',
+  'How have you used your technical skills in one of your projects?',
+  'Describe a challenging project you have worked on and how you overcame the difficulties.',
+  'How do you approach debugging a problem when your first solution does not work?',
+  'Tell me about a time you worked with a team to complete a technical task.',
+  'How do you keep your technical knowledge and skills up to date?',
+  'Describe a situation where you had to learn a new technology quickly.',
+  'How would you design a reliable and scalable application for real users?',
+  'What security and performance considerations would you make before deployment?',
+  'Why are you a good fit for this role, and what would you like to contribute to the team?',
 ];
 
 /* =========================================================
@@ -417,6 +438,8 @@ const AIInterview = () => {
 
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
 
+  const [totalTimeLeft, setTotalTimeLeft] = useState(TOTAL_INTERVIEW_TIME);
+
   const [textAnswer, setTextAnswer] = useState('');
 
   const [voiceTranscript, setVoiceTranscript] = useState('');
@@ -451,6 +474,19 @@ const AIInterview = () => {
   const recognitionRef = useRef(null);
 
   const timerRef = useRef(null);
+
+  // Camera initialization is shared between the automatic Round 3
+  // pre-warm and the Start Interview button. This prevents duplicate
+  // getUserMedia() calls and avoids making the Start button wait.
+  const cameraInitPromiseRef = useRef(null);
+
+  // Speech state is serialized so Chrome does not receive overlapping
+  // cancel()/speak() calls that can produce broken or clipped audio.
+  const speechSequenceRef = useRef(0);
+  const speechVoicesRef = useRef([]);
+  const speechVoiceRef = useRef(null);
+  const speechReadyPromiseRef = useRef(null);
+  const speechTimerRef = useRef(null);
 
   // Keep latest interview state available inside fullscreen event handlers.
   const interviewStartedRef = useRef(false);
@@ -490,6 +526,20 @@ const AIInterview = () => {
        * Fullscreen failure should not stop the interview.
        */
       setIsFullscreen(false);
+    }
+  };
+
+  const handleFullscreenButton = async () => {
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      intentionalFullscreenExitRef.current = true;
+      await exitFullscreen();
+      return;
+    }
+
+    try {
+      await enterFullscreen();
+    } catch (err) {
+      console.warn('Fullscreen button failed:', err);
     }
   };
 
@@ -555,19 +605,16 @@ const AIInterview = () => {
           }
         }
 
+        speechSequenceRef.current += 1;
+        if (speechTimerRef.current) {
+          window.clearTimeout(speechTimerRef.current);
+          speechTimerRef.current = null;
+        }
         window.speechSynthesis?.cancel();
         setAiSpeaking(false);
         setRecording(false);
 
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current
-            .getTracks()
-            .forEach((track) => track.stop());
-          mediaStreamRef.current = null;
-        }
-
-        setCameraOn(false);
-        setMicAvailable(false);
+        stopMediaStream();
 
         // Demo-phase persistence. Backend/MongoDB persistence can replace this later.
         const interruptedInterview = {
@@ -646,58 +693,217 @@ const AIInterview = () => {
   ]);
 
   /* =======================================================
-     CAMERA
+     CAMERA / MICROPHONE
      ======================================================= */
 
-  const startCamera = async () => {
-    try {
-      setError('');
+  /*
+   * IMPORTANT PERFORMANCE FIX
+   * --------------------------
+   * Round 3 renders first, then camera/microphone initialization
+   * starts asynchronously in the background. The Start Interview
+   * button never waits for getUserMedia(). The same stream is reused
+   * if initialization is already in progress or already completed.
+   */
 
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current
-          .getTracks()
-          .forEach((track) => track.stop());
+  const startCamera = () => {
+    /*
+     * Reuse an already running stream.
+     * More importantly, reuse an in-flight getUserMedia() request.
+     * This prevents duplicate permission prompts and camera startup
+     * races when Round 3 preloads the camera and the user immediately
+     * clicks Start Interview.
+     */
+    const existingStream = mediaStreamRef.current;
+
+    if (existingStream) {
+      const liveTracks = existingStream
+        .getTracks()
+        .filter((track) => track.readyState === 'live');
+
+      if (liveTracks.length > 0) {
+        if (videoRef.current) {
+          videoRef.current.srcObject = existingStream;
+          videoRef.current.play().catch(() => {});
+        }
+
+        const videoTrack =
+          existingStream.getVideoTracks()?.[0];
+        const audioTrack =
+          existingStream.getAudioTracks()?.[0];
+
+        setCameraOn(
+          Boolean(
+            videoTrack &&
+              videoTrack.readyState === 'live' &&
+              videoTrack.enabled
+          )
+        );
+
+        setMicAvailable(
+          Boolean(
+            audioTrack &&
+              audioTrack.readyState === 'live' &&
+              audioTrack.enabled
+          )
+        );
+
+        return Promise.resolve(existingStream);
       }
 
-      const stream =
-        await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
+      existingStream
+        .getTracks()
+        .forEach((track) => track.stop());
 
-      mediaStreamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
-
-      const videoTrack =
-        stream.getVideoTracks()?.[0];
-
-      const audioTrack =
-        stream.getAudioTracks()?.[0];
-
-      setCameraOn(
-        Boolean(videoTrack && videoTrack.enabled)
-      );
-
-      setMicAvailable(
-        Boolean(audioTrack && audioTrack.enabled)
-      );
-    } catch (err) {
-      console.error(
-        'Camera/microphone error:',
-        err
-      );
-
-      setCameraOn(false);
-
-      setMicAvailable(false);
-
-      setError(
-        'Camera or microphone permission was not granted. You can still test the text interview.'
-      );
+      mediaStreamRef.current = null;
     }
+
+    if (cameraInitPromiseRef.current) {
+      return cameraInitPromiseRef.current;
+    }
+
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
+      setCameraOn(false);
+      setMicAvailable(false);
+      setError(
+        'Camera and microphone APIs are not available in this browser.'
+      );
+      return Promise.resolve(null);
+    }
+
+    const initPromise = (async () => {
+      try {
+        const stream =
+          await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: 'user',
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            },
+          });
+
+        mediaStreamRef.current = stream;
+
+        const videoTrack =
+          stream.getVideoTracks()?.[0];
+        const audioTrack =
+          stream.getAudioTracks()?.[0];
+
+        setCameraOn(
+          Boolean(
+            videoTrack &&
+              videoTrack.readyState === 'live' &&
+              videoTrack.enabled
+          )
+        );
+
+        setMicAvailable(
+          Boolean(
+            audioTrack &&
+              audioTrack.readyState === 'live' &&
+              audioTrack.enabled
+          )
+        );
+
+        /*
+         * Attach immediately when the video element exists.
+         * The video is muted in JSX, so autoplay is allowed by Chrome.
+         */
+        const attachVideo = () => {
+          if (!videoRef.current) return;
+
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        };
+
+        attachVideo();
+        requestAnimationFrame(attachVideo);
+
+        return stream;
+      } catch (err) {
+        console.error(
+          'Camera/microphone error:',
+          err
+        );
+
+        mediaStreamRef.current = null;
+        setCameraOn(false);
+        setMicAvailable(false);
+
+        setError(
+          'Camera or microphone permission was not granted. Please allow camera and microphone access and try again.'
+        );
+
+        return null;
+      }
+    })();
+
+    cameraInitPromiseRef.current = initPromise;
+
+    initPromise.finally(() => {
+      if (cameraInitPromiseRef.current === initPromise) {
+        cameraInitPromiseRef.current = null;
+      }
+    });
+
+    return initPromise;
+  };
+
+  /* =======================================================
+     CAMERA PRE-WARM
+     ======================================================= */
+
+  useEffect(() => {
+    /*
+     * Start camera/microphone after Round 3 has rendered. This allows the
+     * pre-interview preview to be ready before the user starts.
+     */
+    const timer = window.setTimeout(() => {
+      startCamera();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    /*
+     * The pre-interview screen and active interview screen use different
+     * <video> elements. When React swaps those elements, the existing
+     * MediaStream must be attached to the NEW video element again.
+     */
+    if (!interviewStarted || !mediaStreamRef.current || !videoRef.current) {
+      return;
+    }
+
+    const stream = mediaStreamRef.current;
+    videoRef.current.srcObject = stream;
+    videoRef.current.muted = true;
+    videoRef.current.playsInline = true;
+    videoRef.current.play().catch(() => {});
+  }, [interviewStarted, cameraOn]);
+
+  const stopMediaStream = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current
+        .getTracks()
+        .forEach((track) => track.stop());
+
+      mediaStreamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setCameraOn(false);
+    setMicAvailable(false);
   };
 
   /* =======================================================
@@ -729,41 +935,196 @@ const AIInterview = () => {
      AI TEXT TO SPEECH
      ======================================================= */
 
-  const speakQuestion = (question) => {
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return undefined;
+
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices() || [];
+      speechVoicesRef.current = voices;
+
+      speechVoiceRef.current =
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase() === 'en-us' &&
+            voice.localService
+        ) ||
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase().startsWith('en-us')
+        ) ||
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase().startsWith('en')
+        ) ||
+        null;
+    };
+
+    loadVoices();
+
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      loadVoices
+    );
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        'voiceschanged',
+        loadVoices
+      );
+    };
+  }, []);
+
+  const waitForSpeechVoice = () => {
+    if (!('speechSynthesis' in window)) {
+      return Promise.resolve(null);
+    }
+
+    const refreshVoices = () => {
+      const voices = window.speechSynthesis.getVoices() || [];
+      speechVoicesRef.current = voices;
+
+      const preferred =
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase() === 'en-us' &&
+            voice.localService
+        ) ||
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase().startsWith('en-us')
+        ) ||
+        voices.find(
+          (voice) =>
+            voice.lang?.toLowerCase().startsWith('en')
+        ) ||
+        null;
+
+      speechVoiceRef.current = preferred;
+      return preferred;
+    };
+
+    const immediateVoice = refreshVoices();
+
+    if (immediateVoice || speechVoicesRef.current.length > 0) {
+      return Promise.resolve(immediateVoice);
+    }
+
+    if (speechReadyPromiseRef.current) {
+      return speechReadyPromiseRef.current;
+    }
+
+    speechReadyPromiseRef.current = new Promise((resolve) => {
+      let finished = false;
+
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+
+        window.speechSynthesis.removeEventListener(
+          'voiceschanged',
+          finish
+        );
+
+        resolve(refreshVoices());
+      };
+
+      window.speechSynthesis.addEventListener(
+        'voiceschanged',
+        finish
+      );
+
+      window.setTimeout(finish, 1200);
+    }).finally(() => {
+      speechReadyPromiseRef.current = null;
+    });
+
+    return speechReadyPromiseRef.current;
+  };
+
+  const speakQuestion = async (question) => {
     if (!question) return;
 
     if (!('speechSynthesis' in window)) {
       return;
     }
 
-    window.speechSynthesis.cancel();
+    const sequence = ++speechSequenceRef.current;
+
+    if (speechTimerRef.current) {
+      window.clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
 
     setAiSpeaking(false);
+
+    /*
+     * Cancel only the previous utterance, then give Chrome a short
+     * scheduling window before speaking again. Rapid cancel()+speak()
+     * calls are a common source of clipped/garbled browser TTS.
+     */
+    window.speechSynthesis.cancel();
+
+    const voice = await waitForSpeechVoice();
+
+    if (sequence !== speechSequenceRef.current) {
+      return;
+    }
+
+    await new Promise((resolve) => {
+      speechTimerRef.current = window.setTimeout(() => {
+        speechTimerRef.current = null;
+        resolve();
+      }, 80);
+    });
+
+    if (sequence !== speechSequenceRef.current) {
+      return;
+    }
 
     const utterance =
       new SpeechSynthesisUtterance(question);
 
-    utterance.lang = 'en-US';
+    utterance.lang = voice?.lang || 'en-US';
 
-    utterance.rate = 0.95;
+    if (voice) {
+      utterance.voice = voice;
+    }
 
+    /* Slightly slower speech is clearer and less likely to sound clipped. */
+    utterance.rate = 0.88;
     utterance.pitch = 1;
-
     utterance.volume = 1;
 
     utterance.onstart = () => {
+      if (sequence !== speechSequenceRef.current) return;
       setAiSpeaking(true);
     };
 
     utterance.onend = () => {
+      if (sequence !== speechSequenceRef.current) return;
       setAiSpeaking(false);
     };
 
-    utterance.onerror = () => {
+    utterance.onerror = (event) => {
+      console.warn(
+        'AI speech synthesis error:',
+        event?.error || 'unknown'
+      );
+
+      if (sequence !== speechSequenceRef.current) return;
       setAiSpeaking(false);
     };
 
-    window.speechSynthesis.speak(utterance);
+    try {
+      window.speechSynthesis.resume();
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.error(
+        'Unable to start AI speech:',
+        err
+      );
+      setAiSpeaking(false);
+    }
   };
 
   /* =======================================================
@@ -923,13 +1284,31 @@ const AIInterview = () => {
   const startInterview = async () => {
     setError('');
 
+    /*
+     * CRITICAL: request fullscreen FIRST while the browser still has the
+     * original Start button user-gesture. Starting getUserMedia before
+     * fullscreen can consume the gesture in Chrome/Edge and make
+     * requestFullscreen() silently fail.
+     */
+    const fullscreenPromise = enterFullscreen();
+
     // Hide MainLayout navbar only after Start Interview is clicked.
     setAIInterviewActive(true);
 
     /*
-     * Fullscreen request must happen from the user's click.
+     * Camera/microphone may already be pre-warmed. If not, initialize
+     * them in parallel without blocking fullscreen.
      */
-    await enterFullscreen();
+    if (!mediaStreamRef.current) {
+      startCamera().catch((err) => {
+        console.warn(
+          'Camera initialization is still pending:',
+          err
+        );
+      });
+    }
+
+    await fullscreenPromise;
 
     setInterviewStarted(true);
     interviewStartedRef.current = true;
@@ -947,10 +1326,16 @@ const AIInterview = () => {
     setVoiceTranscript('');
 
     setTimeLeft(QUESTION_TIME);
+    setTotalTimeLeft(TOTAL_INTERVIEW_TIME);
 
-    setTimeout(() => {
+    /*
+     * Let React commit the first interview screen, then start TTS.
+     * speakQuestion() itself waits for the browser voice list and
+     * serializes speech so the robot voice stays clear.
+     */
+    window.requestAnimationFrame(() => {
       speakQuestion(DEMO_QUESTIONS[0]);
-    }, 500);
+    });
   };
 
   /* =======================================================
@@ -970,6 +1355,7 @@ const AIInterview = () => {
       setTimeLeft((previous) => {
         if (previous <= 1) {
           clearInterval(timerRef.current);
+          window.setTimeout(() => moveToNextQuestion(), 0);
 
           return 0;
         }
@@ -989,6 +1375,27 @@ const AIInterview = () => {
     interviewComplete,
     currentQuestion,
   ]);
+
+  /* =======================================================
+     TOTAL INTERVIEW TIMER
+     ======================================================= */
+
+  useEffect(() => {
+    if (!interviewStarted || interviewComplete) return undefined;
+
+    const totalTimer = window.setInterval(() => {
+      setTotalTimeLeft((previous) => {
+        if (previous <= 1) {
+          window.clearInterval(totalTimer);
+          window.setTimeout(() => finishInterview(), 0);
+          return 0;
+        }
+        return previous - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(totalTimer);
+  }, [interviewStarted, interviewComplete]);
 
   /* =======================================================
      NEXT QUESTION
@@ -1014,6 +1421,11 @@ const AIInterview = () => {
       }
     }
 
+    speechSequenceRef.current += 1;
+    if (speechTimerRef.current) {
+      window.clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
     window.speechSynthesis?.cancel();
 
     setAiSpeaking(false);
@@ -1033,9 +1445,9 @@ const AIInterview = () => {
 
     setRecording(false);
 
-    setTimeout(() => {
+    window.requestAnimationFrame(() => {
       speakQuestion(nextQuestion);
-    }, 500);
+    });
   };
 
   /* =======================================================
@@ -1067,15 +1479,23 @@ const AIInterview = () => {
        * Backend connection comes later.
        */
 
-      console.log(
-        'Demo interview answer:',
-        {
-          questionNumber:
-            currentQuestionIndex + 1,
-          question: currentQuestion,
-          answer: finalAnswer,
-        }
+      const savedAnswers = JSON.parse(
+        sessionStorage.getItem('round3_answers') || '[]'
       );
+
+      savedAnswers[currentQuestionIndex] = {
+        questionNumber: currentQuestionIndex + 1,
+        question: currentQuestion,
+        answer: finalAnswer,
+        status: 'answered',
+      };
+
+      sessionStorage.setItem(
+        'round3_answers',
+        JSON.stringify(savedAnswers)
+      );
+
+      console.log('Interview answer:', savedAnswers[currentQuestionIndex]);
 
       await new Promise((resolve) =>
         setTimeout(resolve, 300)
@@ -1094,11 +1514,59 @@ const AIInterview = () => {
   };
 
   /* =======================================================
+     SUBMIT INTERVIEW
+     ======================================================= */
+
+  const handleSubmitInterview = async () => {
+    const finalAnswer = textAnswer.trim() || voiceTranscript.trim();
+
+    if (!finalAnswer) {
+      setError('Please answer the current question before submitting the interview.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      console.log('Interview submitted:', {
+        questionNumber: currentQuestionIndex + 1,
+        question: currentQuestion,
+        answer: finalAnswer,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      await finishInterview();
+    } catch (err) {
+      console.error(err);
+      setError('Unable to submit the interview. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* =======================================================
      SKIP
      ======================================================= */
 
   const handleSkipQuestion = () => {
     setError('');
+
+    const savedAnswers = JSON.parse(
+      sessionStorage.getItem('round3_answers') || '[]'
+    );
+
+    savedAnswers[currentQuestionIndex] = {
+      questionNumber: currentQuestionIndex + 1,
+      question: currentQuestion,
+      answer: '',
+      status: 'skipped',
+    };
+
+    sessionStorage.setItem(
+      'round3_answers',
+      JSON.stringify(savedAnswers)
+    );
 
     moveToNextQuestion();
   };
@@ -1124,6 +1592,11 @@ const AIInterview = () => {
       }
     }
 
+    speechSequenceRef.current += 1;
+    if (speechTimerRef.current) {
+      window.clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
     window.speechSynthesis?.cancel();
 
     setAiSpeaking(false);
@@ -1137,6 +1610,9 @@ const AIInterview = () => {
     setInterviewStarted(false);
 
     setCurrentQuestion('');
+
+    // Release camera/microphone before leaving the interview room.
+    stopMediaStream();
 
     // Normal completion restores the normal navbar.
     setAIInterviewActive(false);
@@ -1172,12 +1648,20 @@ const AIInterview = () => {
       }
     }
 
+    speechSequenceRef.current += 1;
+    if (speechTimerRef.current) {
+      window.clearTimeout(speechTimerRef.current);
+      speechTimerRef.current = null;
+    }
     window.speechSynthesis?.cancel();
 
     setAiSpeaking(false);
     setRecording(false);
 
     interviewStartedRef.current = false;
+
+    // Release camera/microphone immediately.
+    stopMediaStream();
 
     // Exit Interview restores the normal navbar.
     setAIInterviewActive(false);
@@ -1189,27 +1673,32 @@ const AIInterview = () => {
   };
 
   /* =======================================================
-     INITIAL CAMERA + CLEANUP
+     CLEANUP
      ======================================================= */
 
   useEffect(() => {
-    startCamera();
-
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+        timerRef.current = null;
       }
 
+      speechSequenceRef.current += 1;
+      if (speechTimerRef.current) {
+        window.clearTimeout(speechTimerRef.current);
+        speechTimerRef.current = null;
+      }
       window.speechSynthesis?.cancel();
 
-      if (mediaStreamRef.current) {
-        mediaStreamRef.current
-          .getTracks()
-          .forEach((track) =>
-            track.stop()
-          );
-        mediaStreamRef.current = null;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.stop();
+        } catch {
+          // Recognition may already be stopped.
+        }
       }
+
+      stopMediaStream();
 
       // Safety: if this page unmounts, restore MainLayout navbar.
       sessionStorage.removeItem('ai_interview_active');
@@ -1284,1080 +1773,350 @@ const AIInterview = () => {
   }
 
   /* =======================================================
-     MAIN UI
+     FINAL UI
+     IMPORTANT: Existing fullscreen / ESC / responsive rules above
+     are intentionally preserved. Only the presentation is updated.
      ======================================================= */
 
-  return (
-    <div
-      className={`bg-gradient-to-br from-[#020817] via-[#061426] to-[#020617] text-white ${
-        interviewStarted || isFullscreen
-          ? `
-              min-h-screen
-              lg:h-[100dvh]
-              lg:min-h-0
-              lg:max-h-[100dvh]
-              lg:overflow-hidden
-              lg:flex
-              lg:flex-col
-            `
-          : 'min-h-[calc(100vh-80px)]'
-      }`}
-    >
-      {/* =================================================
-          TOP BAR
-          ================================================= */}
+  const interviewType =
+    currentInterview?.interview_type ||
+    currentInterview?.type ||
+    'technical';
 
-      <div className="shrink-0 border-b border-white/10 bg-slate-950/70 backdrop-blur-xl">
-        <div
-          className="
-            mx-auto
-            flex
-            w-full
-            max-w-[1500px]
-            items-center
-            justify-between
-            px-[clamp(12px,1.5vw,20px)]
-            py-[clamp(8px,1.2vh,16px)]
-          "
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className="
-                flex
-                h-[clamp(34px,5vh,40px)]
-                w-[clamp(34px,5vh,40px)]
-                items-center
-                justify-center
-                rounded-xl
-                border
-                border-cyan-400/30
-                bg-cyan-500/10
-              "
-            >
-              <Bot className="h-6 w-6 text-cyan-400" />
-            </div>
+  const interviewTypeLabel =
+    interviewType.toLowerCase() === 'non-technical'
+      ? 'Non-Technical Interview'
+      : 'Technical Interview';
 
-            <div>
-              <h1 className="font-bold">
-                MockMind AI
-              </h1>
+  const userName =
+    currentInterview?.name ||
+    JSON.parse(localStorage.getItem('user') || '{}')?.name ||
+    'Candidate';
 
-              <p className="text-xs text-gray-500">
-                AI Interview Room
-              </p>
-            </div>
+  const totalTimeLabel = formatTime(totalTimeLeft);
+  const answerProgress = Math.max(
+    0,
+    Math.min(100, (timeLeft / QUESTION_TIME) * 100)
+  );
+
+  const questionStatus = (index) => {
+    if (!interviewStarted) return 'Pending';
+    if (index < currentQuestionIndex) return 'Completed';
+    if (index === currentQuestionIndex) return 'In Progress';
+    return 'Pending';
+  };
+
+  const statusClass = (index) => {
+    if (index < currentQuestionIndex)
+      return 'border-emerald-400/20 bg-emerald-500/5';
+    if (index === currentQuestionIndex)
+      return 'border-violet-500/50 bg-violet-600/30';
+    return 'border-white/5 bg-slate-950/40';
+  };
+
+  if (interviewComplete) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#020817] via-[#061426] to-[#020617] px-4 text-white">
+        <div className="w-full max-w-xl rounded-3xl border border-cyan-500/20 bg-slate-950/90 p-8 text-center shadow-2xl">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
+            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
           </div>
-
+          <h1 className="text-3xl font-bold">Interview Complete</h1>
+          <p className="mt-3 text-gray-400">
+            You have completed your {selectedRole} interview.
+          </p>
           <button
-            onClick={handleEndInterview}
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-red-400/20
-              px-[clamp(10px,1vw,16px)]
-              py-[clamp(7px,1vh,8px)]
-              text-sm
-              text-red-300
-              transition
-              hover:bg-red-500/10
-            "
+            onClick={() => navigate('/feedback')}
+            className="mt-8 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white transition hover:opacity-90"
           >
-            <LogOut className="h-4 w-4" />
-
-            <span className="hidden sm:inline">
-              Exit Interview
-            </span>
+            Continue to Feedback
           </button>
         </div>
       </div>
+    );
+  }
 
-      {/* =================================================
-          CONTENT
-          ================================================= */}
-
-      <main
-        className={`
-          mx-auto
-          w-full
-          max-w-[1500px]
-          px-[clamp(10px,1.5vw,24px)]
-
-          ${
-            interviewStarted ||
-            isFullscreen
-              ? `
-                  lg:flex-1
-                  lg:min-h-0
-                  lg:overflow-hidden
-                  lg:flex
-                  lg:flex-col
-                  py-[clamp(7px,1.1vh,18px)]
-                `
-              : 'py-5'
-          }
-        `}
-      >
-        {/* =================================================
-            DOMAIN + PROGRESS
-            ================================================= */}
-
-        <section
-          className="
-            shrink-0
-            text-center
-            mb-[clamp(7px,1.2vh,20px)]
-          "
-        >
-          <h2
-            className="
-              font-bold
-              text-cyan-300
-              text-[clamp(20px,2vw,30px)]
-              leading-tight
-            "
-          >
-            {selectedRole} Interview
-          </h2>
-
-          <p
-            className="
-              mt-[clamp(2px,0.4vh,4px)]
-              text-[clamp(11px,1vw,14px)]
-              text-gray-300
-            "
-          >
-            {interviewStarted
-              ? `Question ${
-                  currentQuestionIndex + 1
-                } of ${MAX_QUESTIONS}`
-              : 'Ready to begin'}
-          </p>
-
-          <div
-            className="
-              mx-auto
-              flex
-              max-w-xs
-              items-center
-              justify-center
-              gap-[clamp(7px,0.8vw,12px)]
-              mt-[clamp(5px,0.8vh,12px)]
-            "
-          >
-            {Array.from({
-              length: MAX_QUESTIONS,
-            }).map((_, index) => (
-              <div
-                key={index}
-                className={`rounded-full transition-all h-[clamp(8px,1.2vh,12px)] w-[clamp(8px,1.2vh,12px)] ${
-                  interviewStarted &&
-                  index ===
-                    currentQuestionIndex
-                    ? 'scale-110 bg-cyan-400 shadow-[0_0_15px_rgba(34,211,238,0.8)]'
-                    : index <
-                        currentQuestionIndex
-                      ? 'bg-emerald-400'
-                      : 'bg-slate-600'
-                }`}
-              />
-            ))}
+  return (
+    <div
+      className={`min-h-screen bg-[#020817] text-white ${
+        interviewStarted || isFullscreen
+          ? 'lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden'
+          : ''
+      }`}
+    >
+      {/* HEADER */}
+      <header className="border-b border-white/10 bg-[#020817]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[58px] w-full max-w-[1500px] items-center justify-between px-[clamp(14px,1.7vw,28px)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg">
+              <Bot className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-[clamp(18px,1.5vw,24px)] font-bold">MockMind AI</span>
           </div>
 
-          <div
-            className="
-              mx-auto
-              max-w-2xl
-              overflow-hidden
-              rounded-full
-              bg-white/10
-              h-[clamp(4px,0.6vh,6px)]
-              mt-[clamp(5px,0.8vh,12px)]
-            "
-          >
-            <div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500 transition-all duration-500"
-              style={{
-                width: interviewStarted
-                  ? `${progress}%`
-                  : '0%',
-              }}
-            />
-          </div>
-        </section>
-
-        {/* =================================================
-            ERROR
-            ================================================= */}
-
-        {error && (
-          <div
-            className="
-              mx-auto
-              mb-[clamp(6px,1vh,16px)]
-              max-w-4xl
-              shrink-0
-              rounded-xl
-              border
-              border-red-500/20
-              bg-red-500/10
-              px-4
-              py-2
-              text-center
-              text-sm
-              text-red-300
-            "
-          >
-            {error}
-          </div>
-        )}
-
-        {/* =================================================
-            RESPONSIVE INTERVIEW WORKSPACE
-            ================================================= */}
-
-        <div
-          className={`
-            grid
-            grid-cols-1
-            items-stretch
-            gap-[clamp(10px,1.2vw,20px)]
-
-            lg:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.2fr)]
-
-            ${
-              interviewStarted ||
-              isFullscreen
-                ? `
-                    lg:flex-1
-                    lg:min-h-0
-                    lg:overflow-hidden
-                  `
-                : ''
-            }
-          `}
-        >
-          {/* =================================================
-              LEFT PANEL
-              ================================================= */}
-
-          <div
-            className={`
-              flex
-              min-h-0
-              flex-col
-              gap-[clamp(8px,1.2vh,16px)]
-
-              ${
-                interviewStarted ||
-                isFullscreen
-                  ? 'lg:h-full lg:overflow-hidden'
-                  : ''
-              }
-            `}
-          >
-            {/* =================================================
-                CAMERA
-                ================================================= */}
-
-            <section
-              className="
-                shrink-0
-                rounded-2xl
-                border
-                border-white/10
-                bg-slate-950/60
-                p-[clamp(10px,1.4vh,16px)]
-                shadow-xl
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  mb-[clamp(7px,1vh,16px)]
-                "
-              >
-                <h3
-                  className="
-                    flex
-                    items-center
-                    gap-2
-                    font-semibold
-                    text-[clamp(13px,1.1vw,16px)]
-                  "
-                >
-                  <Camera className="h-5 w-5" />
-
-                  Live Preview
-                </h3>
-
-                <div
-                  className={`flex items-center gap-2 text-[clamp(11px,1vw,14px)] ${
-                    cameraOn
-                      ? 'text-emerald-400'
-                      : 'text-red-400'
-                  }`}
-                >
-                  <span
-                    className={`h-2.5 w-2.5 rounded-full ${
-                      cameraOn
-                        ? 'bg-emerald-400'
-                        : 'bg-red-400'
-                    }`}
-                  />
-
-                  {cameraOn
-                    ? 'Camera On'
-                    : 'Camera Off'}
-                </div>
-              </div>
-
-              {/* CAMERA VIDEO */}
-
-              <div className="relative overflow-hidden rounded-xl bg-black">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className={`
-                    w-full
-                    object-cover
-                    transition-opacity
-
-                    h-[clamp(190px,34vh,340px)]
-
-                    ${
-                      cameraOn
-                        ? 'opacity-100'
-                        : 'opacity-0'
-                    }
-                  `}
-                />
-
-                {!cameraOn && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
-                    <VideoOff className="mb-3 h-12 w-12" />
-
-                    <p>
-                      Camera is turned off
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* CAMERA + MIC STATUS */}
-
-              <div
-                className="
-                  grid
-                  grid-cols-2
-                  gap-[clamp(6px,0.8vw,12px)]
-                  mt-[clamp(7px,1vh,16px)]
-                "
-              >
-                <button
-                  onClick={toggleCamera}
-                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-[clamp(7px,1vh,12px)] text-[clamp(11px,1vw,14px)] ${
-                    cameraOn
-                      ? 'border-emerald-400/20 bg-emerald-500/5 text-emerald-400'
-                      : 'border-red-400/20 bg-red-500/5 text-red-400'
-                  }`}
-                >
-                  {cameraOn ? (
-                    <Video className="h-4 w-4" />
-                  ) : (
-                    <VideoOff className="h-4 w-4" />
-                  )}
-
-                  {cameraOn
-                    ? 'Camera On'
-                    : 'Enable Camera'}
-                </button>
-
-                <div
-                  className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-[clamp(7px,1vh,12px)] text-[clamp(11px,1vw,14px)] ${
-                    micAvailable
-                      ? 'border-emerald-400/20 bg-emerald-500/5 text-emerald-400'
-                      : 'border-red-400/20 bg-red-500/5 text-red-400'
-                  }`}
-                >
-                  {micAvailable ? (
-                    <Mic className="h-4 w-4" />
-                  ) : (
-                    <MicOff className="h-4 w-4" />
-                  )}
-
-                  {micAvailable
-                    ? 'Mic Ready'
-                    : 'Mic Unavailable'}
-                </div>
-              </div>
-            </section>
-
-            {/* =================================================
-                CURRENT QUESTION
-                ================================================= */}
-
-            <section
-              className={`
-                min-h-0
-                rounded-2xl
-                border
-                border-violet-500/40
-                bg-gradient-to-br
-                from-slate-950/90
-                to-blue-950/30
-                p-[clamp(10px,1.4vh,20px)]
-
-                ${
-                  interviewStarted ||
-                  isFullscreen
-                    ? 'lg:flex-1 lg:flex lg:flex-col lg:overflow-hidden'
-                    : ''
-                }
-              `}
-            >
-              <div className="flex shrink-0 items-center gap-2 text-[clamp(11px,1vw,14px)] font-medium text-violet-300">
-                <CircleHelp className="h-5 w-5" />
-
-                Current Question
-              </div>
-
-              <div
-                className={`
-                  mt-[clamp(7px,1.2vh,20px)]
-                  min-h-[55px]
-
-                  ${
-                    interviewStarted ||
-                    isFullscreen
-                      ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto'
-                      : 'md:min-h-[90px]'
-                  }
-                `}
-              >
-                {currentQuestion ? (
-                  <p
-                    className="
-                      font-semibold
-                      leading-relaxed
-                      text-white
-                      text-[clamp(14px,1.35vw,20px)]
-                    "
-                  >
-                    {currentQuestion}
-                  </p>
-                ) : (
-                  <p className="text-[clamp(12px,1vw,16px)] text-gray-500">
-                    Start the interview to
-                    receive your first
-                    question.
-                  </p>
-                )}
-              </div>
-
-              {/* TIMER */}
-
-              <div
-                className="
-                  mt-[clamp(7px,1vh,20px)]
-                  flex
-                  shrink-0
-                  items-center
-                  justify-between
-                  border-t
-                  border-white/10
-                  pt-[clamp(7px,1vh,16px)]
-                "
-              >
-                <span className="text-[clamp(11px,1vw,14px)] text-gray-400">
-                  Time Left
-                </span>
-
-                <span
-                  className={`font-mono font-bold text-[clamp(16px,1.5vw,20px)] ${
-                    !interviewStarted
-                      ? 'text-gray-500'
-                      : timeLeft <= 10
-                        ? 'text-red-400'
-                        : 'text-emerald-400'
-                  }`}
-                >
-                  {interviewStarted
-                    ? formatTime(timeLeft)
-                    : '--:--'}
-                </span>
-              </div>
-            </section>
+          <div className="hidden items-center gap-3 text-[clamp(13px,1.1vw,17px)] font-medium md:flex">
+            <span className="text-violet-300">▥▥▥</span>
+            <span>AI Interview</span>
+            <span className="text-gray-500">•</span>
+            <span>Round 3</span>
           </div>
 
-          {/* =================================================
-              RIGHT PANEL
-              ================================================= */}
-
-          <section
-            className={`
-              flex
-              min-h-0
-              flex-col
-              overflow-hidden
-              rounded-2xl
-              border
-              border-cyan-500/20
-              bg-slate-950/60
-              shadow-[0_0_40px_rgba(6,182,212,0.06)]
-
-              ${
-                interviewStarted ||
-                isFullscreen
-                  ? 'lg:h-full'
-                  : 'min-h-[650px]'
-              }
-            `}
-          >
-            {/* =================================================
-                AI ROBOT AREA
-                ================================================= */}
-
-            <div
-              className={`
-                relative
-                flex
-                shrink-0
-                flex-col
-                items-center
-                justify-center
-                overflow-hidden
-                border-b
-                border-white/10
-                p-[clamp(8px,1.3vh,24px)]
-
-                ${
-                  interviewStarted ||
-                  isFullscreen
-                    ? 'h-[clamp(175px,29vh,300px)]'
-                    : 'min-h-[330px]'
-                }
-              `}
-            >
-              {/* REPLAY */}
-
+          <div className="flex items-center gap-3">
+            {!interviewStarted && (
               <button
-                onClick={replayQuestion}
-                disabled={!currentQuestion}
-                className="
-                  absolute
-                  right-[clamp(8px,1vw,16px)]
-                  top-[clamp(8px,1vh,16px)]
-                  z-30
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  border
-                  border-white/10
-                  bg-slate-900/80
-                  px-[clamp(9px,1vw,16px)]
-                  py-[clamp(6px,0.8vh,8px)]
-                  text-[clamp(10px,0.9vw,14px)]
-                  text-gray-200
-                  transition
-                  hover:border-cyan-400/30
-                  hover:text-cyan-300
-                  disabled:cursor-not-allowed
-                  disabled:opacity-40
-                "
+                onClick={() => navigate('/dashboard')}
+                className="hidden rounded-xl border border-blue-400/30 bg-slate-900/60 px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-blue-400/60 hover:bg-blue-500/10 sm:block"
               >
-                <RotateCcw className="h-4 w-4" />
-
-                <span className="hidden sm:inline">
-                  Replay Question
-                </span>
+                Dashboard
               </button>
-
-              {/* =================================================
-                  WAVEFORM
-                  ================================================= */}
-
-              <div className="pointer-events-none absolute left-[clamp(12px,3vw,32px)] right-[clamp(12px,3vw,32px)] top-1/2 flex -translate-y-1/2 items-center justify-between gap-[clamp(1px,0.25vw,4px)] opacity-35">
-                {Array.from({
-                  length: 60,
-                }).map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-1 rounded-full bg-cyan-400 ${
-                      aiSpeaking
-                        ? 'mockmind-wave-bar'
-                        : ''
-                    }`}
-                    style={{
-                      height: `${
-                        8 +
-                        ((index * 13) % 45)
-                      }px`,
-                      animationDelay: `${
-                        (index % 10) * 0.05
-                      }s`,
-                    }}
-                  />
-                ))}
-              </div>
-
-              {/* =================================================
-                  RESPONSIVE COMPLETE ROBOT
-
-                  IMPORTANT:
-                  We scale the entire robot wrapper.
-                  No part of the robot is cropped.
-                  ================================================= */}
-
-              <div
-                className="
-                  mockmind-robot-responsive
-                  relative
-                  z-10
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-                <AIInterviewerAvatar
-                  speaking={aiSpeaking}
-                />
-              </div>
-
-              {/* SPEAKING STATUS */}
-
-              <div className="relative z-10 mt-[clamp(0px,0.4vh,8px)] shrink-0 text-center">
-                <div className="flex items-center justify-center gap-2">
-                  {aiSpeaking && (
-                    <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
-                  )}
-
-                  <p className="text-[clamp(11px,1vw,16px)] font-semibold text-cyan-300">
-                    {aiSpeaking
-                      ? 'AI Interviewer is speaking...'
-                      : interviewStarted
-                        ? 'AI Interviewer'
-                        : 'Ready for Interview'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* =================================================
-                QUESTION DISPLAY
-                ================================================= */}
-
-            <div
-              className="
-                shrink-0
-                px-[clamp(10px,1.4vw,20px)]
-                pt-[clamp(8px,1.1vh,20px)]
-              "
-            >
-              <div
-                className="
-                  mx-auto
-                  flex
-                  max-w-2xl
-                  items-start
-                  gap-[clamp(8px,1vw,12px)]
-                  rounded-2xl
-                  border
-                  border-white/10
-                  bg-slate-900/80
-                  p-[clamp(9px,1.2vh,16px)]
-                "
-              >
-                <div
-                  className="
-                    mt-1
-                    flex
-                    h-[clamp(30px,4vh,36px)]
-                    w-[clamp(30px,4vh,36px)]
-                    flex-shrink-0
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-cyan-500/10
-                  "
-                >
-                  <Volume2 className="h-5 w-5 text-cyan-300" />
-                </div>
-
-                <div className="min-w-0">
-                  <p className="mb-1 text-[10px] uppercase tracking-wider text-gray-500 sm:text-xs">
-                    AI Question
-                  </p>
-
-                  <p className="text-[clamp(12px,1.05vw,16px)] font-medium leading-relaxed text-white">
-                    {currentQuestion ||
-                      'Click Start Interview to begin your interview.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* =================================================
-                ANSWER AREA
-
-                Only this area receives internal scrolling when
-                the laptop screen is too short.
-                ================================================= */}
-
-            <div
-              className={`
-                flex-1
-                min-h-0
-                p-[clamp(10px,1.3vh,20px)]
-
-                ${
-                  interviewStarted ||
-                  isFullscreen
-                    ? 'mockmind-answer-scroll overflow-y-auto'
-                    : ''
-                }
-              `}
-            >
-              {/* =================================================
-                  START SCREEN
-                  ================================================= */}
-
-              {!interviewStarted && (
-                <div className="flex h-full min-h-[220px] flex-col items-center justify-center">
-                  <h3 className="text-xl font-semibold">
-                    Ready to start?
-                  </h3>
-
-                  <p className="mt-2 max-w-md text-center text-sm text-gray-400">
-                    The AI interviewer will
-                    ask you {MAX_QUESTIONS}{' '}
-                    questions. Each question
-                    will have a{' '}
-                    {QUESTION_TIME}-second
-                    answer window.
-                  </p>
-
-                  <p className="mt-2 max-w-md text-center text-xs text-cyan-400/70">
-                    Starting the interview
-                    will open the interview
-                    room in fullscreen mode.
-                  </p>
-
-                  <button
-                    onClick={startInterview}
-                    className="mt-6 rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-8 py-3 font-semibold text-white transition hover:scale-[1.02]"
-                  >
-                    Start Interview
-                  </button>
-                </div>
-              )}
-
-              {/* =================================================
-                  ACTIVE INTERVIEW
-                  ================================================= */}
-
-              {interviewStarted && (
-                <div className="space-y-[clamp(8px,1.1vh,16px)]">
-                  {/* =============================================
-                      VOICE ANSWER
-                      ============================================= */}
-
-                  <div className="rounded-xl border border-violet-500/20 bg-violet-500/5">
-                    <div
-                      className="
-                        flex
-                        items-center
-                        justify-between
-                        border-b
-                        border-white/5
-                        px-[clamp(10px,1vw,16px)]
-                        py-[clamp(7px,0.9vh,12px)]
-                      "
-                    >
-                      <div className="flex items-center gap-2 text-[clamp(11px,1vw,14px)] font-medium text-violet-300">
-                        <Mic className="h-5 w-5" />
-
-                        Answer with Voice
-                      </div>
-
-                      {recording && (
-                        <div className="flex items-center gap-2 text-[clamp(10px,0.9vw,14px)] text-emerald-400">
-                          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-
-                          Listening...
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-[clamp(8px,1vh,12px)]">
-                      <button
-                        onClick={
-                          toggleVoiceRecording
-                        }
-                        disabled={
-                          !voiceSupported
-                        }
-                        className={`mb-[clamp(7px,1vh,12px)] flex w-full items-center justify-center gap-2 rounded-xl border py-[clamp(7px,1vh,10px)] text-[clamp(11px,1vw,14px)] font-medium transition ${
-                          recording
-                            ? 'border-red-400/30 bg-red-500/10 text-red-300'
-                            : 'border-violet-400/20 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20'
-                        } disabled:cursor-not-allowed disabled:opacity-40`}
-                      >
-                        {recording ? (
-                          <>
-                            <Square className="h-4 w-4" />
-
-                            Stop Recording
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="h-4 w-4" />
-
-                            Start Voice Answer
-                          </>
-                        )}
-                      </button>
-
-                      <div
-                        className="
-                          rounded-xl
-                          border
-                          border-white/5
-                          bg-black/20
-                          p-[clamp(8px,1vh,12px)]
-                          min-h-[clamp(48px,7vh,70px)]
-                          max-h-[clamp(65px,10vh,110px)]
-                          overflow-y-auto
-                        "
-                      >
-                        {voiceTranscript ? (
-                          <p className="text-[clamp(11px,1vw,16px)] leading-relaxed text-gray-200">
-                            {
-                              voiceTranscript
-                            }
-                          </p>
-                        ) : (
-                          <p className="text-[clamp(10px,0.9vw,14px)] text-gray-500">
-                            {voiceSupported
-                              ? 'Your spoken answer will appear here...'
-                              : 'Speech recognition is not supported in this browser.'}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* =============================================
-                      OR
-                      ============================================= */}
-
-                  <div className="flex items-center gap-4 py-[clamp(1px,0.3vh,4px)]">
-                    <div className="h-px flex-1 bg-white/10" />
-
-                    <span className="text-xs font-semibold text-gray-500">
-                      OR
-                    </span>
-
-                    <div className="h-px flex-1 bg-white/10" />
-                  </div>
-
-                  {/* =============================================
-                      TEXT ANSWER
-                      ============================================= */}
-
-                  <div>
-                    <label className="mb-[clamp(5px,0.7vh,8px)] flex items-center gap-2 text-[clamp(11px,1vw,14px)] text-violet-300">
-                      <Send className="h-4 w-4" />
-
-                      Type your answer
-                    </label>
-
-                    <div className="relative">
-                      <textarea
-                        value={textAnswer}
-                        onChange={(event) =>
-                          setTextAnswer(
-                            event.target.value.slice(
-                              0,
-                              2000
-                            )
-                          )
-                        }
-                        rows={3}
-                        maxLength={2000}
-                        placeholder="Type your answer here..."
-                        className="
-                          w-full
-                          resize-none
-                          rounded-xl
-                          border
-                          border-white/10
-                          bg-black/30
-                          px-4
-                          py-[clamp(8px,1vh,12px)]
-                          pr-16
-                          text-[clamp(11px,1vw,16px)]
-                          text-white
-                          outline-none
-                          transition
-                          placeholder:text-gray-600
-                          focus:border-violet-500/50
-                          min-h-[70px]
-                          max-h-[clamp(80px,13vh,130px)]
-                        "
-                      />
-
-                      <span className="absolute bottom-3 right-3 text-xs text-gray-600">
-                        {textAnswer.length}
-                        /2000
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* =================================================
-                CONTROLS
-
-                Controls remain outside the scroll area so the
-                candidate can always reach Submit / Skip / End.
-                ================================================= */}
+            )}
 
             {interviewStarted && (
-              <div
-                className="
-                  shrink-0
-                  grid
-                  grid-cols-1
-                  gap-[clamp(6px,0.8vw,12px)]
-                  border-t
-                  border-white/10
-                  p-[clamp(8px,1vh,16px)]
-                  sm:grid-cols-3
-                "
+              <button
+                onClick={handleEndInterview}
+                className="flex items-center gap-2 rounded-xl border border-red-500/60 px-4 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
               >
-                <button
-                  onClick={
-                    handleSkipQuestion
-                  }
-                  disabled={loading}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-white/10
-                    px-[clamp(8px,1vw,16px)]
-                    py-[clamp(7px,1vh,12px)]
-                    text-[clamp(10px,0.9vw,14px)]
-                    text-gray-300
-                    transition
-                    hover:bg-white/5
-                    disabled:opacity-40
-                  "
-                >
-                  <SkipForward className="h-4 w-4" />
-
-                  Skip Question
-                </button>
-
-                <button
-                  onClick={
-                    handleSubmitAndNext
-                  }
-                  disabled={loading}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    bg-gradient-to-r
-                    from-violet-600
-                    to-blue-600
-                    px-[clamp(8px,1vw,16px)]
-                    py-[clamp(7px,1vh,12px)]
-                    text-[clamp(10px,0.9vw,14px)]
-                    font-semibold
-                    text-white
-                    transition
-                    hover:opacity-90
-                    disabled:opacity-50
-                  "
-                >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      {currentQuestionIndex ===
-                      MAX_QUESTIONS - 1
-                        ? 'Submit & Finish'
-                        : 'Submit & Next'}
-
-                      <Send className="h-4 w-4" />
-                    </>
-                  )}
-                </button>
-
-                <button
-                  onClick={
-                    handleEndInterview
-                  }
-                  disabled={loading}
-                  className="
-                    flex
-                    items-center
-                    justify-center
-                    gap-2
-                    rounded-xl
-                    border
-                    border-red-500/20
-                    px-[clamp(8px,1vw,16px)]
-                    py-[clamp(7px,1vh,12px)]
-                    text-[clamp(10px,0.9vw,14px)]
-                    text-red-400
-                    transition
-                    hover:bg-red-500/10
-                    disabled:opacity-40
-                  "
-                >
-                  <Flag className="h-4 w-4" />
-
-                  End Interview
-                </button>
-              </div>
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Exit Interview</span>
+              </button>
             )}
-          </section>
-        </div>
 
-        {/* =================================================
-            PRIVACY
+            <button
+              onClick={handleFullscreenButton}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-900/60 text-gray-200 transition hover:border-violet-400/40 hover:text-violet-300"
+              aria-label="Fullscreen"
+            >
+              <Expand className="h-5 w-5" />
+            </button>
 
-            Hide during active fullscreen interview because it
-            unnecessarily consumes vertical interview space.
-            ================================================= */}
-
-        {!interviewStarted && (
-          <div className="mt-5 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-center text-xs text-gray-500">
-            Your answers are used only for
-            interview evaluation. Camera
-            preview remains within your
-            interview session.
+            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-slate-900/70 px-3 py-1.5 sm:flex">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-500 text-xs font-bold text-slate-900">
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <span className="max-w-[110px] truncate text-sm font-medium">{userName}</span>
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            </div>
           </div>
-        )}
-      </main>
+        </div>
+      </header>
+
+      {/* PRE-INTERVIEW */}
+      {!interviewStarted && (
+        <main className="mx-auto w-full max-w-[1500px] px-[clamp(14px,1.7vw,28px)] pb-8 pt-6">
+          <section className="mb-5 flex items-center justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <ShieldCheck className="mt-1 h-10 w-10 shrink-0 text-emerald-400" />
+              <div>
+                <h1 className="text-[clamp(20px,1.8vw,28px)] font-bold">Get Ready for Your AI Interview</h1>
+                <p className="mt-1 text-sm text-gray-300">Please check your setup before starting the interview.</p>
+              </div>
+            </div>
+            <div className="hidden items-center gap-3 sm:flex">
+              <Clock3 className="h-10 w-10 text-violet-400" />
+              <div className="text-right">
+                <p className="text-xs text-gray-300">Total Time Left</p>
+                <p className="font-mono text-3xl font-bold">45:00</p>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr_0.75fr]">
+            {/* CAMERA */}
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-violet-400" />Your Camera</h2>
+                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cameraOn ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  ● {cameraOn ? 'LIVE' : 'OFF'}
+                </span>
+              </div>
+              <div className="relative overflow-hidden rounded-xl bg-black">
+                <video ref={videoRef} autoPlay playsInline muted className={`aspect-[16/9] w-full object-cover ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
+                {!cameraOn && <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500"><VideoOff className="mb-3 h-12 w-12" /><p>Camera is turned off</p></div>}
+                <button onClick={handleFullscreenButton} className="absolute right-3 top-3 rounded-lg bg-black/60 p-2 text-white"><Expand className="h-4 w-4" /></button>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-xl border border-emerald-400/10 bg-emerald-500/5 p-3 text-center"><Video className="mx-auto h-5 w-5 text-emerald-400" /><p className="mt-1 text-xs text-gray-300">Camera</p><p className="text-sm font-semibold text-emerald-400">{cameraOn ? 'Connected' : 'Not Ready'}</p></div>
+                <div className="rounded-xl border border-emerald-400/10 bg-emerald-500/5 p-3 text-center"><UserRound className="mx-auto h-5 w-5 text-emerald-400" /><p className="mt-1 text-xs text-gray-300">Face Detection</p><p className="text-sm font-semibold text-emerald-400">{cameraOn ? 'Good' : 'Waiting'}</p></div>
+                <div className="rounded-xl border border-emerald-400/10 bg-emerald-500/5 p-3 text-center"><Lightbulb className="mx-auto h-5 w-5 text-emerald-400" /><p className="mt-1 text-xs text-gray-300">Lighting</p><p className="text-sm font-semibold text-emerald-400">{cameraOn ? 'Good' : 'Check'}</p></div>
+              </div>
+            </div>
+
+            {/* AI */}
+            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-center shadow-xl">
+              <div className="mb-3 flex w-full items-center gap-2 text-left font-semibold"><Bot className="h-5 w-5 text-violet-400" />AI Interviewer</div>
+              <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden">
+                <div className="pointer-events-none absolute left-4 right-4 top-1/2 flex -translate-y-1/2 items-center justify-between gap-1 opacity-60">
+                  {Array.from({ length: 42 }).map((_, i) => <span key={i} className="h-1 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" style={{ height: `${6 + ((i * 11) % 32)}px` }} />)}
+                </div>
+                <div className="relative z-10 scale-[0.88] sm:scale-100"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
+              </div>
+              <div className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-5 py-2 text-sm font-semibold text-emerald-400"><CircleCheck className="mr-2 inline h-5 w-5" />AI Voice Ready</div>
+              <p className="mt-4 text-gray-200">I'm ready to conduct your interview.</p>
+              <p className="mt-1 text-sm text-gray-400">Click “Start Interview” when you are ready.</p>
+            </div>
+
+            {/* OVERVIEW */}
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5 shadow-xl">
+              <h2 className="mb-5 font-semibold">Interview Overview</h2>
+              <div className="space-y-5">
+                <div className="flex gap-3"><ClipboardCheck className="h-6 w-6 text-violet-400" /><div><p className="text-xs text-gray-400">Interview Type</p><p className="font-medium">{interviewTypeLabel}</p></div></div>
+                <div className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-blue-400" /><div><p className="text-xs text-gray-400">Total Questions</p><p className="font-medium">{MAX_QUESTIONS} Questions</p></div></div>
+                <div className="flex gap-3"><Clock3 className="h-6 w-6 text-amber-400" /><div><p className="text-xs text-gray-400">Time per Question</p><p className="font-medium">{QUESTION_TIME} Seconds</p></div></div>
+                <div className="flex gap-3"><Clock3 className="h-6 w-6 text-cyan-400" /><div><p className="text-xs text-gray-400">Total Duration</p><p className="font-medium">~ 45 Minutes</p></div></div>
+                <div className="flex gap-3"><Globe2 className="h-6 w-6 text-cyan-400" /><div><p className="text-xs text-gray-400">Language</p><p className="font-medium">English</p></div></div>
+                <div className="flex gap-3"><Volume2 className="h-6 w-6 text-emerald-400" /><div><p className="text-xs text-gray-400">AI Voice</p><p className="font-medium text-emerald-400">Enabled</p></div></div>
+              </div>
+            </div>
+          </section>
+
+          {/* CHECKLIST */}
+          <section className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
+            <h2 className="mb-4 flex items-center gap-2 font-semibold"><ClipboardCheck className="h-5 w-5 text-blue-400" />Pre-Interview Checklist</h2>
+            <div className="grid gap-3 md:grid-cols-5">
+              {[
+                [Video, 'Camera', cameraOn ? 'Ready' : 'Waiting', cameraOn],
+                [Mic, 'Microphone', micAvailable ? 'Ready' : 'Waiting', micAvailable],
+                [Volume2, 'AI Voice', 'Ready', true],
+                [Wifi, 'Internet Connection', 'Stable', true],
+                [UserRound, 'Environment', 'Good', true],
+              ].map(([Icon, label, value, ready]) => (
+                <div key={label} className="flex items-center gap-3 rounded-xl border border-cyan-400/10 bg-slate-950/40 p-3">
+                  <Icon className={ready ? 'h-6 w-6 text-emerald-400' : 'h-6 w-6 text-amber-400'} />
+                  <div className="min-w-0"><p className="text-sm font-medium">{label}</p><p className={`text-sm font-semibold ${ready ? 'text-emerald-400' : 'text-amber-400'}`}>{value}</p></div>
+                  <ChevronRight className="ml-auto h-4 w-4 text-emerald-400" />
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-center text-sm font-semibold text-emerald-400"><CircleCheck className="mr-2 inline h-5 w-5" />You are all set! Good luck with your interview.</p>
+          </section>
+
+          {/* LOWER PREP AREA */}
+          <section className="mt-4 grid gap-4 lg:grid-cols-[0.85fr_1.25fr_0.9fr]">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+              <h2 className="mb-4 flex items-center gap-2 font-semibold"><Lightbulb className="h-5 w-5 text-amber-300" />Interview Tips</h2>
+              <ul className="space-y-3 text-sm text-gray-300">
+                {['Speak clearly and at a normal pace', 'Maintain good eye contact', 'Take your time to think', 'Be honest and confident', 'Ensure a quiet environment'].map((x) => <li key={x}><Check className="mr-2 inline h-4 w-4 text-violet-400" />{x}</li>)}
+              </ul>
+            </div>
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-center">
+              <button onClick={startInterview} className="w-full max-w-md rounded-2xl bg-gradient-to-r from-blue-600 to-violet-600 px-8 py-5 text-[clamp(20px,2vw,30px)] font-bold shadow-xl transition hover:scale-[1.01] hover:opacity-95">Start Interview <span className="ml-3">→</span></button>
+              <p className="mt-4 text-sm text-gray-400"><LockKeyhole className="mr-2 inline h-4 w-4" />Your interview will start in fullscreen mode</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
+              <h2 className="mb-4 flex items-center gap-2 font-semibold"><CircleHelp className="h-5 w-5 text-blue-400" />What to Expect</h2>
+              <ul className="space-y-3 text-sm text-gray-300">
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will ask you {MAX_QUESTIONS} questions</li>
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />{QUESTION_TIME} seconds to answer each</li>
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />You can speak or type your answer</li>
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will evaluate your responses</li>
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />Detailed feedback after completion</li>
+              </ul>
+            </div>
+          </section>
+
+          <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-center text-sm text-gray-400"><Info className="mr-2 inline h-5 w-5" />Once you click “Start Interview”, the session will begin and you cannot pause or go back.</div>
+        </main>
+      )}
+
+      {/* ACTIVE INTERVIEW */}
+      {interviewStarted && (
+        <main className="mx-auto flex min-h-[calc(100dvh-58px)] w-full max-w-[1550px] flex-col overflow-y-auto px-[clamp(12px,1.5vw,24px)] py-[clamp(10px,1.2vh,16px)] lg:h-[calc(100dvh-58px)] lg:min-h-0 lg:overflow-hidden">
+          <section className="mb-3 flex shrink-0 items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <ShieldCheck className="mt-1 h-9 w-9 text-emerald-400" />
+              <div><h1 className="text-lg font-bold text-emerald-400 sm:text-xl">Interview in Progress</h1><p className="text-xs text-gray-300 sm:text-sm">Answer clearly and confidently. You're doing great!</p></div>
+            </div>
+            <div className="flex items-center gap-2"><Clock3 className="h-9 w-9 text-violet-400" /><div className="text-right"><p className="text-xs text-gray-300">Total Time Left</p><p className="font-mono text-2xl font-bold sm:text-3xl">{totalTimeLabel}</p></div></div>
+          </section>
+
+          <section className="grid shrink-0 gap-3 lg:h-[clamp(285px,38vh,390px)] lg:grid-cols-[0.95fr_0.95fr_0.52fr]">
+            {/* VIDEO */}
+            <div className="flex min-h-[250px] flex-col rounded-2xl border border-white/10 bg-slate-950/60 p-3 shadow-xl">
+              <div className="mb-2 flex shrink-0 items-center justify-between"><h2 className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-blue-400" />Your Video</h2><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">● LIVE</span></div>
+              <div className="relative min-h-[190px] flex-1 overflow-hidden rounded-xl bg-black">
+                <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-cover ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
+                {!cameraOn && <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500"><VideoOff className="mb-3 h-12 w-12" /><p>Camera is turned off</p></div>}
+                <button onClick={handleFullscreenButton} className="absolute right-3 top-3 rounded-lg bg-black/60 p-2"><Expand className="h-4 w-4" /></button>
+              </div>
+              <div className="mt-2 flex shrink-0 items-center justify-between text-sm"><span className="text-emerald-400"><Video className="mr-2 inline h-4 w-4" />Camera: On</span><span className="text-emerald-400"><Mic className="mr-2 inline h-4 w-4" />Mic: Active</span><span className="hidden text-emerald-400 sm:inline">||||||||||||</span></div>
+            </div>
+
+            {/* AI */}
+            <div className="relative flex min-h-[250px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-center shadow-xl">
+              <div className="mb-2 flex w-full items-center gap-2 text-left font-semibold"><Bot className="h-5 w-5 text-violet-400" />AI Interviewer</div>
+              <div className="relative flex min-h-[170px] flex-1 w-full items-center justify-center overflow-hidden">
+                <div className="pointer-events-none absolute left-3 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-1 opacity-70">
+                  {Array.from({ length: 50 }).map((_, i) => <span key={i} className={`w-1 rounded-full bg-gradient-to-b from-violet-500 to-cyan-400 ${aiSpeaking ? 'mockmind-wave-bar' : ''}`} style={{ height: `${8 + ((i * 13) % 42)}px`, animationDelay: `${(i % 10) * 0.05}s` }} />)}
+                </div>
+                <div className="relative z-10 mockmind-robot-responsive"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
+              </div>
+              <div className="shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300">{aiSpeaking ? '🔊 AI is speaking...' : 'AI Interviewer'}</div>
+              <p className="mt-2 shrink-0 text-xs text-gray-300 sm:text-sm">Listen carefully and answer when you're ready.</p>
+            </div>
+
+            {/* PROGRESS */}
+            <div className="min-h-0 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
+              <h2 className="font-semibold">Interview Progress</h2>
+              <div className="mx-auto my-3 flex h-32 w-32 items-center justify-center rounded-full border-[14px] border-violet-500/20 relative">
+                <div className="absolute inset-[-14px] rounded-full border-[14px] border-transparent border-t-violet-600 border-r-blue-500" />
+                <div className="text-center"><p className="text-2xl font-bold">{currentQuestionIndex + 1} / {MAX_QUESTIONS}</p><p className="text-xs text-gray-400">Question</p></div>
+              </div>
+              <div className="max-h-[46vh] space-y-1 overflow-y-auto pr-1">
+                {Array.from({ length: MAX_QUESTIONS }).map((_, i) => (
+                  <div key={i} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${statusClass(i)}`}>
+                    {i < currentQuestionIndex ? <CircleCheck className="h-6 w-6 shrink-0 text-emerald-400" /> : i === currentQuestionIndex ? <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold">{i + 1}</span> : <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 text-sm">{i + 1}</span>}
+                    <div className="min-w-0"><p className="text-sm font-medium">Question {i + 1}</p><p className={`text-xs ${i < currentQuestionIndex ? 'text-gray-500' : i === currentQuestionIndex ? 'text-violet-300' : 'text-gray-500'}`}>{questionStatus(i)}</p></div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/60 p-3"><p className="text-sm text-gray-300">Answer Time</p><div className="mt-1 flex items-center gap-2"><Clock3 className="h-7 w-7 text-gray-300" /><span className="font-mono text-2xl font-bold text-cyan-400">{formatTime(timeLeft)}</span><span className="text-xs text-gray-500">/ 01:00</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-cyan-400 transition-all" style={{ width: `${answerProgress}%` }} /></div></div>
+            </div>
+          </section>
+
+          {/* QUESTION */}
+          <section className="mt-3 min-h-[112px] shrink-0 rounded-2xl border border-white/10 bg-slate-950/60 p-4 lg:min-h-[118px]">
+            <div className="flex items-center gap-2 text-sm font-medium text-cyan-300"><CircleHelp className="h-5 w-5" />Current Question</div>
+            <p className="mt-3 text-[clamp(15px,1.25vw,20px)] leading-relaxed text-white">{currentQuestion}</p>
+            <button onClick={replayQuestion} className="mt-3 text-sm font-semibold text-violet-400 transition hover:text-violet-300"><RotateCcw className="mr-2 inline h-4 w-4" />Replay Question</button>
+          </section>
+
+          {/* ANSWER + TIPS */}
+          <section className="mt-3 grid min-h-[235px] shrink-0 gap-3 lg:min-h-[250px] lg:grid-cols-[1.55fr_0.45fr]">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
+              <h2 className="mb-2 flex items-center gap-2 font-semibold"><Mic className="h-5 w-5 text-violet-400" />Your Answer</h2>
+              <div className="grid grid-cols-2 rounded-xl border border-white/10 bg-slate-950/60 p-1">
+                <button onClick={toggleVoiceRecording} disabled={!voiceSupported} className={`rounded-lg px-3 py-2 text-sm font-medium ${recording ? 'bg-red-500/20 text-red-300' : 'bg-violet-600 text-white'} disabled:opacity-40`}><Mic className="mr-2 inline h-4 w-4" />{recording ? 'Stop Answering' : 'Voice Answer'}</button>
+                <button onClick={() => document.getElementById('round3-text-answer')?.focus()} className="rounded-lg px-3 py-2 text-sm text-gray-300"><MessageSquare className="mr-2 inline h-4 w-4" />Type Answer</button>
+              </div>
+              <div className="mt-2 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ${recording ? 'border-violet-400 bg-violet-600/20' : 'border-violet-500/30 bg-violet-500/10'}`}><Mic className="h-6 w-6 text-violet-300" /></div>
+                  <div className="min-w-0 flex-1"><p className="font-medium">{recording ? 'Listening...' : 'Ready for your answer'}</p><p className="text-xs text-gray-500">{recording ? 'Speak now' : 'Speak clearly or type your answer below'}</p></div>
+                  <div className="hidden gap-1 sm:flex">{Array.from({ length: 22 }).map((_, i) => <span key={i} className="w-1 rounded-full bg-violet-400" style={{ height: `${5 + ((i * 7) % 18)}px` }} />)}</div>
+                </div>
+                {voiceTranscript && <p className="mt-2 max-h-16 overflow-y-auto text-sm text-gray-200">{voiceTranscript}</p>}
+              </div>
+              <textarea id="round3-text-answer" value={textAnswer} onChange={(e) => setTextAnswer(e.target.value.slice(0, 2000))} rows={2} maxLength={2000} placeholder="Type your answer here..." className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-violet-500/50" />
+              {error && <p className="mt-2 text-center text-xs text-red-300">{error}</p>}
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+              <h2 className="mb-3 flex items-center gap-2 font-semibold"><Lightbulb className="h-5 w-5 text-cyan-300" />Tips</h2>
+              <ul className="space-y-3 text-sm text-gray-300"><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Speak clearly</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Maintain good eye contact</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Take your time</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Be confident</li></ul>
+            </div>
+          </section>
+
+          {/* CONTROLS */}
+          <section className="mt-3 grid min-h-[82px] shrink-0 gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3 sm:grid-cols-[0.8fr_1.3fr_0.8fr]">
+            <button onClick={handleSkipQuestion} disabled={loading} className="rounded-xl border border-amber-400/70 bg-amber-500/5 px-4 py-3 font-semibold text-amber-300 transition hover:bg-amber-500/10 disabled:opacity-40"><SkipForward className="mr-2 inline h-5 w-5" />Skip Question<p className="text-xs font-normal text-gray-500">Skip and move to next</p></button>
+            <button onClick={handleSubmitAndNext} disabled={loading} className="rounded-xl border border-blue-400/60 bg-gradient-to-r from-blue-600/90 to-blue-500/90 px-4 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-40">{loading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : <><span className="text-lg">{currentQuestionIndex === MAX_QUESTIONS - 1 ? 'Submit & Finish' : 'Next Question →'}</span><p className="text-xs font-normal text-blue-100">Save answer and go to next</p></>}</button>
+            <button onClick={handleSubmitInterview} disabled={loading} className="rounded-xl border border-emerald-400/70 bg-emerald-500/5 px-4 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-40"><Check className="mr-2 inline h-5 w-5" />Submit Interview<p className="text-xs font-normal text-gray-500">Submit and finish interview</p></button>
+          </section>
+
+          <p className="mt-2 shrink-0 text-center text-xs text-gray-500"><LockKeyhole className="mr-1 inline h-3.5 w-3.5" />Your video and audio are secure and encrypted. Only used for this interview session.</p>
+        </main>
+      )}
     </div>
   );
 };
 
-export default AIInterview;
+export default AIInterview
