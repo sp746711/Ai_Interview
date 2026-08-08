@@ -108,6 +108,24 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
         }`}
       />
 
+      {/* AI VOICE WAVEFORM — restored without changing robot structure */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-3 top-1/2 z-0 flex h-16 -translate-y-1/2 items-center justify-center gap-1.5 opacity-80"
+      >
+        {[24, 38, 52, 68, 46, 74, 58, 36, 62, 44, 70, 50, 30].map((height, index) => (
+          <span
+            key={index}
+            className={`mockmind-wave-bar w-1 rounded-full bg-gradient-to-t from-violet-500/30 via-cyan-400/80 to-cyan-200 ${speaking ? 'opacity-100' : 'opacity-50'}`}
+            style={{
+              height: `${height}%`,
+              animationDelay: `${index * 0.06}s`,
+              animationPlayState: speaking ? 'running' : 'paused',
+            }}
+          />
+        ))}
+      </div>
+
       {/* ROBOT */}
       <div
         className={`relative z-10 flex flex-col items-center ${
@@ -320,6 +338,23 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
           }
         }
 
+        .mockmind-preflight-wave-bar {
+          animation: mockmindPreflightWave 1.15s ease-in-out infinite alternate;
+          transform-origin: center;
+          min-height: 5px;
+        }
+
+        @keyframes mockmindPreflightWave {
+          0% {
+            transform: scaleY(0.55);
+            filter: brightness(0.85);
+          }
+          100% {
+            transform: scaleY(1);
+            filter: brightness(1.2);
+          }
+        }
+
         .mockmind-wave-bar {
           animation: mockmindWave 0.7s ease-in-out infinite alternate;
           transform-origin: center;
@@ -418,7 +453,8 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
           .mockmind-robot-mouth,
           .mockmind-antenna-speaking,
           .mockmind-chest-speaking,
-          .mockmind-wave-bar {
+          .mockmind-wave-bar,
+          .mockmind-preflight-wave-bar {
             animation: none !important;
           }
         }
@@ -518,7 +554,7 @@ const AIInterview = () => {
   const [preflightMessage, setPreflightMessage] = useState('');
   const [micTestStatus, setMicTestStatus] = useState('idle');
   const [micTestTranscript, setMicTestTranscript] = useState('');
-  const [aiGreetingText, setAiGreetingText] = useState('Welcome to your AI interview!');
+  const [aiGreetingText, setAiGreetingText] = useState('Welcome to your AI interview. Please complete the setup checks, then click Start Interview when you are ready. Good luck!');
   const [showEnvironmentDetails, setShowEnvironmentDetails] = useState(false);
 
   const faceLandmarkerRef = useRef(null);
@@ -528,6 +564,7 @@ const AIInterview = () => {
   const preflightAudioContextRef = useRef(null);
   const micTestRecognitionRef = useRef(null);
   const greetingSpokenRef = useRef(false);
+  const setupCompletionSpokenRef = useRef(false);
 
   /* =======================================================
      REFS
@@ -1113,12 +1150,11 @@ const AIInterview = () => {
     return speechReadyPromiseRef.current;
   };
 
+  // Speak text and resolve only after the browser has actually finished
+  // the utterance. This is important for the microphone pre-check: the
+  // SpeechRecognition listener must NEVER start while the AI is speaking.
   const speakQuestion = async (question) => {
-    if (!question) return;
-
-    if (!('speechSynthesis' in window)) {
-      return;
-    }
+    if (!question || !('speechSynthesis' in window)) return false;
 
     const sequence = ++speechSequenceRef.current;
 
@@ -1128,19 +1164,11 @@ const AIInterview = () => {
     }
 
     setAiSpeaking(false);
-
-    /*
-     * Cancel only the previous utterance, then give Chrome a short
-     * scheduling window before speaking again. Rapid cancel()+speak()
-     * calls are a common source of clipped/garbled browser TTS.
-     */
     window.speechSynthesis.cancel();
 
     const voice = await waitForSpeechVoice();
 
-    if (sequence !== speechSequenceRef.current) {
-      return;
-    }
+    if (sequence !== speechSequenceRef.current) return false;
 
     await new Promise((resolve) => {
       speechTimerRef.current = window.setTimeout(() => {
@@ -1149,54 +1177,56 @@ const AIInterview = () => {
       }, 80);
     });
 
-    if (sequence !== speechSequenceRef.current) {
-      return;
-    }
+    if (sequence !== speechSequenceRef.current) return false;
 
-    const utterance =
-      new SpeechSynthesisUtterance(question);
+    return new Promise((resolve) => {
+      const utterance = new SpeechSynthesisUtterance(question);
+      utterance.lang = voice?.lang || 'en-US';
+      if (voice) utterance.voice = voice;
+      utterance.rate = 0.88;
+      utterance.pitch = 1;
+      utterance.volume = 1;
 
-    utterance.lang = voice?.lang || 'en-US';
+      let settled = false;
+      const finish = (ok) => {
+        if (settled) return;
+        settled = true;
+        if (sequence === speechSequenceRef.current) {
+          setAiSpeaking(false);
+        }
+        resolve(ok);
+      };
 
-    if (voice) {
-      utterance.voice = voice;
-    }
+      utterance.onstart = () => {
+        if (sequence !== speechSequenceRef.current) {
+          finish(false);
+          return;
+        }
+        setAiSpeaking(true);
+      };
 
-    /* Slightly slower speech is clearer and less likely to sound clipped. */
-    utterance.rate = 0.88;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+      utterance.onend = () => finish(true);
 
-    utterance.onstart = () => {
-      if (sequence !== speechSequenceRef.current) return;
-      setAiSpeaking(true);
-    };
+      utterance.onerror = (event) => {
+        console.warn('AI speech synthesis error:', event?.error || 'unknown');
+        finish(false);
+      };
 
-    utterance.onend = () => {
-      if (sequence !== speechSequenceRef.current) return;
-      setAiSpeaking(false);
-    };
+      try {
+        window.speechSynthesis.resume();
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.error('Unable to start AI speech:', err);
+        finish(false);
+      }
 
-    utterance.onerror = (event) => {
-      console.warn(
-        'AI speech synthesis error:',
-        event?.error || 'unknown'
-      );
-
-      if (sequence !== speechSequenceRef.current) return;
-      setAiSpeaking(false);
-    };
-
-    try {
-      window.speechSynthesis.resume();
-      window.speechSynthesis.speak(utterance);
-    } catch (err) {
-      console.error(
-        'Unable to start AI speech:',
-        err
-      );
-      setAiSpeaking(false);
-    }
+      // Safety fallback. Some Chromium builds can occasionally miss onend.
+      window.setTimeout(() => {
+        if (!settled && sequence === speechSequenceRef.current && !window.speechSynthesis.speaking) {
+          finish(true);
+        }
+      }, Math.max(3000, question.length * 95));
+    });
   };
 
   /* =======================================================
@@ -1208,23 +1238,38 @@ const AIInterview = () => {
     const greeting =
       'Welcome to your AI interview. I am ready to conduct your interview. Please complete your camera, microphone, and environment checks, then click Start Interview. Good luck!';
 
-    const speakGreetingOnce = () => {
-      if (greetingSpokenRef.current || interviewStarted) return;
-      greetingSpokenRef.current = true;
-      setAiGreetingText('Welcome to your AI interview! I am ready to conduct your interview. Complete the checks and click Start Interview when you are ready. Good luck!');
-      speakQuestion(greeting);
+    let disposed = false;
+
+    const speakGreetingOnce = async () => {
+      if (disposed || greetingSpokenRef.current || interviewStarted) return;
+
+      setAiGreetingText('Welcome to your AI interview. I am ready to conduct your interview. Please complete the setup checks, then click Start Interview when you are ready. Good luck!');
+
+      // Autoplay can be blocked by the browser. Only mark the greeting as
+      // spoken after speechSynthesis actually completes successfully.
+      const spoken = await speakQuestion(greeting);
+      if (!disposed && spoken) greetingSpokenRef.current = true;
     };
 
-    const timer = window.setTimeout(speakGreetingOnce, 700);
-    const fallback = () => speakGreetingOnce();
-    window.addEventListener('pointerdown', fallback, { once: true });
-    window.addEventListener('keydown', fallback, { once: true });
+    const timer = window.setTimeout(() => {
+      void speakGreetingOnce();
+    }, 700);
+
+    // If autoplay was blocked, retry on the user's first interaction.
+    const fallback = () => {
+      void speakGreetingOnce();
+    };
+
+    window.addEventListener('pointerdown', fallback);
+    window.addEventListener('keydown', fallback);
 
     return () => {
+      disposed = true;
       window.clearTimeout(timer);
       window.removeEventListener('pointerdown', fallback);
       window.removeEventListener('keydown', fallback);
     };
+
   }, [interviewStarted]);
 
   /* =======================================================
@@ -1376,6 +1421,13 @@ const AIInterview = () => {
       new Event('ai-interview-state-change')
     );
   };
+
+  /* Round 3 owns the full page from entry, so the global MainLayout
+     navbar is hidden while this page is mounted. Round 1/2 are untouched. */
+  useEffect(() => {
+    setAIInterviewActive(true);
+    return () => setAIInterviewActive(false);
+  }, []);
 
   /* =======================================================
      ROUND 3 PRE-INTERVIEW CHECKS
@@ -1739,12 +1791,40 @@ const AIInterview = () => {
 
   const canStartInterview = coreChecksReady && environmentReady;
 
+  /* =======================================================
+     ALL SETUP CHECKS COMPLETE — AI FINAL INSTRUCTION
+     Runs only when every Round 3 pre-interview requirement is ready.
+     It waits until any current AI speech has finished so messages never
+     overlap, then tells the candidate exactly what to do next.
+     ======================================================= */
+  useEffect(() => {
+    if (!canStartInterview || interviewStarted || setupCompletionSpokenRef.current) {
+      return undefined;
+    }
+
+    if (aiSpeaking) return undefined;
+
+    setupCompletionSpokenRef.current = true;
+
+    const completionMessage =
+      'Perfect. All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and interview environment are ready. Click Start Interview to begin. Good luck!';
+
+    setAiGreetingText(
+      'All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and environment are ready. Click Start Interview to begin. Good luck!'
+    );
+
+    void speakQuestion(completionMessage);
+
+    return undefined;
+  }, [canStartInterview, aiSpeaking, interviewStarted]);
+
   const getPreflightStatus = (status) => {
     const map = {
       ready: { label: 'Ready', className: 'text-emerald-400' },
       waiting: { label: 'Waiting', className: 'text-amber-400' },
       test: { label: 'Click to test', className: 'text-amber-300' },
       listening: { label: 'Listening…', className: 'text-cyan-300' },
+      prompting: { label: 'AI prompt…', className: 'text-violet-300' },
       failed: { label: 'Voice Not Detected', className: 'text-red-400' },
       checking: { label: 'Checking…', className: 'text-amber-300' },
       none: { label: 'No face detected', className: 'text-amber-300' },
@@ -1813,7 +1893,7 @@ const AIInterview = () => {
      User clicks the microphone card -> AI asks for the phrase ->
      browser speech recognition verifies the spoken phrase.
      ======================================================= */
-  const startMicrophoneTest = () => {
+  const startMicrophoneTest = async () => {
     if (!micAvailable) {
       setPreflightMessage('Microphone access is not available. Please allow microphone access first.');
       return;
@@ -1830,7 +1910,17 @@ const AIInterview = () => {
 
     if (micTestRecognitionRef.current) {
       try { micTestRecognitionRef.current.stop(); } catch {}
+      micTestRecognitionRef.current = null;
     }
+
+    setMicTestStatus('prompting');
+    setMicTestTranscript('');
+    setPreflightMessage('');
+
+    // IMPORTANT: AI finishes speaking first. Only then do we start
+    // SpeechRecognition, so the browser cannot mistake the AI voice for
+    // the candidate's microphone response.
+    const spoken = await speakQuestion('Please say: Ready for the interview.');
 
     const recognition = new SpeechRecognition();
     micTestRecognitionRef.current = recognition;
@@ -1840,20 +1930,22 @@ const AIInterview = () => {
     recognition.maxAlternatives = 3;
 
     setMicTestStatus('listening');
-    setMicTestTranscript('');
-    setPreflightMessage('');
+    setPreflightMessage('Listening… Please say: “Ready for the interview.”');
 
-    const expected = ['ready for the interview', 'ready for interview', 'ready to interview'];
+    const expected = [
+      'ready for the interview',
+      'ready for interview',
+      'ready to interview',
+    ];
+
     let timeoutId = null;
     let matched = false;
 
-    const finish = (status) => {
+    const cleanup = () => {
       if (timeoutId) window.clearTimeout(timeoutId);
       if (micTestRecognitionRef.current === recognition) {
         micTestRecognitionRef.current = null;
       }
-      try { recognition.stop(); } catch {}
-      if (!matched) setMicTestStatus(status);
     };
 
     recognition.onresult = (event) => {
@@ -1861,53 +1953,68 @@ const AIInterview = () => {
       for (let i = event.resultIndex; i < event.results.length; i += 1) {
         transcript += ` ${event.results[i][0].transcript}`;
       }
-      const normalized = transcript.trim().toLowerCase().replace(/[^a-z0-9 ]/g, '');
+
+      const clean = transcript
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
       setMicTestTranscript(transcript.trim());
 
-      if (expected.some((phrase) => normalized.includes(phrase))) {
+      if (expected.some((phrase) => clean.includes(phrase))) {
         matched = true;
-        if (timeoutId) window.clearTimeout(timeoutId);
+        cleanup();
         setMicTestStatus('ready');
         setPreflightMessage('Microphone verified successfully.');
-        window.speechSynthesis?.cancel();
-        window.setTimeout(() => {
-          speakQuestion('Perfect. Your microphone is working correctly.');
-        }, 120);
         try { recognition.stop(); } catch {}
+
+        // The final setup-complete voice is handled centrally below.
+        // This prevents the microphone confirmation and the all-checks
+        // confirmation from speaking over each other.
       }
     };
 
     recognition.onerror = (event) => {
       if (matched) return;
-      console.warn('Microphone test recognition error:', event?.error);
-      finish('failed');
-      setPreflightMessage('Voice was not detected. Click the microphone card and try again.');
+      cleanup();
+      setMicTestStatus('failed');
+      setPreflightMessage(
+        event?.error === 'not-allowed'
+          ? 'Microphone permission was blocked. Allow microphone access and try again.'
+          : 'Voice was not detected. Click the microphone card and try again.'
+      );
     };
 
     recognition.onend = () => {
-      if (!matched) {
-        setMicTestStatus('failed');
-        setPreflightMessage('Voice was not detected. Click the microphone card and try again.');
-      }
+      if (matched) return;
+      cleanup();
+      setMicTestStatus('failed');
+      setPreflightMessage('Voice was not detected. Click the microphone card and try again.');
     };
 
     timeoutId = window.setTimeout(() => {
-      if (!matched) {
-        finish('failed');
-        setPreflightMessage('Voice was not detected within 8 seconds. Click the microphone card and try again.');
-      }
+      if (matched) return;
+      cleanup();
+      try { recognition.stop(); } catch {}
+      setMicTestStatus('failed');
+      setPreflightMessage('Voice was not detected within 8 seconds. Click the microphone card and try again.');
     }, 8000);
 
-    // Speak first, then start listening so the prompt is not captured.
-    speakQuestion('Please say: Ready for the interview.');
-    window.setTimeout(() => {
-      if (!matched) {
-        try { recognition.start(); } catch (err) {
-          console.warn('Unable to start microphone test:', err);
-          finish('failed');
-        }
-      }
-    }, 900);
+    // If TTS failed, still allow the microphone check to proceed.
+    if (!spoken) {
+      setPreflightMessage('AI voice prompt could not be played. Listening for your microphone response…');
+    }
+
+    try {
+      recognition.start();
+    } catch (err) {
+      console.warn('Unable to start microphone recognition:', err);
+      cleanup();
+      setMicTestStatus('failed');
+      setPreflightMessage('Unable to start voice detection. Please try the microphone check again.');
+    }
   };
 
   const startInterview = async () => {
@@ -2627,17 +2734,34 @@ const AIInterview = () => {
                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${aiVoiceReady ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-300'}`}>{aiVoiceReady ? 'VOICE READY' : 'VOICE CHECKING'}</span>
               </div>
               <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden">
-                <div className="pointer-events-none absolute left-4 right-4 top-1/2 flex -translate-y-1/2 items-center justify-between gap-1 opacity-60">
-                  {Array.from({ length: 42 }).map((_, i) => <span key={i} className={`h-1 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400 ${aiSpeaking ? 'mockmind-wave-bar' : ''}`} style={{ height: `${6 + ((i * 11) % 32)}px`, animationDelay: `${(i % 10) * 0.04}s` }} />)}
+                {/* Permanent left/right AI voice waveform. It stays visible even while idle. */}
+                <div className="pointer-events-none absolute inset-x-2 top-1/2 z-0 flex -translate-y-1/2 items-center justify-center gap-2">
+                  <div className="flex h-20 w-[31%] items-center justify-end gap-1 overflow-hidden">
+                    {[18, 30, 44, 62, 38, 72, 50, 30, 58, 42, 68, 34, 52, 26, 46].map((height, i) => (
+                      <span
+                        key={`left-wave-${i}`}
+                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-violet-500/40 via-violet-400 to-cyan-300"
+                        style={{ height: `${height}%`, animationDelay: `${i * 0.055}s`, opacity: aiSpeaking ? 1 : 0.7 }}
+                      />
+                    ))}
+                  </div>
+                  <div className="relative z-10 shrink-0 scale-[0.88] sm:scale-100"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
+                  <div className="flex h-20 w-[31%] items-center justify-start gap-1 overflow-hidden">
+                    {[46, 26, 52, 34, 68, 42, 58, 30, 50, 72, 38, 62, 44, 30, 18].map((height, i) => (
+                      <span
+                        key={`right-wave-${i}`}
+                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-cyan-400 via-cyan-300 to-violet-400"
+                        style={{ height: `${height}%`, animationDelay: `${i * 0.055}s`, opacity: aiSpeaking ? 1 : 0.7 }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="relative z-10 scale-[0.88] sm:scale-100"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
               </div>
               <div className={`rounded-full border px-5 py-2 text-sm font-semibold ${aiVoiceReady ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-400' : 'border-amber-400/30 bg-amber-500/10 text-amber-300'}`}>
                 {aiVoiceReady ? <CircleCheck className="mr-2 inline h-5 w-5" /> : <RefreshCw className="mr-2 inline h-5 w-5 animate-spin" />}
                 {aiVoiceReady ? 'AI Voice Ready' : 'Checking AI Voice'}
               </div>
               <p className="mt-4 text-gray-200">{aiGreetingText}</p>
-              <p className="mt-1 text-sm text-gray-400">The AI will welcome you, guide the setup, and conduct the interview.</p>
             </div>
 
             {/* OVERVIEW */}
@@ -2713,7 +2837,7 @@ const AIInterview = () => {
             <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
               <h2 className="mb-4 flex items-center gap-2 font-semibold"><Lightbulb className="h-5 w-5 text-amber-300" />Interview Tips</h2>
               <ul className="space-y-3 text-sm text-gray-300">
-                {['Speak clearly and at a normal pace', 'Maintain good eye contact', 'Take your time to think', 'Be honest and confident', 'Ensure a quiet environment', 'Dress professionally', 'Sit in a well-lit place', 'Keep your face visible', 'Avoid distractions'].map((x) => <li key={x}><Check className="mr-2 inline h-4 w-4 text-violet-400" />{x}</li>)}
+                {['Speak clearly and at a normal pace', 'Maintain good eye contact', 'Take your time to think', 'Be honest and confident', 'Ensure a quiet environment', 'Dress professionally'].map((x) => <li key={x}><Check className="mr-2 inline h-4 w-4 text-violet-400" />{x}</li>)}
               </ul>
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-center">
