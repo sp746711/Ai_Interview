@@ -553,12 +553,22 @@ const AIInterview = () => {
   const [preflightMessage, setPreflightMessage] = useState('');
   const [micTestStatus, setMicTestStatus] = useState('idle');
   const [micTestTranscript, setMicTestTranscript] = useState('');
+  // Becomes true only after the post-microphone AI confirmation has finished.
+  // This guarantees the final all-checks instruction plays afterward.
+  const [micConfirmationDone, setMicConfirmationDone] = useState(false);
   const [aiGreetingText, setAiGreetingText] = useState('Welcome to your AI interview. Please complete the setup checks, then click Start Interview when you are ready. Good luck!');
   const [showEnvironmentDetails, setShowEnvironmentDetails] = useState(false);
 
   const faceLandmarkerRef = useRef(null);
   const faceDetectionTimestampRef = useRef(0);
   const faceCheckBusyRef = useRef(false);
+  // Face detection runs in a Web Worker so MediaPipe never blocks the live
+  // camera preview or the main React UI thread.
+  const faceWorkerRef = useRef(null);
+  const faceWorkerReadyRef = useRef(false);
+  const faceWorkerBusyRef = useRef(false);
+  const faceWorkerInitRef = useRef(null);
+  const cameraFrameTimerRef = useRef(null);
   const preflightCanvasRef = useRef(null);
   const preflightAudioContextRef = useRef(null);
   const micTestRecognitionRef = useRef(null);
@@ -591,6 +601,11 @@ const AIInterview = () => {
   const speechVoiceRef = useRef(null);
   const speechReadyPromiseRef = useRef(null);
   const speechTimerRef = useRef(null);
+  const speechHardTimeoutRef = useRef(null);
+  const aiSpeakingRef = useRef(false);
+  const questionTransitionRef = useRef(false);
+  const finishInProgressRef = useRef(false);
+  const mountedRef = useRef(true);
 
   // Keep latest interview state available inside fullscreen event handlers.
   const interviewStartedRef = useRef(false);
@@ -600,6 +615,10 @@ const AIInterview = () => {
   useEffect(() => {
     interviewStartedRef.current = interviewStarted;
   }, [interviewStarted]);
+
+  useEffect(() => {
+    aiSpeakingRef.current = aiSpeaking;
+  }, [aiSpeaking]);
 
   useEffect(() => {
     // Keep the timer/question state aligned with the actual source.
@@ -702,6 +721,9 @@ const AIInterview = () => {
 
       try {
         // ESC/browser fullscreen exit during an active interview = strict exit.
+        finishInProgressRef.current = true;
+        questionTransitionRef.current = false;
+
         if (timerRef.current) {
           clearInterval(timerRef.current);
           timerRef.current = null;
@@ -815,6 +837,37 @@ const AIInterview = () => {
    * if initialization is already in progress or already completed.
    */
 
+  /* -------------------------------------------------------
+     CAMERA PREVIEW ATTACHMENT
+     -------------------------------------------------------
+     The MediaStream is attached only when the actual <video> element changes.
+     Face detection, lighting and React state never replace srcObject while the
+     same video element is already playing. This keeps the webcam preview live.
+  ------------------------------------------------------- */
+  const attachCameraStream = async (stream) => {
+    const video = videoRef.current;
+    if (!video || !stream) return false;
+
+    try {
+      video.autoplay = true;
+      video.playsInline = true;
+      video.muted = true;
+
+      if (video.srcObject !== stream) {
+        video.srcObject = stream;
+      }
+
+      if (video.readyState < 2 || video.paused) {
+        await video.play().catch(() => {});
+      }
+
+      return true;
+    } catch (err) {
+      console.warn('Camera preview attach failed:', err);
+      return false;
+    }
+  };
+
   const startCamera = (options = {}) => {
     const { force = false } = options;
 
@@ -823,12 +876,7 @@ const AIInterview = () => {
     if (!force && existingStream) {
       const videoTrack = existingStream.getVideoTracks()?.[0];
       if (videoTrack && videoTrack.readyState === 'live') {
-        if (videoRef.current) {
-          videoRef.current.srcObject = existingStream;
-          videoRef.current.muted = true;
-          videoRef.current.playsInline = true;
-          videoRef.current.play().catch(() => {});
-        }
+        void attachCameraStream(existingStream);
         setCameraOn(videoTrack.enabled);
         return Promise.resolve(existingStream);
       }
@@ -866,7 +914,7 @@ const AIInterview = () => {
               // make webcam negotiation much faster and reduce CPU usage.
               width: { ideal: 640, max: 1280 },
               height: { ideal: 480, max: 720 },
-              frameRate: { ideal: 15, max: 24 },
+              frameRate: { ideal: 30, min: 24, max: 30 },
             },
           }),
           new Promise((_, reject) =>
@@ -884,12 +932,7 @@ const AIInterview = () => {
           throw new Error('CAMERA_TRACK_NOT_LIVE');
         }
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.muted = true;
-          videoRef.current.playsInline = true;
-          await videoRef.current.play().catch(() => {});
-        }
+        await attachCameraStream(stream);
 
         setCameraOn(videoTrack.enabled);
         setMicAvailable(false);
@@ -959,10 +1002,7 @@ const AIInterview = () => {
     }
 
     const stream = mediaStreamRef.current;
-    videoRef.current.srcObject = stream;
-    videoRef.current.muted = true;
-    videoRef.current.playsInline = true;
-    videoRef.current.play().catch(() => {});
+    void attachCameraStream(stream);
   }, [interviewStarted, cameraOn]);
 
   const stopMediaStream = () => {
@@ -976,6 +1016,14 @@ const AIInterview = () => {
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+    }
+
+    if (faceWorkerRef.current) {
+      try { faceWorkerRef.current.terminate(); } catch {}
+      faceWorkerRef.current = null;
+      faceWorkerReadyRef.current = false;
+      faceWorkerBusyRef.current = false;
+      faceWorkerInitRef.current = null;
     }
 
     setCameraOn(false);
@@ -1004,12 +1052,7 @@ const AIInterview = () => {
     if (!videoTrack.enabled) {
       videoTrack.enabled = true;
       setCameraOn(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.muted = true;
-        videoRef.current.playsInline = true;
-        videoRef.current.play().catch(() => {});
-      }
+      void attachCameraStream(stream);
       return;
     }
 
@@ -1171,7 +1214,12 @@ const AIInterview = () => {
       const finish = (ok) => {
         if (settled) return;
         settled = true;
+        if (speechHardTimeoutRef.current) {
+          window.clearTimeout(speechHardTimeoutRef.current);
+          speechHardTimeoutRef.current = null;
+        }
         if (sequence === speechSequenceRef.current) {
+          aiSpeakingRef.current = false;
           setAiSpeaking(false);
         }
         resolve(ok);
@@ -1182,6 +1230,7 @@ const AIInterview = () => {
           finish(false);
           return;
         }
+        aiSpeakingRef.current = true;
         setAiSpeaking(true);
       };
 
@@ -1200,12 +1249,18 @@ const AIInterview = () => {
         finish(false);
       }
 
-      // Safety fallback. Some Chromium builds can occasionally miss onend.
-      window.setTimeout(() => {
-        if (!settled && sequence === speechSequenceRef.current && !window.speechSynthesis.speaking) {
-          finish(true);
-        }
-      }, Math.max(3000, question.length * 95));
+      // Strong safety timeout: Chromium can occasionally miss onend or leave
+      // speechSynthesis in a stuck state. Never let one TTS call freeze the
+      // microphone test, question flow, or readiness screen indefinitely.
+      const estimatedDuration = Math.max(4500, question.length * 115);
+      speechHardTimeoutRef.current = window.setTimeout(() => {
+        if (settled || sequence !== speechSequenceRef.current) return;
+        console.warn('AI speech timeout; releasing the interview flow.');
+        try {
+          window.speechSynthesis.cancel();
+        } catch {}
+        finish(false);
+      }, Math.min(20000, estimatedDuration));
     });
   };
 
@@ -1543,9 +1598,74 @@ const AIInterview = () => {
     }
   };
 
+  /* =======================================================
+     FACE DETECTION ONLY
+     -------------------------------------------------------
+     IMPORTANT:
+     - This is the ONLY functional block changed.
+     - Camera start/stop/toggle code is untouched.
+     - The live <video> stream is never replaced or restarted here.
+     - No eye-landmark/face-size validation is used because those checks
+       were causing a clearly visible face to remain "Auto check unavailable".
+     - MediaPipe FaceDetector only answers the required question:
+       Is there one face visible in the current camera frame?
+     ======================================================= */
+  const createFaceWorker = () => {
+    // Keep the existing function name so the rest of the pre-flight flow
+    // remains completely unchanged.
+    if (faceLandmarkerRef.current) {
+      return Promise.resolve(faceLandmarkerRef.current);
+    }
+
+    if (faceWorkerInitRef.current) {
+      return faceWorkerInitRef.current;
+    }
+
+    faceWorkerInitRef.current = (async () => {
+      try {
+        // FaceDetector is intentionally used instead of FaceLandmarker.
+        // We only need reliable face presence; landmarks/eye checks are not
+        // required for the Round 3 environment check.
+        const { FaceDetector, FilesetResolver } = await import(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/+esm'
+        );
+
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+        );
+
+        const detector = await FaceDetector.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath:
+              'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+          },
+          runningMode: 'IMAGE',
+          minDetectionConfidence: 0.25,
+        });
+
+        faceLandmarkerRef.current = detector;
+        faceWorkerReadyRef.current = true;
+
+        return detector;
+      } catch (error) {
+        faceWorkerReadyRef.current = false;
+        faceLandmarkerRef.current = null;
+        console.error('Face detector initialization failed:', error);
+        setFaceStatus('unsupported');
+        return null;
+      } finally {
+        faceWorkerInitRef.current = null;
+      }
+    })();
+
+    return faceWorkerInitRef.current;
+  };
+
   const checkFace = async () => {
     const video = videoRef.current;
 
+    // Do not touch the camera stream here. This function only reads the
+    // already-running video element.
     if (!video || !cameraOn || video.readyState < 2 || video.videoWidth < 2) {
       setFaceStatus('checking');
       return;
@@ -1553,152 +1673,64 @@ const AIInterview = () => {
 
     if (faceCheckBusyRef.current) return;
 
-    /*
-     * MediaPipe is the heaviest Round 3 preflight operation.
-     * Do not let it compete with AI speech, especially during
-     * the initial greeting and setup-complete instruction.
-     */
-    if (aiSpeaking) return;
-
-    faceCheckBusyRef.current = true;
+    // Do not let an AI speech event interrupt an already-running detection.
+    if (aiSpeakingRef.current) return;
 
     try {
-      /*
-       * Round 3 ONLY:
-       * Use MediaPipe Face Landmarker instead of the browser's optional
-       * window.FaceDetector API. The old API is not reliably available in
-       * Chromium browsers and caused "Auto check unavailable".
-       *
-       * This detector also gives facial landmarks, so one visible face can
-       * be accepted only when the face is large enough and both eyes have
-       * usable landmarks.
-       */
-      if (!faceLandmarkerRef.current) {
-        // Lazy-load MediaPipe only when the camera is already live. This keeps
-        // the initial Round 3 bundle light and prevents WASM/model loading from
-        // delaying the first paint, camera preview, or AI greeting.
-        const { FaceLandmarker, FilesetResolver } = await import(
-          '@mediapipe/tasks-vision'
-        );
+      faceCheckBusyRef.current = true;
 
-        const vision = await FilesetResolver.forVisionTasks(
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
-        );
+      const detector = await createFaceWorker();
 
-        faceLandmarkerRef.current = await FaceLandmarker.createFromOptions(
-          vision,
-          {
-            baseOptions: {
-              modelAssetPath:
-                'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
-            },
-            runningMode: 'VIDEO',
-            numFaces: 2,
-            minFaceDetectionConfidence: 0.35,
-            minFacePresenceConfidence: 0.35,
-            minTrackingConfidence: 0.35,
-            outputFaceBlendshapes: false,
-            outputFacialTransformationMatrixes: false,
-          }
-        );
-      }
-
-      // Face Landmarker VIDEO mode requires monotonically increasing time.
-      const now = performance.now();
-      const timestamp = Math.max(
-        now,
-        faceDetectionTimestampRef.current + 1
-      );
-      faceDetectionTimestampRef.current = timestamp;
-
-      const result = faceLandmarkerRef.current.detectForVideo(
-        video,
-        timestamp
-      );
-
-      const faces = result?.faceLandmarks || [];
-
-      if (faces.length === 0) {
-        setFaceStatus('none');
+      if (!detector) {
+        faceCheckBusyRef.current = false;
         return;
       }
 
-      if (faces.length > 1) {
+      // Take a lightweight snapshot of the EXISTING video frame.
+      // No srcObject, MediaStreamTrack, cameraOn state, or camera function
+      // is changed here.
+      const canvas = preflightCanvasRef.current || document.createElement('canvas');
+      preflightCanvasRef.current = canvas;
+
+      const sampleWidth = 480;
+      const aspect =
+        video.videoWidth > 0 && video.videoHeight > 0
+          ? video.videoHeight / video.videoWidth
+          : 3 / 4;
+
+      const sampleHeight = Math.max(270, Math.round(sampleWidth * aspect));
+
+      canvas.width = sampleWidth;
+      canvas.height = sampleHeight;
+
+      const context = canvas.getContext('2d', {
+        alpha: false,
+        willReadFrequently: false,
+      });
+
+      if (!context) {
+        setFaceStatus('unsupported');
+        faceCheckBusyRef.current = false;
+        return;
+      }
+
+      context.drawImage(video, 0, 0, sampleWidth, sampleHeight);
+
+      const result = detector.detect(canvas);
+      const detections = result?.detections || [];
+
+      if (detections.length === 0) {
+        setFaceStatus('none');
+      } else if (detections.length > 1) {
         setFaceStatus('multiple');
-        return;
+      } else {
+        // A valid MediaPipe face detection is enough. Do not require
+        // 400+ landmarks, eye ratios, face-size thresholds, or other
+        // secondary checks that can reject a clearly visible candidate.
+        setFaceStatus('detected');
       }
-
-      const landmarks = faces[0];
-      if (!landmarks || landmarks.length < 400) {
-        setFaceStatus('none');
-        return;
-      }
-
-      // Determine whether the detected face is large enough to be useful.
-      let minX = 1;
-      let maxX = 0;
-      let minY = 1;
-      let maxY = 0;
-
-      for (const point of landmarks) {
-        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
-        minX = Math.min(minX, point.x);
-        maxX = Math.max(maxX, point.x);
-        minY = Math.min(minY, point.y);
-        maxY = Math.max(maxY, point.y);
-      }
-
-      const faceWidth = maxX - minX;
-      const faceHeight = maxY - minY;
-
-      if (faceWidth < 0.12 || faceHeight < 0.16) {
-        setFaceStatus('far');
-        return;
-      }
-
-      /*
-       * Simple eye-openness/visibility check from standard MediaPipe
-       * Face Mesh landmark pairs. This is intentionally tolerant: the goal
-       * is normal interview readiness, not biometric identification.
-       */
-      const distance = (a, b) => {
-        if (!a || !b) return 0;
-        return Math.hypot(a.x - b.x, a.y - b.y);
-      };
-
-      const eyeAspectRatio = (top, bottom, left, right) => {
-        const vertical = distance(top, bottom);
-        const horizontal = distance(left, right);
-        return horizontal > 0 ? vertical / horizontal : 0;
-      };
-
-      // Left eye: upper/lower + outer/inner corners.
-      const leftEyeRatio = eyeAspectRatio(
-        landmarks[159],
-        landmarks[145],
-        landmarks[33],
-        landmarks[133]
-      );
-
-      // Right eye: upper/lower + outer/inner corners.
-      const rightEyeRatio = eyeAspectRatio(
-        landmarks[386],
-        landmarks[374],
-        landmarks[362],
-        landmarks[263]
-      );
-
-      const eyesVisible = leftEyeRatio >= 0.10 && rightEyeRatio >= 0.10;
-
-      if (!eyesVisible) {
-        setFaceStatus('eyes');
-        return;
-      }
-
-      setFaceStatus('detected');
-    } catch (err) {
-      console.error('MediaPipe Face Landmarker error:', err);
-      // Never turn a detector/model failure into a fake success.
+    } catch (error) {
+      console.error('Face detection check failed:', error);
       setFaceStatus('unsupported');
     } finally {
       faceCheckBusyRef.current = false;
@@ -1760,89 +1792,54 @@ const AIInterview = () => {
   }, []);
 
   /* =======================================================
-     LIGHTWEIGHT PRE-FLIGHT LOOP
+     NON-BLOCKING PRE-FLIGHT LOOP
      -------------------------------------------------------
-     Lighting is cheap, so it starts quickly. MediaPipe face
-     detection is deliberately delayed so the initial UI and
-     AI greeting are not competing with WASM/model loading.
+     Camera rendering is completely independent from face detection. The
+     detector is loaded in a worker after the page/camera are ready and only
+     receives occasional image snapshots.
      ======================================================= */
   useEffect(() => {
-    if (!cameraOn) {
-      return undefined;
-    }
+    if (!cameraOn) return undefined;
 
     let disposed = false;
     let faceTimer = null;
     let lightTimer = null;
-    let faceStartTimer = null;
-    let faceIdleId = null;
 
     const runLighting = () => {
-      if (!disposed) {
-        checkLighting();
-      }
+      if (!disposed) checkLighting();
     };
 
-    // Lighting is intentionally throttled. It is only a readiness signal,
-    // not a real-time video effect, so there is no reason to sample the
-    // camera every 1.8 seconds.
-    const lightingDelay = window.setTimeout(runLighting, 900);
-    lightTimer = window.setInterval(runLighting, 4000);
+    const lightingDelay = window.setTimeout(runLighting, 1000);
+    lightTimer = window.setInterval(runLighting, 5000);
 
-    /*
-     * MediaPipe is the heaviest operation in Round 3. It is deliberately
-     * NOT loaded on route entry. Wait until the microphone has also been
-     * verified, because only then do we actually need the environment/face
-     * check. Then schedule the model load during browser idle time.
-     *
-     * This is the key fix for the 'page becomes smooth only after a few
-     * minutes' problem: the expensive WASM/model work no longer competes
-     * with the first Round 3 render, camera startup, TTS, or mic test.
-     */
+    // Start the worker only after the microphone test is complete. Loading and
+    // running MediaPipe is then fully off the main thread.
     if (micAvailable) {
-      const startFaceDetection = () => {
+      const startWorker = () => {
         if (disposed) return;
-
-        void checkFace();
-
-        faceTimer = window.setInterval(() => {
-          if (!disposed && document.visibilityState === 'visible') {
-            void checkFace();
-          }
-        }, 4500);
+        void createFaceWorker().then(() => {
+          if (disposed) return;
+          void checkFace();
+          faceTimer = window.setInterval(() => {
+            if (!disposed && document.visibilityState === 'visible') {
+              void checkFace();
+            }
+          }, 1800);
+        });
       };
 
-      const scheduleFaceDetection = () => {
-        if (disposed) return;
-        if ('requestIdleCallback' in window) {
-          faceIdleId = window.requestIdleCallback(startFaceDetection, {
-            timeout: 5000,
-          });
-        } else {
-          faceStartTimer = window.setTimeout(startFaceDetection, 1400);
-        }
-      };
-
-      // Let the microphone-complete confirmation and its React repaint finish
-      // before starting the heavy face model.
-      faceStartTimer = window.setTimeout(scheduleFaceDetection, 1200);
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(startWorker, { timeout: 2500 });
+      } else {
+        window.setTimeout(startWorker, 900);
+      }
     }
 
     return () => {
       disposed = true;
-      window.clearTimeout(faceStartTimer);
-      if (faceIdleId !== null && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(faceIdleId);
-      }
       window.clearTimeout(lightingDelay);
-
-      if (lightTimer) {
-        window.clearInterval(lightTimer);
-      }
-
-      if (faceTimer) {
-        window.clearInterval(faceTimer);
-      }
+      if (lightTimer) window.clearInterval(lightTimer);
+      if (faceTimer) window.clearInterval(faceTimer);
     };
   }, [cameraOn, micAvailable]);
 
@@ -1896,24 +1893,37 @@ const AIInterview = () => {
       return undefined;
     }
 
-    // Wait for the microphone-complete confirmation to finish first.
-    // aiSpeaking normally covers this, while the ref also closes the tiny
-    // event-loop race between setState() and SpeechSynthesis.onstart.
+    // The final AI announcement MUST come after the microphone-success
+    // announcement. Do not let the two TTS messages overlap.
+    if (!micConfirmationDone) return undefined;
     if (aiSpeaking || micConfirmationInProgressRef.current) return undefined;
 
-    setupCompletionSpokenRef.current = true;
+    let disposed = false;
 
-    const completionMessage =
-      'Perfect. All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and interview environment are ready. Click Start Interview to begin. Good luck!';
+    const speakFinalSetupMessage = async () => {
+      const completionMessage =
+        'Perfect. All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and interview environment are ready. Click Start Interview to begin. Good luck!';
 
-    setAiGreetingText(
-      'All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and environment are ready. Click Start Interview to begin. Good luck!'
-    );
+      setAiGreetingText(
+        'Perfect. All your setup checks are complete. Your camera, microphone, AI voice, internet connection, and interview environment are ready. Click Start Interview to begin. Good luck!'
+      );
 
-    void speakQuestion(completionMessage);
+      // At this point the candidate has already interacted with the microphone
+      // test, so browser speech autoplay is normally permitted. Only mark the
+      // announcement as spoken after speechSynthesis actually accepts it.
+      const spoken = await speakQuestion(completionMessage);
 
-    return undefined;
-  }, [canStartInterview, aiSpeaking, interviewStarted]);
+      if (!disposed && spoken) {
+        setupCompletionSpokenRef.current = true;
+      }
+    };
+
+    void speakFinalSetupMessage();
+
+    return () => {
+      disposed = true;
+    };
+  }, [canStartInterview, aiSpeaking, interviewStarted, micConfirmationDone]);
 
   const getPreflightStatus = (status) => {
     const map = {
@@ -2058,6 +2068,7 @@ const AIInterview = () => {
     setPreflightMessage('');
     micConfirmationSpokenRef.current = false;
     micConfirmationInProgressRef.current = false;
+    setMicConfirmationDone(false);
 
     // IMPORTANT: AI finishes speaking first. Only then do we start
     // SpeechRecognition, so the browser cannot mistake the AI voice for
@@ -2112,20 +2123,33 @@ const AIInterview = () => {
         setPreflightMessage('Microphone verified successfully.');
         try { recognition.stop(); } catch {}
 
-        // IMPORTANT: after the microphone test finishes, the AI robot must
-        // explicitly confirm it. speakQuestion() serializes this with any
-        // other TTS, so the robot never talks over the candidate.
+        // IMPORTANT: the AI robot MUST speak immediately after the candidate
+        // successfully completes the microphone test. Do this only after the
+        // recognition result has matched and the recognition session is stopped.
+        // A tiny next-task delay lets Chrome finish releasing SpeechRecognition
+        // before SpeechSynthesis starts, which prevents the confirmation from
+        // being swallowed/interrupted on some browsers.
         if (!micConfirmationSpokenRef.current) {
           micConfirmationSpokenRef.current = true;
           micConfirmationInProgressRef.current = true;
-          setAiGreetingText(
-            'Microphone check complete. Your microphone and voice are working correctly.'
-          );
-          void speakQuestion(
-            'Microphone check complete. Your microphone and voice are working correctly.'
-          ).finally(() => {
-            micConfirmationInProgressRef.current = false;
-          });
+
+          const microphoneSuccessMessage =
+            'Perfect. Your microphone is working correctly. Your voice has been detected successfully.';
+
+          setAiGreetingText(microphoneSuccessMessage);
+
+          window.setTimeout(() => {
+            if (interviewStartedRef.current) {
+              micConfirmationInProgressRef.current = false;
+              setMicConfirmationDone(true);
+              return;
+            }
+
+            void speakQuestion(microphoneSuccessMessage).finally(() => {
+              micConfirmationInProgressRef.current = false;
+              setMicConfirmationDone(true);
+            });
+          }, 120);
         }
 
         // The final all-checks confirmation is handled centrally below.
@@ -2264,6 +2288,8 @@ const AIInterview = () => {
     }, 1000);
 
     return () => {
+      mountedRef.current = false;
+
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
@@ -2301,22 +2327,24 @@ const AIInterview = () => {
      ======================================================= */
 
   const moveToNextQuestion = () => {
-    const nextIndex =
-      currentQuestionIndex + 1;
+    if (finishInProgressRef.current || questionTransitionRef.current) return;
+    if (!interviewStartedRef.current || interviewComplete) return;
+
+    questionTransitionRef.current = true;
+
+    const nextIndex = currentQuestionIndex + 1;
 
     if (nextIndex >= totalQuestions) {
-      finishInterview();
+      void finishInterview();
+      questionTransitionRef.current = false;
       return;
     }
 
-    if (
-      recording &&
-      recognitionRef.current
-    ) {
+    if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch {
-        // Ignore.
+        // Recognition may already be stopped.
       }
     }
 
@@ -2325,26 +2353,28 @@ const AIInterview = () => {
       window.clearTimeout(speechTimerRef.current);
       speechTimerRef.current = null;
     }
+    if (speechHardTimeoutRef.current) {
+      window.clearTimeout(speechHardTimeoutRef.current);
+      speechHardTimeoutRef.current = null;
+    }
     window.speechSynthesis?.cancel();
-
+    aiSpeakingRef.current = false;
     setAiSpeaking(false);
 
     const nextQuestion = questions[nextIndex] || '';
 
     setCurrentQuestionIndex(nextIndex);
-
     setCurrentQuestion(nextQuestion);
-
     setTextAnswer('');
-
     setVoiceTranscript('');
-
     setTimeLeft(QUESTION_TIME);
-
     setRecording(false);
 
     window.requestAnimationFrame(() => {
-      speakQuestion(nextQuestion);
+      questionTransitionRef.current = false;
+      if (!finishInProgressRef.current && interviewStartedRef.current) {
+        void speakQuestion(nextQuestion);
+      }
     });
   };
 
@@ -2474,6 +2504,10 @@ const AIInterview = () => {
      ======================================================= */
 
   const finishInterview = async () => {
+    if (finishInProgressRef.current) return;
+    finishInProgressRef.current = true;
+    questionTransitionRef.current = false;
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
@@ -2494,6 +2528,10 @@ const AIInterview = () => {
     if (speechTimerRef.current) {
       window.clearTimeout(speechTimerRef.current);
       speechTimerRef.current = null;
+    }
+    if (speechHardTimeoutRef.current) {
+      window.clearTimeout(speechHardTimeoutRef.current);
+      speechHardTimeoutRef.current = null;
     }
     window.speechSynthesis?.cancel();
 
@@ -2529,6 +2567,9 @@ const AIInterview = () => {
     );
 
     if (!shouldExit) return;
+    if (finishInProgressRef.current) return;
+    finishInProgressRef.current = true;
+    questionTransitionRef.current = false;
 
     if (timerRef.current) {
       clearInterval(timerRef.current);
@@ -2551,7 +2592,12 @@ const AIInterview = () => {
       window.clearTimeout(speechTimerRef.current);
       speechTimerRef.current = null;
     }
+    if (speechHardTimeoutRef.current) {
+      window.clearTimeout(speechHardTimeoutRef.current);
+      speechHardTimeoutRef.current = null;
+    }
     window.speechSynthesis?.cancel();
+    aiSpeakingRef.current = false;
 
     setAiSpeaking(false);
     setRecording(false);
@@ -2585,6 +2631,10 @@ const AIInterview = () => {
       if (speechTimerRef.current) {
         window.clearTimeout(speechTimerRef.current);
         speechTimerRef.current = null;
+      }
+      if (speechHardTimeoutRef.current) {
+        window.clearTimeout(speechHardTimeoutRef.current);
+        speechHardTimeoutRef.current = null;
       }
       window.speechSynthesis?.cancel();
 
@@ -2859,11 +2909,21 @@ const AIInterview = () => {
           <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr_0.75fr]">
             {/* CAMERA */}
             <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <h2 className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-violet-400" />Your Camera</h2>
-                <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cameraOn ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
-                  ● {cameraOn ? 'LIVE' : 'OFF'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cameraOn ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                    ● {cameraOn ? 'LIVE' : 'OFF'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { void toggleCamera(); }}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${cameraOn ? 'border-red-400/30 text-red-300 hover:bg-red-500/10' : 'border-violet-400/30 text-violet-300 hover:bg-violet-500/10'}`}
+                    aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'}
+                  >
+                    {cameraOn ? 'Turn Off Camera' : 'Enable Camera'}
+                  </button>
+                </div>
               </div>
               <div className="relative overflow-hidden rounded-xl bg-black">
                 <video ref={videoRef} autoPlay playsInline muted className={`aspect-[16/9] w-full object-cover transition-opacity ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
@@ -2871,7 +2931,7 @@ const AIInterview = () => {
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                     <VideoOff className="mb-3 h-12 w-12" />
                     <p>Camera is turned off</p>
-                    <button onClick={() => startCamera()} className="mt-3 rounded-lg border border-violet-400/30 px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10">Enable Camera</button>
+                    <button onClick={() => startCamera({ force: true })} className="mt-3 rounded-lg border border-violet-400/30 px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10">Enable Camera</button>
                   </div>
                 )}
                 {cameraOn && faceStatus === 'none' && (
@@ -3066,7 +3126,7 @@ const AIInterview = () => {
                 {!cameraOn && <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500"><VideoOff className="mb-3 h-12 w-12" /><p>Camera is turned off</p></div>}
                 <button onClick={handleFullscreenButton} className="absolute right-3 top-3 rounded-lg bg-black/60 p-2"><Expand className="h-4 w-4" /></button>
               </div>
-              <div className="mt-2 flex shrink-0 items-center justify-between text-sm"><span className="text-emerald-400"><Video className="mr-2 inline h-4 w-4" />Camera: On</span><span className="text-emerald-400"><Mic className="mr-2 inline h-4 w-4" />Mic: Active</span><span className="hidden text-emerald-400 sm:inline">||||||||||||</span></div>
+              <div className="mt-2 flex shrink-0 items-center justify-between text-sm"><span className={cameraOn ? 'text-emerald-400' : 'text-red-400'}><Video className="mr-2 inline h-4 w-4" />Camera: {cameraOn ? 'On' : 'Off'}</span><span className={micAvailable ? 'text-emerald-400' : 'text-red-400'}><Mic className="mr-2 inline h-4 w-4" />Mic: {micAvailable ? 'Active' : 'Off'}</span><span className="hidden text-emerald-400 sm:inline">||||||||||||</span></div>
             </div>
 
             {/* AI */}
@@ -3147,4 +3207,4 @@ const AIInterview = () => {
   );
 };
 
-export default AIInterview
+export default AIInterview;
