@@ -3251,14 +3251,6 @@ const AIInterview = () => {
               </button>
             )}
 
-            <button
-              onClick={handleFullscreenButton}
-              className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-slate-900/60 text-gray-200 transition hover:border-violet-400/40 hover:text-violet-300"
-              aria-label="Fullscreen"
-            >
-              <Expand className="h-5 w-5" />
-            </button>
-
             <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-slate-900/70 px-3 py-1.5 sm:flex">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-500 text-xs font-bold text-slate-900">
                 {userName.charAt(0).toUpperCase()}
