@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bot,
@@ -13,7 +13,6 @@ import {
   Info,
   Lightbulb,
   LockKeyhole,
-  MessageSquare,
   ShieldCheck,
   UserRound,
   Wifi,
@@ -481,22 +480,14 @@ const AIInterview = () => {
       : 'Technical Interview');
 
   /* =======================================================
-     ROUND 3 QUESTION SOURCE — DYNAMIC
-     Current demo = 5. Future backend-generated question counts
-     automatically flow through questions.length.
+     ROUND 3 QUESTION SOURCE — PHASE 1 DEMO
+     -------------------------------------------------------
+     The current goal is to make the complete Final Round work
+     end-to-end. Therefore the frontend uses the same five demo
+     questions as the audited AIController. Dynamic question
+     generation is intentionally NOT used yet.
      ======================================================= */
-  const initialQuestions = normalizeQuestions(
-    currentInterview?.round3_questions ||
-      currentInterview?.ai_questions ||
-      currentInterview?.interview_questions ||
-      currentInterview?.generated_questions ||
-      currentInterview?.questions ||
-      currentInterview?.ai_interview?.questions
-  );
-
-  const [questions, setQuestions] = useState(
-    initialQuestions.length ? initialQuestions : DEMO_QUESTIONS
-  );
+  const [questions, setQuestions] = useState(DEMO_QUESTIONS);
 
   const totalQuestions = questions.length;
   const totalInterviewTime = totalQuestions * QUESTION_TIME;
@@ -507,6 +498,11 @@ const AIInterview = () => {
 
   const [interviewStarted, setInterviewStarted] = useState(false);
 
+  // Final Round state machine: Pre-Interview -> readiness -> active interview -> completed.
+  const [round3State, setRound3State] = useState('waiting_for_ready');
+  const [readinessListening, setReadinessListening] = useState(false);
+  const [readinessTranscript, setReadinessTranscript] = useState('');
+
   const [currentQuestionIndex, setCurrentQuestionIndex] =
     useState(0);
 
@@ -515,8 +511,6 @@ const AIInterview = () => {
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME);
 
   const [totalTimeLeft, setTotalTimeLeft] = useState(totalInterviewTime);
-
-  const [textAnswer, setTextAnswer] = useState('');
 
   const [voiceTranscript, setVoiceTranscript] = useState('');
 
@@ -586,6 +580,8 @@ const AIInterview = () => {
   const mediaStreamRef = useRef(null);
 
   const recognitionRef = useRef(null);
+  const readinessRecognitionRef = useRef(null);
+  const readinessInProgressRef = useRef(false);
 
   const timerRef = useRef(null);
 
@@ -615,6 +611,21 @@ const AIInterview = () => {
   useEffect(() => {
     interviewStartedRef.current = interviewStarted;
   }, [interviewStarted]);
+
+  // Enter must never bypass the Final Round readiness conversation or
+  // accidentally activate an interview control while the candidate is typing.
+  useEffect(() => {
+    const preventAccidentalEnter = (event) => {
+      if (event.key !== 'Enter') return;
+      const target = event.target;
+      if (target instanceof HTMLButtonElement) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', preventAccidentalEnter, true);
+    return () => window.removeEventListener('keydown', preventAccidentalEnter, true);
+  }, []);
 
   useEffect(() => {
     aiSpeakingRef.current = aiSpeaking;
@@ -761,7 +772,6 @@ const AIInterview = () => {
           currentQuestionNumber: currentQuestionIndex + 1,
           currentQuestion,
           currentAnswer:
-            textAnswer.trim() ||
             voiceTranscript.trim() ||
             '',
           timeRemaining: timeLeft,
@@ -819,7 +829,6 @@ const AIInterview = () => {
     selectedRole,
     currentQuestionIndex,
     currentQuestion,
-    textAnswer,
     voiceTranscript,
     timeLeft,
   ]);
@@ -844,21 +853,45 @@ const AIInterview = () => {
      Face detection, lighting and React state never replace srcObject while the
      same video element is already playing. This keeps the webcam preview live.
   ------------------------------------------------------- */
-  const attachCameraStream = async (stream) => {
-    const video = videoRef.current;
+  const attachCameraStream = async (stream, targetVideo = null) => {
+    const video = targetVideo || videoRef.current;
     if (!video || !stream) return false;
 
     try {
       video.autoplay = true;
       video.playsInline = true;
       video.muted = true;
+      video.setAttribute('autoplay', '');
+      video.setAttribute('playsinline', '');
+      video.setAttribute('muted', '');
 
       if (video.srcObject !== stream) {
         video.srcObject = stream;
       }
 
-      if (video.readyState < 2 || video.paused) {
-        await video.play().catch(() => {});
+      // Some Chromium builds do not start a newly-mounted srcObject video
+      // until metadata is available. Listen once and explicitly play it.
+      const playVideo = async () => {
+        try {
+          await video.play();
+        } catch (playError) {
+          // Autoplay should be allowed because the video is muted, but retry
+          // on the next frame in case the element has just mounted.
+          window.requestAnimationFrame(() => {
+            video.play().catch(() => {});
+          });
+        }
+      };
+
+      if (video.readyState >= 2) {
+        await playVideo();
+      } else {
+        video.onloadedmetadata = () => {
+          void playVideo();
+        };
+        video.oncanplay = () => {
+          void playVideo();
+        };
       }
 
       return true;
@@ -867,6 +900,30 @@ const AIInterview = () => {
       return false;
     }
   };
+
+  // IMPORTANT: React's normal useRef does not run an effect when the actual
+  // <video> DOM node is replaced. Pre-Interview and Active Interview render
+  // different video elements, so the MediaStream must be reattached at the
+  // exact moment the new DOM node mounts.
+  const handleVideoElementRef = useCallback((node) => {
+    videoRef.current = node;
+
+    if (!node) return;
+
+    node.autoplay = true;
+    node.playsInline = true;
+    node.muted = true;
+
+    const stream = mediaStreamRef.current;
+    if (stream) {
+      // Wait one frame so React has completed the DOM insertion/layout.
+      window.requestAnimationFrame(() => {
+        if (videoRef.current === node && mediaStreamRef.current === stream) {
+          void attachCameraStream(stream, node);
+        }
+      });
+    }
+  }, []);
 
   const startCamera = (options = {}) => {
     const { force = false } = options;
@@ -993,17 +1050,23 @@ const AIInterview = () => {
 
   useEffect(() => {
     /*
-     * The pre-interview screen and active interview screen use different
-     * <video> elements. When React swaps those elements, the existing
-     * MediaStream must be attached to the NEW video element again.
+     * Keep a second safety net in addition to the callback ref. When the
+     * interview state changes, React may replace the video DOM node. The
+     * callback ref normally handles this immediately; this effect verifies
+     * the final mounted node and starts playback again.
      */
-    if (!interviewStarted || !mediaStreamRef.current || !videoRef.current) {
-      return;
-    }
-
     const stream = mediaStreamRef.current;
-    void attachCameraStream(stream);
-  }, [interviewStarted, cameraOn]);
+    const video = videoRef.current;
+    if (!stream || !video) return;
+
+    const timer = window.setTimeout(() => {
+      if (videoRef.current === video && mediaStreamRef.current === stream) {
+        void attachCameraStream(stream, video);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [interviewStarted, round3State, cameraOn]);
 
   const stopMediaStream = () => {
     if (mediaStreamRef.current) {
@@ -1016,6 +1079,8 @@ const AIInterview = () => {
 
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+      videoRef.current.onloadedmetadata = null;
+      videoRef.current.oncanplay = null;
     }
 
     if (faceWorkerRef.current) {
@@ -1405,7 +1470,7 @@ const AIInterview = () => {
 
       if (event.error !== 'no-speech') {
         setError(
-          'Voice recognition stopped. You can try again or type your answer.'
+          'Voice recognition stopped. Please try speaking again.'
         );
       }
     };
@@ -1432,7 +1497,7 @@ const AIInterview = () => {
   const toggleVoiceRecording = () => {
     if (!voiceSupported) {
       setError(
-        'Speech recognition is not supported in this browser. Please use Chrome/Edge or type your answer.'
+        'Speech recognition is not supported in this browser. Please use Chrome or Edge with microphone access.'
       );
 
       return;
@@ -1492,6 +1557,76 @@ const AIInterview = () => {
   const API_BASE_URL = (
     import.meta.env?.VITE_API_BASE_URL || 'http://127.0.0.1:8001'
   ).replace(/\/$/, '');
+
+  const interviewId = currentInterview?.id || currentInterview?._id || currentInterview?.interview_id || currentInterview?.interviewId || null;
+  const getAuthToken = () => localStorage.getItem('access_token') || localStorage.getItem('token') || '';
+  const apiRequest = async (path, options = {}) => {
+    const token = getAuthToken();
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json') ? await response.json() : await response.text();
+    if (!response.ok) {
+      const message = typeof data === 'object' ? data?.detail || data?.message || data?.error : data;
+      throw new Error(message || `Request failed with status ${response.status}`);
+    }
+    return data;
+  };
+  const getRound3Answers = () => {
+    try { const data = JSON.parse(sessionStorage.getItem('round3_answers') || '[]'); return Array.isArray(data) ? data : []; }
+    catch { return []; }
+  };
+  const persistRound3Answer = async (payload) => {
+    const answers = getRound3Answers();
+    answers[payload.questionNumber - 1] = payload;
+    sessionStorage.setItem('round3_answers', JSON.stringify(answers));
+
+    // Phase 1 uses the audited FastAPI Round 3 endpoint:
+    // POST /api/interview/answer with { interview_id, question, answer }.
+    if (!interviewId) return { localOnly: true };
+
+    const body = {
+      interview_id: interviewId,
+      question: payload.question,
+      answer: payload.answer,
+    };
+
+    return apiRequest('/api/interview/answer', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  };
+
+  const fetchRound3Question = async () => {
+    if (!interviewId) {
+      return {
+        state: 'interview_active',
+        ready: true,
+        question_number: currentQuestionIndex + 1,
+        total_questions: DEMO_QUESTIONS.length,
+        question: DEMO_QUESTIONS[currentQuestionIndex] || '',
+      };
+    }
+
+    return apiRequest(
+      `/api/interview/question?interview_id=${encodeURIComponent(interviewId)}`,
+      { method: 'POST' }
+    );
+  };
+
+  const persistRound3Completion = async (backendResponse = null) => {
+    const payload = {
+      interview_id: interviewId,
+      round: 3,
+      total_questions: totalQuestions,
+      answers: getRound3Answers(),
+      completed_at: new Date().toISOString(),
+      backend_response: backendResponse,
+    };
+    sessionStorage.setItem('round3_result', JSON.stringify(payload));
+    return payload;
+  };
 
   const checkAIVoice = () => {
     if (!('speechSynthesis' in window)) {
@@ -2198,6 +2333,266 @@ const AIInterview = () => {
     }
   };
 
+  /* =======================================================
+     FINAL ROUND READINESS CONVERSATION
+     -------------------------------------------------------
+     Pre-Interview checks are locked. Clicking Start Interview
+     NEVER jumps directly to Q1. It enters the readiness state,
+     asks the candidate verbally if they are ready, and only then
+     requests the first question from the audited backend.
+     ======================================================= */
+
+  const localReadinessDecision = (text) => {
+    const value = String(text || '').trim().toLowerCase();
+    const normalized = value.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+    const negative = [
+      'not ready',
+      'not yet',
+      'wait',
+      'no',
+      'nope',
+      'not now',
+      'give me a minute',
+    ];
+    const positive = [
+      'yes',
+      'yeah',
+      'yep',
+      'sure',
+      'ready',
+      'i am ready',
+      'im ready',
+      'i m ready',
+      'lets start',
+      'let s start',
+    ];
+
+    if (negative.some((x) => normalized.includes(x))) return false;
+    if (positive.some((x) => normalized.includes(x))) return true;
+    return null;
+  };
+
+  const activateFirstQuestion = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      const response = await fetchRound3Question();
+      const question = String(response?.question || '').trim();
+
+      if (!question) {
+        throw new Error('The interview server did not return the first question.');
+      }
+
+      const serverIndex = Number(response?.question_number);
+      const nextIndex = Number.isFinite(serverIndex) && serverIndex > 0
+        ? serverIndex - 1
+        : 0;
+
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentQuestion(question);
+      setVoiceTranscript('');
+      setReadinessTranscript('');
+      setRound3State('interview_active');
+      setTimeLeft(QUESTION_TIME);
+      setTotalTimeLeft(totalInterviewTime);
+
+      window.requestAnimationFrame(() => {
+        void speakQuestion(question);
+      });
+    } catch (err) {
+      // Demo fallback: if the backend is temporarily unavailable, continue
+      // with the same five audited demo questions instead of breaking the UI.
+      console.warn('Unable to load Q1 from backend; using demo fallback.', err);
+      const question = DEMO_QUESTIONS[0];
+      setQuestions((previous) => previous.length ? previous : DEMO_QUESTIONS);
+      setCurrentQuestionIndex(0);
+      setCurrentQuestion(question);
+      setVoiceTranscript('');
+      setReadinessTranscript('');
+      setRound3State('interview_active');
+      setTimeLeft(QUESTION_TIME);
+      setTotalTimeLeft(totalInterviewTime);
+      setError('Interview server did not return the question. Demo question mode is active.');
+      window.requestAnimationFrame(() => {
+        void speakQuestion(question);
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startReadinessListening = () => {
+    if (readinessInProgressRef.current || interviewComplete || !interviewStartedRef.current) return;
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setError('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+
+    try {
+      readinessRecognitionRef.current?.stop();
+    } catch {}
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    let transcript = '';
+    let settled = false;
+
+    readinessRecognitionRef.current = recognition;
+    readinessInProgressRef.current = true;
+    setReadinessListening(true);
+    setReadinessTranscript('');
+    setError('');
+
+    const cleanup = () => {
+      readinessInProgressRef.current = false;
+      setReadinessListening(false);
+      if (readinessRecognitionRef.current === recognition) {
+        readinessRecognitionRef.current = null;
+      }
+    };
+
+    recognition.onstart = () => {
+      setReadinessListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let combined = transcript;
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        combined += ` ${event.results[i][0].transcript}`;
+      }
+      transcript = combined.trim();
+      setReadinessTranscript(transcript);
+    };
+
+    recognition.onerror = (event) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (event?.error !== 'no-speech') {
+        setError('I could not hear your readiness response. Please try again.');
+      }
+    };
+
+    recognition.onend = async () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+
+      const responseText = transcript.trim();
+      if (!responseText) {
+        setError('I did not hear a response. Please say yes when you are ready.');
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        let response = null;
+
+        if (interviewId) {
+          response = await apiRequest('/api/interview/readiness', {
+            method: 'POST',
+            body: JSON.stringify({
+              interview_id: interviewId,
+              response: responseText,
+            }),
+          });
+        } else {
+          const decision = localReadinessDecision(responseText);
+          response = {
+            ready: decision === true,
+            state: decision === true ? 'interview_active' : 'waiting_for_ready',
+            message: decision === false
+              ? 'No problem. Take your time. Let me know when you are ready.'
+              : decision === true
+                ? 'Okay, now let us start the interview. Good luck!'
+                : 'Please say yes when you are ready to begin the interview.',
+          };
+        }
+
+        const isReady = Boolean(response?.ready) || response?.state === 'interview_active';
+        const message = String(response?.message || '').trim();
+
+        if (!isReady) {
+          setRound3State('waiting_for_ready');
+          if (message) {
+            setAiGreetingText(message);
+            const spoken = await speakQuestion(message);
+            if (spoken && interviewStartedRef.current) {
+              window.setTimeout(() => startReadinessListening(), 250);
+            }
+          } else {
+            window.setTimeout(() => startReadinessListening(), 250);
+          }
+          return;
+        }
+
+        setRound3State('interview_active');
+        if (message) {
+          setAiGreetingText(message);
+          await speakQuestion(message);
+        }
+        await activateFirstQuestion();
+      } catch (err) {
+        console.error('Readiness request failed:', err);
+        const decision = localReadinessDecision(responseText);
+
+        if (decision === true) {
+          setRound3State('interview_active');
+          await activateFirstQuestion();
+        } else {
+          const message = decision === false
+            ? 'No problem. Take your time. Let me know when you are ready.'
+            : 'Please say yes when you are ready to begin the interview.';
+          setRound3State('waiting_for_ready');
+          setAiGreetingText(message);
+          await speakQuestion(message);
+          if (interviewStartedRef.current) {
+            window.setTimeout(() => startReadinessListening(), 250);
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    try {
+      recognition.start();
+    } catch (err) {
+      cleanup();
+      setError('Unable to start readiness listening. Please try again.');
+      console.error('Readiness recognition start failed:', err);
+    }
+  };
+
+  const startReadinessConversation = async () => {
+    setRound3State('waiting_for_ready');
+    setCurrentQuestion('');
+    setCurrentQuestionIndex(0);
+    setVoiceTranscript('');
+    setReadinessTranscript('');
+    setTimeLeft(QUESTION_TIME);
+    setError('');
+
+    const prompt = 'Before we begin, I need to confirm that you are ready. Are you ready for the interview?';
+    setAiGreetingText(prompt);
+
+    const spoken = await speakQuestion(prompt);
+    if (interviewStartedRef.current) {
+      window.setTimeout(() => startReadinessListening(), spoken ? 250 : 100);
+    }
+  };
+
   const startInterview = async () => {
     setError('');
     setPreflightMessage('');
@@ -2249,15 +2644,18 @@ const AIInterview = () => {
     interviewStartedRef.current = true;
 
     setInterviewComplete(false);
+    setRound3State('waiting_for_ready');
     setCurrentQuestionIndex(0);
-    setCurrentQuestion(questions[0] || '');
-    setTextAnswer('');
+    setCurrentQuestion('');
     setVoiceTranscript('');
+    setReadinessTranscript('');
     setTimeLeft(QUESTION_TIME);
     setTotalTimeLeft(totalInterviewTime);
 
+    // IMPORTANT: Start Interview never jumps directly to Q1.
+    // The candidate must first complete the Final Round readiness conversation.
     window.requestAnimationFrame(() => {
-      speakQuestion(questions[0] || '');
+      void startReadinessConversation();
     });
   };
 
@@ -2268,6 +2666,7 @@ const AIInterview = () => {
   useEffect(() => {
     if (
       !interviewStarted ||
+      round3State !== 'interview_active' ||
       interviewComplete ||
       !currentQuestion
     ) {
@@ -2278,7 +2677,7 @@ const AIInterview = () => {
       setTimeLeft((previous) => {
         if (previous <= 1) {
           clearInterval(timerRef.current);
-          window.setTimeout(() => moveToNextQuestion(), 0);
+          window.setTimeout(() => { void handleQuestionTimeout(); }, 0);
 
           return 0;
         }
@@ -2297,6 +2696,7 @@ const AIInterview = () => {
   }, [
     currentQuestionIndex,
     interviewStarted,
+    round3State,
     interviewComplete,
     currentQuestion,
   ]);
@@ -2306,7 +2706,7 @@ const AIInterview = () => {
      ======================================================= */
 
   useEffect(() => {
-    if (!interviewStarted || interviewComplete) return undefined;
+    if (!interviewStarted || round3State !== 'interview_active' || interviewComplete) return undefined;
 
     const totalTimer = window.setInterval(() => {
       setTotalTimeLeft((previous) => {
@@ -2320,190 +2720,237 @@ const AIInterview = () => {
     }, 1000);
 
     return () => window.clearInterval(totalTimer);
-  }, [interviewStarted, interviewComplete]);
+  }, [interviewStarted, round3State, interviewComplete]);
 
   /* =======================================================
      NEXT QUESTION
      ======================================================= */
 
-  const moveToNextQuestion = () => {
+  const moveToNextQuestion = async () => {
     if (finishInProgressRef.current || questionTransitionRef.current) return;
     if (!interviewStartedRef.current || interviewComplete) return;
 
     questionTransitionRef.current = true;
 
-    const nextIndex = currentQuestionIndex + 1;
-
-    if (nextIndex >= totalQuestions) {
-      void finishInterview();
-      questionTransitionRef.current = false;
-      return;
-    }
-
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // Recognition may already be stopped.
+    try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch {}
       }
-    }
 
-    speechSequenceRef.current += 1;
-    if (speechTimerRef.current) {
-      window.clearTimeout(speechTimerRef.current);
-      speechTimerRef.current = null;
-    }
-    if (speechHardTimeoutRef.current) {
-      window.clearTimeout(speechHardTimeoutRef.current);
-      speechHardTimeoutRef.current = null;
-    }
-    window.speechSynthesis?.cancel();
-    aiSpeakingRef.current = false;
-    setAiSpeaking(false);
+      speechSequenceRef.current += 1;
+      if (speechTimerRef.current) { window.clearTimeout(speechTimerRef.current); speechTimerRef.current = null; }
+      if (speechHardTimeoutRef.current) { window.clearTimeout(speechHardTimeoutRef.current); speechHardTimeoutRef.current = null; }
+      window.speechSynthesis?.cancel();
+      aiSpeakingRef.current = false;
+      setAiSpeaking(false);
+      setRecording(false);
 
-    const nextQuestion = questions[nextIndex] || '';
-
-    setCurrentQuestionIndex(nextIndex);
-    setCurrentQuestion(nextQuestion);
-    setTextAnswer('');
-    setVoiceTranscript('');
-    setTimeLeft(QUESTION_TIME);
-    setRecording(false);
-
-    window.requestAnimationFrame(() => {
-      questionTransitionRef.current = false;
-      if (!finishInProgressRef.current && interviewStartedRef.current) {
-        void speakQuestion(nextQuestion);
+      let response = null;
+      if (interviewId) {
+        response = await fetchRound3Question();
       }
-    });
+
+      const nextQuestion = String(response?.question || '').trim() || DEMO_QUESTIONS[currentQuestionIndex + 1] || '';
+      const serverNumber = Number(response?.question_number);
+      const nextIndex = Number.isFinite(serverNumber) && serverNumber > 0
+        ? serverNumber - 1
+        : currentQuestionIndex + 1;
+
+      if (!nextQuestion || nextIndex >= totalQuestions) {
+        await finishInterview();
+        return;
+      }
+
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentQuestion(nextQuestion);
+      setVoiceTranscript('');
+      setTimeLeft(QUESTION_TIME);
+
+      window.requestAnimationFrame(() => {
+        if (!finishInProgressRef.current && interviewStartedRef.current) {
+          void speakQuestion(nextQuestion);
+        }
+      });
+    } catch (err) {
+      console.error('Unable to load next question:', err);
+      const nextIndex = currentQuestionIndex + 1;
+      const nextQuestion = DEMO_QUESTIONS[nextIndex] || '';
+
+      if (!nextQuestion) {
+        await finishInterview();
+        return;
+      }
+
+      setError('Interview server did not return the next question. Demo question mode is active.');
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentQuestion(nextQuestion);
+      setVoiceTranscript('');
+      setTimeLeft(QUESTION_TIME);
+      window.requestAnimationFrame(() => void speakQuestion(nextQuestion));
+    } finally {
+      questionTransitionRef.current = false;
+    }
   };
 
   /* =======================================================
-     SUBMIT AND NEXT
+     SAVE / SUBMIT ROUND 3 ANSWER
      ======================================================= */
+
+  const saveCurrentAnswer = async (status = 'answered') => {
+    const answer = voiceTranscript.trim();
+    const payload = {
+      interview_id: interviewId,
+      round: 3,
+      questionNumber: currentQuestionIndex + 1,
+      question: currentQuestion,
+      answer,
+      transcript: answer,
+      status,
+      time_remaining: timeLeft,
+      submitted_at: new Date().toISOString(),
+    };
+
+    const response = await persistRound3Answer(payload);
+    return { payload, response };
+  };
 
   const handleSubmitAndNext = async () => {
-    const finalAnswer =
-      textAnswer.trim() ||
-      voiceTranscript.trim();
-
-    if (!finalAnswer) {
-      setError(
-        'Please answer using voice or text before continuing.'
-      );
-
-      return;
-    }
+    if (loading || finishInProgressRef.current || round3State !== 'interview_active') return;
+    if (recording) { try { recognitionRef.current?.stop(); } catch {} setRecording(false); }
+    if (!voiceTranscript.trim()) { setError('Please answer using your voice before continuing.'); return; }
 
     setError('');
-
     setLoading(true);
-
     try {
-      /*
-       * PHASE 1:
-       * Demo only.
-       *
-       * Backend connection comes later.
-       */
-
-      const savedAnswers = JSON.parse(
-        sessionStorage.getItem('round3_answers') || '[]'
-      );
-
-      savedAnswers[currentQuestionIndex] = {
-        questionNumber: currentQuestionIndex + 1,
-        question: currentQuestion,
-        answer: finalAnswer,
-        status: 'answered',
-      };
-
-      sessionStorage.setItem(
-        'round3_answers',
-        JSON.stringify(savedAnswers)
-      );
-
-      console.log('Interview answer:', savedAnswers[currentQuestionIndex]);
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 300)
-      );
-
-      moveToNextQuestion();
+      const result = await saveCurrentAnswer('answered');
+      if (currentQuestionIndex >= totalQuestions - 1 || result.response?.completed === true) {
+        await finishInterview(result.response);
+      } else {
+        await moveToNextQuestion();
+      }
     } catch (err) {
-      console.error(err);
-
-      setError(
-        'Unable to save your answer. Please try again.'
-      );
+      console.error('Unable to submit answer:', err);
+      setError(err?.message || 'Unable to save your answer. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  /* =======================================================
-     SUBMIT INTERVIEW
-     ======================================================= */
-
   const handleSubmitInterview = async () => {
-    const finalAnswer = textAnswer.trim() || voiceTranscript.trim();
-
-    if (!finalAnswer) {
-      setError('Please answer the current question before submitting the interview.');
-      return;
-    }
+    if (loading || finishInProgressRef.current || round3State !== 'interview_active') return;
+    if (recording) { try { recognitionRef.current?.stop(); } catch {} setRecording(false); }
+    if (!voiceTranscript.trim()) { setError('Please answer the current question using your voice before submitting.'); return; }
 
     setError('');
     setLoading(true);
-
     try {
-      console.log('Interview submitted:', {
-        questionNumber: currentQuestionIndex + 1,
-        question: currentQuestion,
-        answer: finalAnswer,
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await finishInterview();
+      const result = await saveCurrentAnswer('answered');
+      await finishInterview(result.response);
     } catch (err) {
-      console.error(err);
-      setError('Unable to submit the interview. Please try again.');
+      console.error('Unable to submit the interview:', err);
+      setError(err?.message || 'Unable to submit the interview. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuestionTimeout = async () => {
+    if (finishInProgressRef.current || questionTransitionRef.current || round3State !== 'interview_active') return;
+    setError('');
+
+    try {
+      // The audited backend rejects empty answers. If the candidate said
+      // nothing before the 60-second timer expired, record it as a skip.
+      if (voiceTranscript.trim()) {
+        await saveCurrentAnswer('answered');
+      } else if (interviewId) {
+        await apiRequest('/api/interview/skip', {
+          method: 'POST',
+          body: JSON.stringify({
+            interview_id: interviewId,
+            question: currentQuestion,
+          }),
+        });
+      } else {
+        const answers = getRound3Answers();
+        answers[currentQuestionIndex] = {
+          interview_id: interviewId,
+          round: 3,
+          questionNumber: currentQuestionIndex + 1,
+          question: currentQuestion,
+          answer: '',
+          transcript: '',
+          status: 'timeout',
+          score: 0,
+          score_10: 0,
+          feedback: 'No answer was submitted before the timer expired.',
+          submitted_at: new Date().toISOString(),
+        };
+        sessionStorage.setItem('round3_answers', JSON.stringify(answers));
+      }
+    } catch (err) {
+      console.warn('Timeout answer sync failed:', err);
+    }
+
+    await moveToNextQuestion();
   };
 
   /* =======================================================
      SKIP
      ======================================================= */
 
-  const handleSkipQuestion = () => {
+  const handleSkipQuestion = async () => {
+    if (loading || finishInProgressRef.current || round3State !== 'interview_active') return;
     setError('');
+    setLoading(true);
 
-    const savedAnswers = JSON.parse(
-      sessionStorage.getItem('round3_answers') || '[]'
-    );
+    try {
+      if (recording) { try { recognitionRef.current?.stop(); } catch {} setRecording(false); }
 
-    savedAnswers[currentQuestionIndex] = {
-      questionNumber: currentQuestionIndex + 1,
-      question: currentQuestion,
-      answer: '',
-      status: 'skipped',
-    };
+      if (interviewId) {
+        await apiRequest('/api/interview/skip', {
+          method: 'POST',
+          body: JSON.stringify({
+            interview_id: interviewId,
+            question: currentQuestion,
+          }),
+        });
+      } else {
+        const answers = getRound3Answers();
+        answers[currentQuestionIndex] = {
+          interview_id: interviewId,
+          round: 3,
+          questionNumber: currentQuestionIndex + 1,
+          question: currentQuestion,
+          answer: '',
+          transcript: '',
+          status: 'skipped',
+          score: 0,
+          score_10: 0,
+          feedback: 'Question skipped.',
+          submitted_at: new Date().toISOString(),
+        };
+        sessionStorage.setItem('round3_answers', JSON.stringify(answers));
+      }
 
-    sessionStorage.setItem(
-      'round3_answers',
-      JSON.stringify(savedAnswers)
-    );
-
-    moveToNextQuestion();
+      if (currentQuestionIndex >= totalQuestions - 1) {
+        await finishInterview();
+      } else {
+        await moveToNextQuestion();
+      }
+    } catch (err) {
+      console.error('Unable to record skipped question:', err);
+      setError(err?.message || 'Unable to record the skipped question.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* =======================================================
      FINISH INTERVIEW
      ======================================================= */
 
-  const finishInterview = async () => {
+  const finishInterview = async (backendResponse = null) => {
     if (finishInProgressRef.current) return;
     finishInProgressRef.current = true;
     questionTransitionRef.current = false;
@@ -2539,9 +2986,13 @@ const AIInterview = () => {
 
     setRecording(false);
 
+    try { await persistRound3Completion(backendResponse); }
+    catch (err) { console.warn('Round 3 completion persistence failed:', err); }
+
     interviewStartedRef.current = false;
 
     setInterviewComplete(true);
+    setRound3State('completed');
 
     setInterviewStarted(false);
 
@@ -2601,6 +3052,12 @@ const AIInterview = () => {
 
     setAiSpeaking(false);
     setRecording(false);
+    setRound3State('completed');
+
+    if (readinessRecognitionRef.current) {
+      try { readinessRecognitionRef.current.stop(); } catch {}
+      readinessRecognitionRef.current = null;
+    }
 
     interviewStartedRef.current = false;
 
@@ -2639,11 +3096,11 @@ const AIInterview = () => {
       window.speechSynthesis?.cancel();
 
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // Recognition may already be stopped.
-        }
+        try { recognitionRef.current.stop(); } catch {}
+      }
+      if (readinessRecognitionRef.current) {
+        try { readinessRecognitionRef.current.stop(); } catch {}
+        readinessRecognitionRef.current = null;
       }
 
       stopMediaStream();
@@ -2679,46 +3136,6 @@ const AIInterview = () => {
     ((currentQuestionIndex + 1) /
       totalQuestions) *
     100;
-
-  /* =======================================================
-     COMPLETE SCREEN
-     ======================================================= */
-
-  if (interviewComplete) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-950 via-[#061426] to-slate-950 px-4 text-white">
-        <div className="w-full max-w-xl rounded-3xl border border-cyan-500/20 bg-slate-950/80 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
-          </div>
-
-          <h1 className="text-3xl font-bold">
-            Interview Complete
-          </h1>
-
-          <p className="mt-3 text-gray-400">
-            You have completed all{' '}
-            {totalQuestions} questions in your{' '}
-            {selectedRole} interview.
-          </p>
-
-          <p className="mt-2 text-sm text-gray-500">
-            Your Round 3 interview is
-            complete.
-          </p>
-
-          <button
-            onClick={() =>
-              navigate('/feedback')
-            }
-            className="mt-8 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white transition hover:opacity-90"
-          >
-            Continue to Feedback
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   /* =======================================================
      FINAL UI
@@ -2762,28 +3179,6 @@ const AIInterview = () => {
     return 'border-white/5 bg-slate-950/40';
   };
 
-  if (interviewComplete) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#020817] via-[#061426] to-[#020617] px-4 text-white">
-        <div className="w-full max-w-xl rounded-3xl border border-cyan-500/20 bg-slate-950/90 p-8 text-center shadow-2xl">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
-            <CheckCircle2 className="h-8 w-8 text-emerald-400" />
-          </div>
-          <h1 className="text-3xl font-bold">Interview Complete</h1>
-          <p className="mt-3 text-gray-400">
-            You have completed your {selectedRole} interview.
-          </p>
-          <button
-            onClick={() => navigate('/feedback')}
-            className="mt-8 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white transition hover:opacity-90"
-          >
-            Continue to Feedback
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     return () => {
       if (speechTimerRef.current) {
@@ -2807,14 +3202,19 @@ const AIInterview = () => {
   }, []);
 
   return (
-    <div
-      className={`min-h-screen bg-[#020817] text-white ${
-        interviewStarted || isFullscreen
-          ? 'lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden'
-          : ''
-      }`}
-    >
-      {/* HEADER */}
+    <div className="min-h-screen bg-[#020817] text-white">
+      {interviewComplete ? (
+        <div className="flex min-h-screen items-center justify-center px-4">
+          <div className="w-full max-w-xl rounded-3xl border border-emerald-400/20 bg-slate-950/90 p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
+            <h1 className="text-3xl font-bold">Interview Complete</h1>
+            <p className="mt-3 text-gray-400">You completed all {totalQuestions} questions in your {selectedRole} interview.</p>
+            <p className="mt-2 text-sm text-gray-500">Your Round 3 responses have been saved for feedback generation.</p>
+            <button type="button" onClick={() => navigate('/feedback')} className="mt-8 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white transition hover:opacity-90">Continue to Feedback</button>
+          </div>
+        </div>
+      ) : (
+        <>
       <header className="border-b border-white/10 bg-[#020817]/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[58px] w-full max-w-[1500px] items-center justify-between px-[clamp(14px,1.7vw,28px)]">
           <div className="flex items-center gap-3">
@@ -2902,7 +3302,7 @@ const AIInterview = () => {
                 <p className="font-semibold">Setup attention required</p>
                 <p className="mt-0.5 text-amber-100/80">{preflightMessage}</p>
               </div>
-              <button onClick={() => setPreflightMessage('')} className="text-xs text-amber-300 hover:text-white">Dismiss</button>
+              <button type="button" onClick={() => setPreflightMessage('')} className="text-xs text-amber-300 hover:text-white">Dismiss</button>
             </div>
           )}
 
@@ -2926,12 +3326,12 @@ const AIInterview = () => {
                 </div>
               </div>
               <div className="relative overflow-hidden rounded-xl bg-black">
-                <video ref={videoRef} autoPlay playsInline muted className={`aspect-[16/9] w-full object-cover transition-opacity ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
+                <video ref={handleVideoElementRef} autoPlay playsInline muted className={`aspect-[16/9] w-full object-cover transition-opacity ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
                 {!cameraOn && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
                     <VideoOff className="mb-3 h-12 w-12" />
                     <p>Camera is turned off</p>
-                    <button onClick={() => startCamera({ force: true })} className="mt-3 rounded-lg border border-violet-400/30 px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10">Enable Camera</button>
+                    <button type="button" onClick={() => startCamera({ force: true })} className="mt-3 rounded-lg border border-violet-400/30 px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10">Enable Camera</button>
                   </div>
                 )}
                 {cameraOn && faceStatus === 'none' && (
@@ -3058,7 +3458,7 @@ const AIInterview = () => {
                 <p className="font-semibold">Environment Analysis</p>
                 <p className="mt-1 text-xs text-gray-500">Current browser/camera observations. No value is hard-coded as Good.</p>
               </div>
-              <button onClick={() => setShowEnvironmentDetails((v) => !v)} className="rounded-xl border border-cyan-400/30 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/10">{showEnvironmentDetails ? 'Hide Environment Details' : 'Get Environment Details'}</button>
+              <button type="button" onClick={() => setShowEnvironmentDetails((v) => !v)} className="rounded-xl border border-cyan-400/30 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/10">{showEnvironmentDetails ? 'Hide Environment Details' : 'Get Environment Details'}</button>
             </div>
             {showEnvironmentDetails && (
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
@@ -3081,6 +3481,7 @@ const AIInterview = () => {
             </div>
             <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-center">
               <button
+                type="button"
                 onClick={startInterview}
                 disabled={!canStartInterview}
                 className={`w-full max-w-md rounded-2xl px-8 py-5 text-[clamp(20px,2vw,30px)] font-bold shadow-xl transition ${canStartInterview ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:scale-[1.01] hover:opacity-95' : 'cursor-not-allowed bg-slate-800 text-gray-500'}`}
@@ -3095,7 +3496,7 @@ const AIInterview = () => {
               <ul className="space-y-3 text-sm text-gray-300">
                 <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will ask you {totalQuestions} questions</li>
                 <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />{QUESTION_TIME} seconds to answer each</li>
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />You can speak or type your answer</li>
+                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />You will answer every question using your voice</li>
                 <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will evaluate your responses</li>
                 <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />Detailed feedback after completion</li>
               </ul>
@@ -3108,7 +3509,7 @@ const AIInterview = () => {
 
       {/* ACTIVE INTERVIEW */}
       {interviewStarted && (
-        <main className="mx-auto flex min-h-[calc(100dvh-58px)] w-full max-w-[1550px] flex-col overflow-y-auto px-[clamp(12px,1.5vw,24px)] py-[clamp(10px,1.2vh,16px)] lg:h-[calc(100dvh-58px)] lg:min-h-0 lg:overflow-hidden">
+        <main className="mx-auto flex min-h-[calc(100dvh-58px)] w-full max-w-[1550px] flex-col px-[clamp(12px,1.5vw,24px)] pb-8 pt-[clamp(10px,1.2vh,16px)]">
           <section className="mb-3 flex shrink-0 items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <ShieldCheck className="mt-1 h-9 w-9 text-emerald-400" />
@@ -3117,91 +3518,365 @@ const AIInterview = () => {
             <div className="flex items-center gap-2"><Clock3 className="h-9 w-9 text-violet-400" /><div className="text-right"><p className="text-xs text-gray-300">Total Time Left</p><p className="font-mono text-2xl font-bold sm:text-3xl">{totalTimeLabel}</p></div></div>
           </section>
 
-          <section className="grid shrink-0 gap-3 lg:h-[clamp(285px,38vh,390px)] lg:grid-cols-[0.95fr_0.95fr_0.52fr]">
-            {/* VIDEO */}
-            <div className="flex min-h-[250px] flex-col rounded-2xl border border-white/10 bg-slate-950/60 p-3 shadow-xl">
-              <div className="mb-2 flex shrink-0 items-center justify-between"><h2 className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-blue-400" />Your Video</h2><span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">● LIVE</span></div>
-              <div className="relative min-h-[190px] flex-1 overflow-hidden rounded-xl bg-black">
-                <video ref={videoRef} autoPlay playsInline muted className={`absolute inset-0 h-full w-full object-cover ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
-                {!cameraOn && <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500"><VideoOff className="mb-3 h-12 w-12" /><p>Camera is turned off</p></div>}
-                <button onClick={handleFullscreenButton} className="absolute right-3 top-3 rounded-lg bg-black/60 p-2"><Expand className="h-4 w-4" /></button>
-              </div>
-              <div className="mt-2 flex shrink-0 items-center justify-between text-sm"><span className={cameraOn ? 'text-emerald-400' : 'text-red-400'}><Video className="mr-2 inline h-4 w-4" />Camera: {cameraOn ? 'On' : 'Off'}</span><span className={micAvailable ? 'text-emerald-400' : 'text-red-400'}><Mic className="mr-2 inline h-4 w-4" />Mic: {micAvailable ? 'Active' : 'Off'}</span><span className="hidden text-emerald-400 sm:inline">||||||||||||</span></div>
-            </div>
-
-            {/* AI */}
-            <div className="relative flex min-h-[250px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-center shadow-xl">
-              <div className="mb-2 flex w-full items-center gap-2 text-left font-semibold"><Bot className="h-5 w-5 text-violet-400" />AI Interviewer</div>
-              <div className="relative flex min-h-[170px] flex-1 w-full items-center justify-center overflow-hidden">
-                <div className="pointer-events-none absolute left-3 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-1 opacity-70">
-                  {Array.from({ length: 50 }).map((_, i) => <span key={i} className={`w-1 rounded-full bg-gradient-to-b from-violet-500 to-cyan-400 ${aiSpeaking ? 'mockmind-wave-bar' : ''}`} style={{ height: `${8 + ((i * 13) % 42)}px`, animationDelay: `${(i % 10) * 0.05}s` }} />)}
+          {round3State === 'waiting_for_ready' && !currentQuestion && (
+            <section className="grid min-h-[min(620px,calc(100vh-170px))] flex-1 place-items-center py-6">
+              <div className="w-full max-w-3xl rounded-3xl border border-violet-400/20 bg-slate-950/80 p-8 text-center shadow-2xl">
+                <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-cyan-400/30 bg-cyan-500/10">
+                  <Bot className="h-12 w-12 text-cyan-300" />
                 </div>
-                <div className="relative z-10 mockmind-robot-responsive"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
-              </div>
-              <div className="shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300">{aiSpeaking ? '🔊 AI is speaking...' : 'AI Interviewer'}</div>
-              <p className="mt-2 shrink-0 text-xs text-gray-300 sm:text-sm">Listen carefully and answer when you're ready.</p>
-            </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-violet-300">Final Round Readiness</p>
+                <h1 className="mt-3 text-3xl font-bold">Are you ready for the interview?</h1>
+                <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-gray-400">The AI interviewer will listen to your voice. Say <span className="font-semibold text-white">yes, I am ready</span> when you are ready to begin.</p>
 
-            {/* PROGRESS */}
-            <div className="min-h-0 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
-              <h2 className="font-semibold">Interview Progress</h2>
-              <div className="mx-auto my-3 flex h-32 w-32 items-center justify-center rounded-full border-[14px] border-violet-500/20 relative">
-                <div className="absolute inset-[-14px] rounded-full border-[14px] border-transparent border-t-violet-600 border-r-blue-500" />
-                <div className="text-center"><p className="text-2xl font-bold">{currentQuestionIndex + 1} / {totalQuestions}</p><p className="text-xs text-gray-400">Question</p></div>
-              </div>
-              <div className="max-h-[46vh] space-y-1 overflow-y-auto pr-1">
-                {Array.from({ length: totalQuestions }).map((_, i) => (
-                  <div key={i} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${statusClass(i)}`}>
-                    {i < currentQuestionIndex ? <CircleCheck className="h-6 w-6 shrink-0 text-emerald-400" /> : i === currentQuestionIndex ? <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold">{i + 1}</span> : <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 text-sm">{i + 1}</span>}
-                    <div className="min-w-0"><p className="text-sm font-medium">Question {i + 1}</p><p className={`text-xs ${i < currentQuestionIndex ? 'text-gray-500' : i === currentQuestionIndex ? 'text-violet-300' : 'text-gray-500'}`}>{questionStatus(i)}</p></div>
+                <div className="mx-auto mt-7 max-w-xl rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <div className="flex items-center justify-center gap-3 text-cyan-300">
+                    <Volume2 className="h-5 w-5" />
+                    <span className="font-semibold">{aiSpeaking ? 'AI is speaking...' : readinessListening ? 'Listening for your answer...' : 'Waiting for your response'}</span>
                   </div>
-                ))}
-              </div>
-              <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/60 p-3"><p className="text-sm text-gray-300">Answer Time</p><div className="mt-1 flex items-center gap-2"><Clock3 className="h-7 w-7 text-gray-300" /><span className="font-mono text-2xl font-bold text-cyan-400">{formatTime(timeLeft)}</span><span className="text-xs text-gray-500">/ 01:00</span></div><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-cyan-400 transition-all" style={{ width: `${answerProgress}%` }} /></div></div>
-            </div>
-          </section>
-
-          {/* QUESTION */}
-          <section className="mt-3 min-h-[112px] shrink-0 rounded-2xl border border-white/10 bg-slate-950/60 p-4 lg:min-h-[118px]">
-            <div className="flex items-center gap-2 text-sm font-medium text-cyan-300"><CircleHelp className="h-5 w-5" />Current Question</div>
-            <p className="mt-3 text-[clamp(15px,1.25vw,20px)] leading-relaxed text-white">{currentQuestion}</p>
-            <button onClick={replayQuestion} className="mt-3 text-sm font-semibold text-violet-400 transition hover:text-violet-300"><RotateCcw className="mr-2 inline h-4 w-4" />Replay Question</button>
-          </section>
-
-          {/* ANSWER + TIPS */}
-          <section className="mt-3 grid min-h-[235px] shrink-0 gap-3 lg:min-h-[250px] lg:grid-cols-[1.55fr_0.45fr]">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3">
-              <h2 className="mb-2 flex items-center gap-2 font-semibold"><Mic className="h-5 w-5 text-violet-400" />Your Answer</h2>
-              <div className="grid grid-cols-2 rounded-xl border border-white/10 bg-slate-950/60 p-1">
-                <button onClick={toggleVoiceRecording} disabled={!voiceSupported} className={`rounded-lg px-3 py-2 text-sm font-medium ${recording ? 'bg-red-500/20 text-red-300' : 'bg-violet-600 text-white'} disabled:opacity-40`}><Mic className="mr-2 inline h-4 w-4" />{recording ? 'Stop Answering' : 'Voice Answer'}</button>
-                <button onClick={() => document.getElementById('round3-text-answer')?.focus()} className="rounded-lg px-3 py-2 text-sm text-gray-300"><MessageSquare className="mr-2 inline h-4 w-4" />Type Answer</button>
-              </div>
-              <div className="mt-2 rounded-xl border border-white/10 bg-slate-950/50 p-3">
-                <div className="flex items-center gap-3">
-                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border ${recording ? 'border-violet-400 bg-violet-600/20' : 'border-violet-500/30 bg-violet-500/10'}`}><Mic className="h-6 w-6 text-violet-300" /></div>
-                  <div className="min-w-0 flex-1"><p className="font-medium">{recording ? 'Listening...' : 'Ready for your answer'}</p><p className="text-xs text-gray-500">{recording ? 'Speak now' : 'Speak clearly or type your answer below'}</p></div>
-                  <div className="hidden gap-1 sm:flex">{Array.from({ length: 22 }).map((_, i) => <span key={i} className="w-1 rounded-full bg-violet-400" style={{ height: `${5 + ((i * 7) % 18)}px` }} />)}</div>
+                  {readinessTranscript && (
+                    <p className="mt-4 rounded-xl border border-white/10 bg-slate-950/60 p-3 text-left text-sm text-gray-200">{readinessTranscript}</p>
+                  )}
                 </div>
-                {voiceTranscript && <p className="mt-2 max-h-16 overflow-y-auto text-sm text-gray-200">{voiceTranscript}</p>}
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <button type="button" onClick={startReadinessListening} disabled={aiSpeaking || loading || readinessListening} className="rounded-xl border border-violet-400/40 bg-violet-500/10 px-5 py-3 font-semibold text-violet-200 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-40">
+                    <Mic className="mr-2 inline h-5 w-5" />{readinessListening ? 'Listening...' : 'Answer Ready Check'}
+                  </button>
+                </div>
+
+                {error && <p className="mt-4 text-sm text-red-300">{error}</p>}
               </div>
-              <textarea id="round3-text-answer" value={textAnswer} onChange={(e) => setTextAnswer(e.target.value.slice(0, 2000))} rows={2} maxLength={2000} placeholder="Type your answer here..." className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-black/30 px-4 py-2 text-sm text-white outline-none placeholder:text-gray-600 focus:border-violet-500/50" />
-              {error && <p className="mt-2 text-center text-xs text-red-300">{error}</p>}
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-              <h2 className="mb-3 flex items-center gap-2 font-semibold"><Lightbulb className="h-5 w-5 text-cyan-300" />Tips</h2>
-              <ul className="space-y-3 text-sm text-gray-300"><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Speak clearly</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Maintain good eye contact</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Take your time</li><li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Be confident</li></ul>
-            </div>
-          </section>
+            </section>
+          )}
 
-          {/* CONTROLS */}
-          <section className="mt-3 grid min-h-[82px] shrink-0 gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3 sm:grid-cols-[0.8fr_1.3fr_0.8fr]">
-            <button onClick={handleSkipQuestion} disabled={loading} className="rounded-xl border border-amber-400/70 bg-amber-500/5 px-4 py-3 font-semibold text-amber-300 transition hover:bg-amber-500/10 disabled:opacity-40"><SkipForward className="mr-2 inline h-5 w-5" />Skip Question<p className="text-xs font-normal text-gray-500">Skip and move to next</p></button>
-            <button onClick={handleSubmitAndNext} disabled={loading} className="rounded-xl border border-blue-400/60 bg-gradient-to-r from-blue-600/90 to-blue-500/90 px-4 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-40">{loading ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : <><span className="text-lg">{currentQuestionIndex === totalQuestions - 1 ? 'Submit & Finish' : 'Next Question →'}</span><p className="text-xs font-normal text-blue-100">Save answer and go to next</p></>}</button>
-            <button onClick={handleSubmitInterview} disabled={loading} className="rounded-xl border border-emerald-400/70 bg-emerald-500/5 px-4 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-40"><Check className="mr-2 inline h-5 w-5" />Submit Interview<p className="text-xs font-normal text-gray-500">Submit and finish interview</p></button>
-          </section>
+          {round3State === 'interview_active' && currentQuestion && (
+            <>
+              {/* EXACT FINAL ROUND LAYOUT: left workspace + continuous right progress sidebar */}
+              <section className="grid items-stretch gap-3 lg:grid-cols-[minmax(0,1fr)_330px] lg:grid-rows-[350px_auto_auto]">
+                {/* VIDEO + AI */}
+                  <section className="grid min-w-0 gap-3 lg:col-start-1 lg:row-start-1 lg:grid-cols-2">
+                    {/* VIDEO */}
+                    <div className="min-w-0 flex min-h-[310px] flex-col lg:col-start-1 lg:row-start-1 rounded-2xl border border-white/10 bg-slate-950/60 p-3 shadow-xl lg:h-[350px]">
+                      <div className="mb-2 flex shrink-0 items-center justify-between">
+                        <h2 className="flex items-center gap-2 font-semibold">
+                          <Video className="h-5 w-5 text-blue-400" />
+                          Your Video
+                        </h2>
+                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">● LIVE</span>
+                      </div>
 
-          <p className="mt-2 shrink-0 text-center text-xs text-gray-500"><LockKeyhole className="mr-1 inline h-3.5 w-3.5" />Your video and audio are secure and encrypted. Only used for this interview session.</p>
+                      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black">
+                        <video
+                          ref={handleVideoElementRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className={`absolute inset-0 h-full w-full object-cover ${cameraOn ? 'opacity-100' : 'opacity-0'}`}
+                        />
+                        {!cameraOn && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                            <VideoOff className="mb-3 h-12 w-12" />
+                            <p>Camera is turned off</p>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleFullscreenButton}
+                          className="absolute right-3 top-3 rounded-lg bg-black/60 p-2 transition hover:bg-black/80"
+                          aria-label="Fullscreen camera"
+                        >
+                          <Expand className="h-4 w-4" />
+                        </button>
+                        <div className={`absolute left-3 top-3 rounded-full border px-3 py-1.5 text-xs font-semibold backdrop-blur ${
+                          faceStatus === 'detected'
+                            ? 'border-emerald-400/30 bg-emerald-500/15 text-emerald-300'
+                            : faceStatus === 'multiple'
+                              ? 'border-red-400/30 bg-red-500/15 text-red-300'
+                              : faceStatus === 'none'
+                                ? 'border-amber-400/30 bg-amber-500/15 text-amber-200'
+                                : 'border-white/15 bg-black/60 text-gray-300'
+                        }`}>
+                          {faceStatus === 'detected' ? '✓ Face Detected' :
+                            faceStatus === 'multiple' ? '⚠ Multiple Faces' :
+                              faceStatus === 'none' ? '⚠ Face Not Detected' :
+                                'Face Detection…'}
+                        </div>
+                      </div>
+
+                      <div className="mt-2 flex shrink-0 flex-wrap items-center justify-between gap-2 text-sm">
+                        <span className={cameraOn ? 'text-emerald-400' : 'text-red-400'}>
+                          <Video className="mr-2 inline h-4 w-4" />
+                          Camera: {cameraOn ? 'On' : 'Off'}
+                        </span>
+                        <span className={micAvailable ? 'text-emerald-400' : 'text-red-400'}>
+                          <Mic className="mr-2 inline h-4 w-4" />
+                          Mic: {micAvailable ? 'Active' : 'Off'}
+                        </span>
+                        <span className={`text-xs font-semibold ${faceStatus === 'detected' ? 'text-emerald-400' : faceStatus === 'multiple' ? 'text-red-400' : 'text-amber-300'}`}>
+                          Face: {faceStatus === 'detected' ? 'Detected' : faceStatus === 'multiple' ? 'Multiple' : faceStatus === 'none' ? 'Not detected' : 'Checking'}
+                        </span>
+                        <span className="hidden text-emerald-400 sm:inline">||||||||||||</span>
+                      </div>
+                    </div>
+
+                    {/* AI */}
+                    <div className="relative flex min-h-[310px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-3 text-center shadow-xl lg:h-[350px]">
+                      <div className="mb-2 flex w-full shrink-0 items-center gap-2 text-left font-semibold">
+                        <Bot className="h-5 w-5 text-violet-400" />
+                        AI Interviewer
+                      </div>
+
+                      <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
+                        <div className="pointer-events-none absolute left-3 right-3 top-1/2 flex -translate-y-1/2 items-center justify-between gap-1 opacity-70">
+                          {Array.from({ length: 50 }).map((_, i) => (
+                            <span
+                              key={i}
+                              className={`w-1 rounded-full bg-gradient-to-b from-violet-500 to-cyan-400 ${aiSpeaking ? 'mockmind-wave-bar' : ''}`}
+                              style={{
+                                height: `${8 + ((i * 13) % 42)}px`,
+                                animationDelay: `${(i % 10) * 0.05}s`,
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div className="relative z-10 mockmind-robot-responsive">
+                          <AIInterviewerAvatar speaking={aiSpeaking} />
+                        </div>
+                      </div>
+
+                      <div className="shrink-0 rounded-xl border border-cyan-400/40 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300">
+                        {aiSpeaking ? '🔊 AI is speaking...' : 'AI Interviewer'}
+                      </div>
+                      <p className="mt-2 shrink-0 text-xs text-gray-300 sm:text-sm">
+                        Listen carefully and answer when you're ready.
+                      </p>
+                    </div>
+                  </section>
+
+                  
+                {/* CURRENT QUESTION — intentionally compact */}
+                  <section className="min-w-0 rounded-2xl border lg:col-start-1 lg:row-start-2 border-white/10 bg-slate-950/60 px-4 py-2.5 shadow-xl">
+                    <div className="flex items-center gap-2 text-sm font-medium text-cyan-300">
+                      <CircleHelp className="h-5 w-5" />
+                      Current Question
+                    </div>
+                    <p className="mt-1.5 break-words text-[clamp(14px,1.05vw,18px)] leading-snug text-white">
+                      {currentQuestion}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={replayQuestion}
+                      className="mt-1.5 text-sm font-semibold text-violet-400 transition hover:text-violet-300"
+                    >
+                      <RotateCcw className="mr-2 inline h-4 w-4" />
+                      Replay Question
+                    </button>
+                  </section>
+
+                  
+                {/* ANSWER + TIPS */}
+                  <section className="min-w-0 grid gap-3 lg:col-start-1 lg:row-start-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(230px,0.45fr)]">
+                    {/* ANSWER */}
+                    <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/60 p-3 shadow-xl">
+                      <h2 className="mb-2 flex items-center gap-2 font-semibold">
+                        <Mic className="h-5 w-5 text-violet-400" />
+                        Your Answer
+                      </h2>
+
+                      <div className="rounded-xl border border-violet-400/20 bg-violet-500/5 px-3 py-2 text-center text-sm font-medium text-violet-200">
+                        <Mic className="mr-2 inline h-4 w-4" />
+                        Voice-only answer — speak clearly and confidently
+                      </div>
+
+                      <div className="mt-2 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={toggleVoiceRecording}
+                            disabled={!voiceSupported || loading || aiSpeaking}
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition ${
+                              recording
+                                ? 'border-red-400 bg-red-500/20 hover:bg-red-500/30'
+                                : 'border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20'
+                            } disabled:cursor-not-allowed disabled:opacity-40`}
+                            aria-label={recording ? 'Stop answering' : 'Start voice answer'}
+                          >
+                            {recording ? (
+                              <Square className="h-5 w-5 fill-current text-red-300" />
+                            ) : (
+                              <Mic className="h-6 w-6 text-violet-300" />
+                            )}
+                          </button>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium">
+                              {recording ? 'Listening...' : voiceTranscript ? 'Answer captured' : 'Ready for your answer'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {recording
+                                ? 'Speak now — your words appear below'
+                                : voiceTranscript
+                                  ? 'Answer captured. Continue when you are ready.'
+                                  : 'Speak clearly and answer using your voice'}
+                            </p>
+                          </div>
+
+                          <div className="hidden shrink-0 gap-1 sm:flex" aria-hidden="true">
+                            {Array.from({ length: 22 }).map((_, i) => (
+                              <span
+                                key={i}
+                                className={`w-1 rounded-full ${recording ? 'mockmind-wave-bar bg-violet-400' : 'bg-violet-400/60'}`}
+                                style={{
+                                  height: `${5 + ((i * 7) % 18)}px`,
+                                  animationDelay: `${(i % 8) * 0.06}s`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+
+                        {voiceTranscript && (
+                          <p className="mt-2 max-h-20 overflow-y-auto rounded-lg border border-white/5 bg-black/10 p-2 text-sm leading-5 text-gray-200">
+                            {voiceTranscript}
+                          </p>
+                        )}
+                      </div>
+
+                      {error && <p className="mt-2 text-center text-xs text-red-300">{error}</p>}
+                    </div>
+
+                    {/* TIPS */}
+                    <div className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
+                      <h2 className="mb-3 flex items-center gap-2 font-semibold">
+                        <Lightbulb className="h-5 w-5 text-cyan-300" />
+                        Tips
+                      </h2>
+                      <ul className="space-y-3 text-sm text-gray-300">
+                        <li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Speak clearly</li>
+                        <li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Maintain good eye contact</li>
+                        <li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Take your time</li>
+                        <li><Check className="mr-2 inline h-4 w-4 text-cyan-300" />Be confident</li>
+                      </ul>
+                    </div>
+                  </section>
+
+                {/* RIGHT SIDEBAR — STRETCHES FROM TOP TO THE BOTTOM OF TIPS */}
+                <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-3">
+                  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl lg:min-h-0">
+                    <h2 className="shrink-0 font-semibold">Interview Progress</h2>
+
+                    <div className="relative mx-auto my-3 flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-[14px] border-violet-500/20">
+                      <div className="absolute inset-[-14px] rounded-full border-[14px] border-transparent border-t-violet-600 border-r-blue-500" />
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{currentQuestionIndex + 1} / {totalQuestions}</p>
+                        <p className="text-xs text-gray-400">Question</p>
+                      </div>
+                    </div>
+
+                    <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1">
+                      {Array.from({ length: totalQuestions }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 ${statusClass(i)}`}
+                        >
+                          {i < currentQuestionIndex ? (
+                            <CircleCheck className="h-6 w-6 shrink-0 text-emerald-400" />
+                          ) : i === currentQuestionIndex ? (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-600 font-bold">
+                              {i + 1}
+                            </span>
+                          ) : (
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/20 text-sm">
+                              {i + 1}
+                            </span>
+                          )}
+
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">Question {i + 1}</p>
+                            <p
+                              className={`text-xs ${
+                                i < currentQuestionIndex
+                                  ? 'text-gray-500'
+                                  : i === currentQuestionIndex
+                                    ? 'text-violet-300'
+                                    : 'text-gray-500'
+                              }`}
+                            >
+                              {questionStatus(i)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 shrink-0 rounded-xl border border-white/10 bg-slate-950/60 p-3">
+                      <p className="text-sm text-gray-300">Answer Time</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <Clock3 className="h-7 w-7 text-gray-300" />
+                        <span className="font-mono text-2xl font-bold text-cyan-400">{formatTime(timeLeft)}</span>
+                        <span className="text-xs text-gray-500">/ 01:00</span>
+                      </div>
+                      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-cyan-400 transition-all"
+                          style={{ width: `${answerProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </aside>
+              </section>
+
+{/* CONTROLS — BELOW BOTH THE LEFT WORKSPACE AND PROGRESS */}
+              <section className="mt-3 grid min-h-[82px] shrink-0 gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-3 sm:grid-cols-[0.8fr_1.3fr_0.8fr]">
+                <button
+                  type="button"
+                  onClick={handleSkipQuestion}
+                  disabled={loading}
+                  className="rounded-xl border border-amber-400/70 bg-amber-500/5 px-4 py-3 font-semibold text-amber-300 transition hover:bg-amber-500/10 disabled:opacity-40"
+                >
+                  <SkipForward className="mr-2 inline h-5 w-5" />
+                  Skip Question
+                  <p className="text-xs font-normal text-gray-500">Skip and move to next</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSubmitAndNext}
+                  disabled={loading}
+                  className="rounded-xl border border-blue-400/60 bg-gradient-to-r from-blue-600/90 to-blue-500/90 px-4 py-3 font-semibold text-white transition hover:opacity-95 disabled:opacity-40"
+                >
+                  {loading ? (
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+                  ) : (
+                    <>
+                      <span className="text-lg">{currentQuestionIndex === totalQuestions - 1 ? 'Submit & Finish' : 'Next Question →'}</span>
+                      <p className="text-xs font-normal text-blue-100">Save answer and go to next</p>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSubmitInterview}
+                  disabled={loading}
+                  className="rounded-xl border border-emerald-400/70 bg-emerald-500/5 px-4 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-500/10 disabled:opacity-40"
+                >
+                  <Check className="mr-2 inline h-5 w-5" />
+                  Submit Interview
+                  <p className="text-xs font-normal text-gray-500">Submit and finish interview</p>
+                </button>
+              </section>
+
+              <p className="mt-2 shrink-0 text-center text-xs text-gray-500">
+                <LockKeyhole className="mr-1 inline h-3.5 w-3.5" />
+                Your video and audio are secure and encrypted. Only used for this interview session.
+              </p>
+            </>
+          )}
         </main>
+      )}
+        </>
       )}
     </div>
   );
