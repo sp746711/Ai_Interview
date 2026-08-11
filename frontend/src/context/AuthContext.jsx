@@ -3,9 +3,9 @@ import React, {
   useState,
   useEffect,
   useContext,
-} from 'react';
+} from "react";
 
-import api from '../services/api';
+import api from "../services/api";
 
 const AuthContext = createContext();
 
@@ -13,21 +13,30 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
 
   const [token, setToken] = useState(
-    localStorage.getItem('token')
+    localStorage.getItem("token")
   );
 
   const [loading, setLoading] = useState(true);
 
+  // Restore authentication when the application starts
   useEffect(() => {
     const initAuth = () => {
-      const storedToken = localStorage.getItem('token');
-
-      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
 
       if (storedToken && storedUser) {
-        setToken(storedToken);
+        try {
+          setToken(storedToken);
+          setUser(JSON.parse(storedUser));
+        } catch (error) {
+          console.error("Failed to restore stored user:", error);
 
-        setUser(JSON.parse(storedUser));
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+
+          setToken(null);
+          setUser(null);
+        }
       }
 
       setLoading(false);
@@ -36,40 +45,46 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // Login
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post("/auth/login", {
         email,
         password,
       });
 
-      const { access_token, name } = response.data;
-      
+      const {
+        access_token,
+        name,
+        email: responseEmail,
+      } = response.data;
+
       console.log("LOGIN RESPONSE:", response.data);
 
-      localStorage.setItem('token', access_token);
+      // Store JWT token
+      localStorage.setItem("token", access_token);
 
+      // Store logged-in user
       const userData = {
         name: name,
-        email: email,
+        email: responseEmail || email,
       };
 
       localStorage.setItem(
-        'user',
+        "user",
         JSON.stringify(userData)
       );
 
+      // Update React state
       setToken(access_token);
-
       setUser(userData);
 
       return {
         success: true,
       };
-
     } catch (error) {
       console.error(
-        'Login API Error:',
+        "Login API Error:",
         error.response?.data || error.message
       );
 
@@ -77,24 +92,25 @@ export const AuthProvider = ({ children }) => {
         success: false,
         error:
           error.response?.data?.detail ||
-          'Login failed. Please check your credentials.',
+          "Login failed. Please check your credentials.",
       };
     }
   };
 
+  // Register
   const register = async (name, email, password) => {
     try {
-      await api.post('/auth/register', {
+      await api.post("/auth/register", {
         name,
         email,
         password,
       });
 
+      // Automatically login after successful registration
       return await login(email, password);
-
     } catch (error) {
       console.error(
-        'Registration API Error:',
+        "Registration API Error:",
         error.response?.data || error.message
       );
 
@@ -102,27 +118,23 @@ export const AuthProvider = ({ children }) => {
         success: false,
         error:
           error.response?.data?.detail ||
-          'Registration failed.',
+          "Registration failed.",
       };
     }
   };
 
+  // Logout
   const logout = () => {
-    localStorage.removeItem('token');
-
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
 
     setToken(null);
-
     setUser(null);
   };
 
+  // Show loading while restoring authentication
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-primary-500">
-        Loading...
-      </div>
-    );
+    return <div>Loading...</div>;
   }
 
   return (
@@ -141,14 +153,17 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// Custom authentication hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
 
   if (!context) {
     throw new Error(
-      'useAuth must be used within an AuthProvider'
+      "useAuth must be used within an AuthProvider"
     );
   }
 
   return context;
 };
+
+export default AuthContext;
