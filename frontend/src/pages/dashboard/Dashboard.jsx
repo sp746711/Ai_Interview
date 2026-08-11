@@ -1,5 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import StatCard from "../../components/dashboard/StatCard";
+import Table from "../../components/dashboard/Table";
+
 import api from "../../services/api";
 
 import {
@@ -17,14 +21,14 @@ import {
   Eye,
   ChevronDown,
   CheckCircle2,
-  Bot,
 } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
 
   // =========================================================
-  // DASHBOARD DATA
+  // GLOBAL DASHBOARD STATISTICS
+  // Technical + Non-Technical combined
   // =========================================================
 
   const [stats, setStats] = useState({
@@ -34,34 +38,104 @@ const Dashboard = () => {
     best_score: 0,
   });
 
+  // =========================================================
+  // COMBINED HISTORY
+  // Technical + Non-Technical
+  // =========================================================
+
   const [history, setHistory] = useState([]);
+
+  // =========================================================
+  // SELECTOR 1
+  // READY FOR YOUR NEXT INTERVIEW
+  //
+  // Existing interview flow - DO NOT CHANGE
+  // =========================================================
 
   const [interviewType, setInterviewType] =
     useState("technical");
 
-  const [analyticsType, setAnalyticsType] =
-    useState("technical");
+  // =========================================================
+  // SELECTOR 2
+  // ANALYTICS
+  //
+  // Controls:
+  // - Score Overview
+  // - Interviews By Role
+  // - Your Performance
+  //
+  // IMPORTANT:
+  // This selected value is persisted so that a page reload
+  // does not automatically switch back to Technical.
+  // =========================================================
+
+  const [analyticsType, setAnalyticsType] = useState(() => {
+    return (
+      localStorage.getItem("dashboard_analytics_type") ||
+      "technical"
+    );
+  });
+
+  // =========================================================
+  // ANALYTICS STATE
+  //
+  // Backend returns:
+  //
+  // score_overview = {
+  //   labels: [],
+  //   scores: [],
+  //   count: 25
+  // }
+  //
+  // interviews_by_role = {
+  //   roles: []
+  // }
+  //
+  // performance = {
+  //   average_score: 12.1,
+  //   completed_interviews: 25,
+  //   best_score: 36,
+  //   completion_rate: 28.1
+  // }
+  // =========================================================
 
   const [analytics, setAnalytics] = useState({
-    score_overview: [],
-    interviews_by_role: [],
+    interview_type: "technical",
+
+    score_overview: {
+      interview_type: "technical",
+      labels: [],
+      scores: [],
+      count: 0,
+    },
+
+    interviews_by_role: {
+      interview_type: "technical",
+      total_interviews: 0,
+      roles: [],
+    },
+
     performance: {
-      percentage: 0,
-      label: "No Data",
-      description:
-        "Complete an interview to see your performance.",
+      interview_type: "technical",
+      total_interviews: 0,
+      completed_interviews: 0,
+      average_score: 0,
+      best_score: 0,
+      completion_rate: 0,
     },
   });
 
   const [loading, setLoading] = useState(true);
+
   const [analyticsLoading, setAnalyticsLoading] =
     useState(false);
 
   const [starting, setStarting] = useState(false);
+
   const [error, setError] = useState("");
 
   // =========================================================
-  // LOAD OVERVIEW + HISTORY
+  // LOAD GLOBAL DASHBOARD DATA
   // =========================================================
 
   useEffect(() => {
@@ -83,6 +157,10 @@ const Dashboard = () => {
 
         const historyData =
           historyResponse.data || {};
+
+        // -----------------------------------------------------
+        // GLOBAL STATISTICS
+        // -----------------------------------------------------
 
         const overviewStats =
           overview.stats || overview;
@@ -108,6 +186,10 @@ const Dashboard = () => {
             0,
         });
 
+        // -----------------------------------------------------
+        // COMBINED HISTORY
+        // -----------------------------------------------------
+
         const rawHistory = Array.isArray(historyData)
           ? historyData
           : Array.isArray(historyData.history)
@@ -128,8 +210,10 @@ const Dashboard = () => {
 
             role:
               item?.role ||
+              item?.job_role ||
+              item?.jobRole ||
               item?.domain ||
-              "Interview",
+              "Role Not Selected",
 
             type:
               item?.interview_type ||
@@ -175,6 +259,8 @@ const Dashboard = () => {
 
   // =========================================================
   // LOAD ANALYTICS
+  //
+  // Runs when Technical / Non-Technical changes
   // =========================================================
 
   useEffect(() => {
@@ -193,32 +279,78 @@ const Dashboard = () => {
 
         const data = response.data || {};
 
+        // =====================================================
+        // IMPORTANT FIX
+        //
+        // Backend score_overview is OBJECT
+        // NOT ARRAY
+        // =====================================================
+
+        const scoreOverview =
+          data.score_overview &&
+          typeof data.score_overview === "object" &&
+          !Array.isArray(data.score_overview)
+            ? data.score_overview
+            : {
+                interview_type:
+                  analyticsType,
+                labels: [],
+                scores: [],
+                count: 0,
+              };
+
+        // =====================================================
+        // IMPORTANT FIX
+        //
+        // Backend interviews_by_role is OBJECT
+        // NOT ARRAY
+        // =====================================================
+
+        const interviewsByRole =
+          data.interviews_by_role &&
+          typeof data.interviews_by_role === "object" &&
+          !Array.isArray(
+            data.interviews_by_role
+          )
+            ? data.interviews_by_role
+            : {
+                interview_type:
+                  analyticsType,
+                total_interviews: 0,
+                roles: [],
+              };
+
+        // =====================================================
+        // PERFORMANCE
+        // =====================================================
+
+        const performanceData =
+          data.performance &&
+          typeof data.performance === "object"
+            ? data.performance
+            : {
+                interview_type:
+                  analyticsType,
+                total_interviews: 0,
+                completed_interviews: 0,
+                average_score: 0,
+                best_score: 0,
+                completion_rate: 0,
+              };
+
         setAnalytics({
+          interview_type:
+            data.interview_type ||
+            analyticsType,
+
           score_overview:
-            Array.isArray(
-              data.score_overview
-            )
-              ? data.score_overview
-              : [],
+            scoreOverview,
 
           interviews_by_role:
-            Array.isArray(
-              data.interviews_by_role
-            )
-              ? data.interviews_by_role
-              : [],
+            interviewsByRole,
 
           performance:
-            data.performance &&
-            typeof data.performance ===
-              "object"
-              ? data.performance
-              : {
-                  percentage: 0,
-                  label: "No Data",
-                  description:
-                    "No analytics available yet.",
-                },
+            performanceData,
         });
       } catch (err) {
         console.error(
@@ -228,13 +360,31 @@ const Dashboard = () => {
         );
 
         setAnalytics({
-          score_overview: [],
-          interviews_by_role: [],
+          interview_type: analyticsType,
+
+          score_overview: {
+            interview_type:
+              analyticsType,
+            labels: [],
+            scores: [],
+            count: 0,
+          },
+
+          interviews_by_role: {
+            interview_type:
+              analyticsType,
+            total_interviews: 0,
+            roles: [],
+          },
+
           performance: {
-            percentage: 0,
-            label: "No Data",
-            description:
-              `No ${analyticsType} analytics available yet.`,
+            interview_type:
+              analyticsType,
+            total_interviews: 0,
+            completed_interviews: 0,
+            average_score: 0,
+            best_score: 0,
+            completion_rate: 0,
           },
         });
       } finally {
@@ -247,6 +397,8 @@ const Dashboard = () => {
 
   // =========================================================
   // START INTERVIEW
+  //
+  // EXISTING CONNECTION - DO NOT CHANGE
   // =========================================================
 
   const handleStart = async () => {
@@ -257,29 +409,34 @@ const Dashboard = () => {
       const res = await api.post(
         "/interview/start",
         {
-          interview_type: interviewType,
+          interview_type:
+            interviewType,
         }
       );
 
       localStorage.setItem(
         "current_interview",
         JSON.stringify({
-          id: res.data.interview_id,
-          interview_type: interviewType,
+          id:
+            res.data.interview_id,
+
+          interview_type:
+            interviewType,
+
           stage: "round1",
         })
       );
 
       navigate("/round1");
-    } catch (err) {
+    } catch (error) {
       console.error(
         "Failed to start interview:",
-        err.response?.data ||
-          err.message
+        error.response?.data ||
+          error.message
       );
 
       setError(
-        err.response?.data?.detail ||
+        error.response?.data?.detail ||
           "Failed to start interview."
       );
     } finally {
@@ -288,109 +445,15 @@ const Dashboard = () => {
   };
 
   // =========================================================
-  // NORMALIZE ANALYTICS
-  // =========================================================
-
-  const scoreData = useMemo(() => {
-    const overview = analytics.score_overview;
-
-    if (
-      overview &&
-      typeof overview === "object" &&
-      Array.isArray(overview.scores)
-    ) {
-      return overview.scores;
-    }
-
-    return [];
-  }, [analytics.score_overview]);
-
-  const scoreValues = useMemo(() => {
-    return scoreData
-      .map((item) => {
-        if (typeof item === "number") {
-          return item;
-        }
-
-        return Number(
-          item?.score ??
-            item?.value ??
-            item?.average_score ??
-            item?.avg_score ??
-            0
-        );
-      })
-      .filter((value) =>
-        Number.isFinite(value)
-      );
-  }, [scoreData]);
-
-  const roleData = useMemo(() => {
-    const completed = history.filter(
-      (item) =>
-        item?.status === "completed" &&
-        item?.type === analyticsType
-    );
-
-    const roleCounts = {};
-
-    completed.forEach((item) => {
-      const role =
-        item?.role ||
-        "Role Not Selected";
-
-      roleCounts[role] =
-        (roleCounts[role] || 0) + 1;
-    });
-
-    return Object.entries(roleCounts)
-      .map(([role, count]) => ({
-        role,
-        count,
-      }))
-      .sort((a, b) => b.count - a.count);
-  }, [history, analyticsType]);
-
-  const totalRoleInterviews = roleData.reduce(
-    (sum, item) =>
-      sum + Number(item?.count || 0),
-    0
-  );
-
-  const performance =
-    analytics.performance || {};
-
-  const performancePercentage = Math.min(
-    100,
-    Math.max(
-      0,
-      Number(
-        performance.average_score || 0
-      )
-    )
-  );
-
-  const performanceLabel =
-    performancePercentage >= 80
-      ? "Excellent Performance"
-      : performancePercentage >= 60
-      ? "Good Performance"
-      : performancePercentage >= 40
-      ? "Keep Improving"
-      : "Keep Practicing";
-
-  const performanceDescription =
-    `Average score from ${performance.completed_interviews || 0} completed interviews.`;
-
-  // =========================================================
   // LOADING
   // =========================================================
 
   if (loading) {
     return (
-      <div className="min-h-[65vh] flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <div className="flex items-center gap-3 text-slate-300">
           <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
+
           Loading dashboard...
         </div>
       </div>
@@ -398,23 +461,162 @@ const Dashboard = () => {
   }
 
   // =========================================================
-  // MAIN DASHBOARD
+  // SCORE OVERVIEW DATA
+  //
+  // Backend:
+  //
+  // score_overview: {
+  //   labels: ["Interview 1", ...],
+  //   scores: [26, 26, ...]
+  // }
+  // =========================================================
+
+  const scoreOverview =
+    analytics.score_overview || {};
+
+  const scoreLabels =
+    Array.isArray(
+      scoreOverview.labels
+    )
+      ? scoreOverview.labels
+      : [];
+
+  const scoreValues =
+    Array.isArray(
+      scoreOverview.scores
+    )
+      ? scoreOverview.scores
+          .map((value) =>
+            Number(value)
+          )
+          .filter((value) =>
+            Number.isFinite(value)
+          )
+      : [];
+
+  // =========================================================
+  // ROLE DATA
+  //
+  // Backend:
+  //
+  // interviews_by_role: {
+  //   total_interviews: 89,
+  //   roles: [
+  //     {
+  //       role: "...",
+  //       count: 9,
+  //       percentage: 10.1
+  //     }
+  //   ]
+  // }
+  // =========================================================
+
+  const roleAnalytics =
+    analytics.interviews_by_role ||
+    {};
+
+  const roleData =
+    Array.isArray(
+      roleAnalytics.roles
+    )
+      ? roleAnalytics.roles
+      : [];
+
+  // =========================================================
+  // ROLE TOTAL
+  //
+  // Analytics should visually represent the completed
+  // score/role dataset where possible.
+  //
+  // If backend supplies completed role data, use it.
+  // Otherwise use role count sum.
+  // =========================================================
+
+  const roleCountTotal =
+    roleData.reduce(
+      (sum, item) =>
+        sum +
+        Number(
+          item?.count ??
+          item?.total ??
+          item?.value ??
+          0
+        ),
+      0
+    );
+
+  // =========================================================
+  // PERFORMANCE
+  // =========================================================
+
+  const performance =
+    analytics.performance || {};
+
+  const averageScore = Number(
+    performance.average_score ??
+      performance.percentage ??
+      0
+  );
+
+  const performancePercentage =
+    Math.min(
+      100,
+      Math.max(
+        0,
+        Number.isFinite(
+          averageScore
+        )
+          ? averageScore
+          : 0
+      )
+    );
+
+  const completedInterviews =
+    Number(
+      performance.completed_interviews ??
+        scoreOverview.count ??
+        scoreValues.length ??
+        0
+    );
+
+  const bestScore =
+    Number(
+      performance.best_score ?? 0
+    );
+
+  // =========================================================
+  // MAX SCORE FOR BAR CHART
+  // =========================================================
+
+  const maxScore =
+    scoreValues.length > 0
+      ? Math.max(
+          ...scoreValues,
+          5
+        )
+      : 5;
+
+  // =========================================================
+  // RENDER
   // =========================================================
 
   return (
     <div className="space-y-6 pb-10">
 
-      {/* ERROR */}
+      {/* =====================================================
+          ERROR
+      ====================================================== */}
 
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-300 flex items-center gap-2">
           <AlertCircle className="w-5 h-5" />
+
           <span>{error}</span>
         </div>
       )}
 
       {/* =====================================================
-          4 STAT CARDS
+          4 GLOBAL STATISTICS
       ====================================================== */}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
@@ -450,28 +652,18 @@ const Dashboard = () => {
       </div>
 
       {/* =====================================================
-          AI INTERVIEW CTA
+          READY FOR YOUR NEXT INTERVIEW
       ====================================================== */}
 
-      <section className="rounded-2xl border border-purple-500/25 bg-gradient-to-r from-[#171342] via-[#14113b] to-[#0d1532] p-5 shadow-[0_0_30px_rgba(124,58,237,0.08)]">
+      <section className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-[#11103b] via-[#15133d] to-[#11142e] p-5">
 
         <div className="flex flex-col xl:flex-row items-center gap-5">
 
-          {/* AI ROBOT */}
-
-          <div className="hidden md:flex w-36 h-28 shrink-0 items-center justify-center rounded-2xl bg-purple-500/10">
-
-            <div className="relative">
-
-              <div className="absolute inset-0 rounded-full bg-purple-500/20 blur-2xl" />
-
-              <Bot className="relative w-20 h-20 text-purple-300 drop-shadow-[0_0_12px_rgba(139,92,246,0.8)]" />
-
+          <div className="hidden md:flex w-32 h-24 items-center justify-center rounded-xl bg-purple-500/10">
+            <div className="text-5xl">
+              🤖
             </div>
-
           </div>
-
-          {/* TEXT */}
 
           <div className="flex-1 text-center xl:text-left">
 
@@ -479,16 +671,16 @@ const Dashboard = () => {
               Ready for your next interview?
             </h2>
 
-            <p className="text-slate-400 mt-2 leading-6">
+            <p className="text-slate-400 mt-1">
               Choose your interview type and
               start your AI interview.
             </p>
 
           </div>
 
-          {/* TYPE SELECTOR */}
+          {/* INTERVIEW TYPE SELECTOR */}
 
-          <div className="relative w-full xl:w-auto">
+          <div className="relative">
 
             <select
               value={interviewType}
@@ -497,7 +689,7 @@ const Dashboard = () => {
                   e.target.value
                 )
               }
-              className="appearance-none w-full xl:min-w-[210px] rounded-xl border border-slate-700 bg-[#080d1d] px-5 py-3 pr-11 text-white outline-none focus:border-purple-500"
+              className="appearance-none min-w-[200px] rounded-xl border border-slate-700 bg-[#090d1c] px-5 py-3 pr-10 text-white outline-none focus:border-purple-500"
             >
 
               <option value="technical">
@@ -519,17 +711,19 @@ const Dashboard = () => {
           <button
             onClick={handleStart}
             disabled={starting}
-            className="inline-flex w-full xl:w-auto min-w-[250px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-7 py-3.5 font-bold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-7 py-3.5 font-bold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
           >
 
             {starting ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
+
                 Starting...
               </>
             ) : (
               <>
                 <Plus className="w-5 h-5" />
+
                 Start New Interview
               </>
             )}
@@ -541,7 +735,7 @@ const Dashboard = () => {
       </section>
 
       {/* =====================================================
-          ANALYTICS HEADER
+          ANALYTICS SELECTOR
       ====================================================== */}
 
       <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -562,12 +756,17 @@ const Dashboard = () => {
 
           <select
             value={analyticsType}
-            onChange={(e) =>
-              setAnalyticsType(
-                e.target.value
-              )
-            }
-            className="appearance-none min-w-[220px] rounded-xl border border-purple-500/30 bg-[#090d1d] px-5 py-3 pr-11 text-white outline-none focus:border-purple-500"
+            onChange={(e) => {
+              const value = e.target.value;
+
+              setAnalyticsType(value);
+
+              localStorage.setItem(
+                "dashboard_analytics_type",
+                value
+              );
+            }}
+            className="appearance-none min-w-[220px] rounded-xl border border-purple-500/30 bg-[#0b1020] px-5 py-3 pr-10 text-white outline-none focus:border-purple-500"
           >
 
             <option value="technical">
@@ -587,94 +786,472 @@ const Dashboard = () => {
       </section>
 
       {/* =====================================================
-          ANALYTICS
+          ANALYTICS AREA
       ====================================================== */}
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
 
-        {/* SCORE OVERVIEW */}
+        {/* ===================================================
+            LEFT SIDE
+        ==================================================== */}
 
-        <section className="xl:col-span-5 rounded-2xl border border-slate-800 bg-[#090e1e] p-5 min-h-[330px]">
+        <div className="xl:col-span-9 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          <PanelTitle
-            icon={
-              <TrendingUp className="w-5 h-5 text-cyan-400" />
-            }
-            title="Score Overview"
-            badge={
-              analyticsType ===
-              "technical"
-                ? "Technical"
-                : "Non-Technical"
-            }
-          />
+          {/* =================================================
+              SCORE OVERVIEW
+          ================================================== */}
 
-          {analyticsLoading ? (
-            <AnalyticsLoader />
-          ) : scoreValues.length === 0 ? (
-            <EmptyAnalytics
-              text={`No ${analyticsType} score data available yet.`}
-            />
-          ) : (
-            <ScoreChart
-              values={scoreValues.slice(-10)}
-            />
-          )}
+          <section className="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
 
-        </section>
+            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
 
-        {/* INTERVIEWS BY ROLE */}
+            <div className="flex items-center justify-between mb-5 relative z-10">
 
-        <section className="xl:col-span-4 rounded-2xl border border-slate-800 bg-[#090e1e] p-5 min-h-[330px]">
+              <div className="flex items-center gap-2">
 
-          <PanelTitle
-            icon={
-              <Briefcase className="w-5 h-5 text-purple-400" />
-            }
-            title="Interviews By Role"
-          />
+                <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center">
 
-          {analyticsLoading ? (
-            <AnalyticsLoader />
-          ) : roleData.length === 0 ? (
-            <EmptyAnalytics
-              text={`No ${analyticsType} role data available yet.`}
-            />
-          ) : (
-            <RoleChart
-              roleData={roleData}
-              total={totalRoleInterviews}
-            />
-          )}
+                  <TrendingUp className="w-5 h-5 text-cyan-400" />
 
-        </section>
+                </div>
 
-        {/* YOUR PERFORMANCE */}
+                <div>
 
-        <section className="xl:col-span-3 rounded-2xl border border-slate-800 bg-[#090e1e] p-5 min-h-[330px]">
+                  <h3 className="font-semibold text-white">
+                    Score Overview
+                  </h3>
 
-          <PanelTitle
-            icon={
+                  <p className="text-[11px] text-slate-500">
+                    Recent completed interviews
+                  </p>
+
+                </div>
+
+              </div>
+
+              <span className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs text-slate-300">
+
+                {analyticsType ===
+                "technical"
+                  ? "Technical"
+                  : "Non-Technical"}
+
+              </span>
+
+            </div>
+
+            {analyticsLoading ? (
+
+              <div className="h-56 flex items-center justify-center">
+
+                <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+
+              </div>
+
+            ) : scoreValues.length === 0 ? (
+
+              <EmptyAnalytics
+                text={`No ${analyticsType} score data available yet.`}
+              />
+
+            ) : (
+
+              <div className="relative h-56">
+
+                <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+
+                  <div className="border-t border-slate-800/70" />
+
+                  <div className="border-t border-slate-800/50" />
+
+                  <div className="border-t border-slate-800/50" />
+
+                  <div className="border-t border-slate-800/50" />
+
+                  <div className="border-t border-slate-800/70" />
+
+                </div>
+
+                <div className="relative h-full flex items-end gap-2 px-1 pt-5">
+
+                  {scoreValues
+                    .slice(-10)
+                    .map(
+                      (
+                        value,
+                        index
+                      ) => {
+
+                        const height =
+                          Math.max(
+                            8,
+                            (value /
+                              maxScore) *
+                              100
+                          );
+
+                        const originalIndex =
+                          Math.max(
+                            0,
+                            scoreValues.length -
+                              10
+                          ) +
+                          index;
+
+                        const label =
+                          scoreLabels[
+                            originalIndex
+                          ] ||
+                          `Interview ${
+                            originalIndex +
+                            1
+                          }`;
+
+                        return (
+                          <div
+                            key={`${label}-${index}`}
+                            className="flex-1 h-full flex flex-col justify-end group min-w-0"
+                          >
+
+                            <div className="text-center text-xs font-semibold text-slate-300 mb-2 opacity-80 group-hover:opacity-100">
+
+                              {value}
+
+                            </div>
+
+                            <div
+                              className="relative w-full rounded-t-lg bg-gradient-to-t from-purple-700 via-purple-500 to-cyan-400 shadow-lg shadow-purple-900/10 transition-all duration-300 group-hover:from-purple-600 group-hover:to-cyan-300"
+                              style={{
+                                height: `${height}%`,
+                              }}
+                              title={`${label}: ${value}`}
+                            >
+
+                              <div className="absolute inset-x-0 top-0 h-1 rounded-full bg-white/20" />
+
+                            </div>
+
+                            <div className="mt-2 text-center text-[9px] text-slate-600 truncate">
+
+                              {`I${
+                                originalIndex +
+                                1
+                              }`}
+
+                            </div>
+
+                          </div>
+                        );
+                      }
+                    )}
+
+                </div>
+
+              </div>
+
+            )}
+
+          </section>
+
+          {/* =================================================
+              INTERVIEWS BY ROLE
+          ================================================== */}
+
+          <section className="relative overflow-hidden rounded-2xl border border-purple-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-purple-950/10">
+
+            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+
+            <div className="flex items-center justify-between mb-5 relative z-10">
+
+              <div className="flex items-center gap-2">
+
+                <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+
+                  <Briefcase className="w-5 h-5 text-purple-400" />
+
+                </div>
+
+                <div>
+
+                  <h3 className="font-semibold text-white">
+                    Interviews By Role
+                  </h3>
+
+                  <p className="text-[11px] text-slate-500">
+                    Completed interview distribution
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {analyticsLoading ? (
+
+              <div className="h-56 flex items-center justify-center">
+
+                <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+
+              </div>
+
+            ) : roleData.length === 0 ? (
+
+              <EmptyAnalytics
+                text={`No ${analyticsType} role data available yet.`}
+              />
+
+            ) : (
+
+              <div className="space-y-4">
+
+                <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+
+                  <div>
+
+                    <p className="text-xs text-slate-500">
+                      Completed interviews
+                    </p>
+
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {completedInterviews ||
+                        roleCountTotal}
+                    </p>
+
+                  </div>
+
+                  <div className="w-11 h-11 rounded-full bg-purple-500/10 flex items-center justify-center">
+
+                    <Target className="w-5 h-5 text-purple-400" />
+
+                  </div>
+
+                </div>
+
+                <div className="space-y-3 max-h-[215px] overflow-y-auto pr-1">
+
+                  {roleData
+                    .slice(0, 8)
+                    .map(
+                      (
+                        item,
+                        index
+                      ) => {
+
+                        const count =
+                          Number(
+                            item?.count ??
+                              item?.total ??
+                              item?.value ??
+                              0
+                          );
+
+                        const backendPercentage =
+                          Number(
+                            item?.percentage
+                          );
+
+                        const percentage =
+                          Number.isFinite(
+                            backendPercentage
+                          )
+                            ? backendPercentage
+                            : roleCountTotal >
+                              0
+                            ? (
+                                (count /
+                                  roleCountTotal) *
+                                100
+                              )
+                            : 0;
+
+                        const role =
+                          item?.role ||
+                          item?.job_role ||
+                          item?.jobRole ||
+                          item?.name ||
+                          "Role Not Selected";
+
+                        return (
+                          <div
+                            key={`${role}-${index}`}
+                            className="group"
+                          >
+
+                            <div className="flex items-center justify-between gap-3 mb-1.5">
+
+                              <div className="flex items-center gap-2 min-w-0">
+
+                                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-cyan-400 shrink-0" />
+
+                                <span
+                                  className="text-xs text-slate-300 leading-5"
+                                  title={role}
+                                >
+                                  {role}
+                                </span>
+
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+
+                                <span className="text-[11px] text-slate-500">
+                                  {count}
+                                </span>
+
+                                <span className="text-xs font-medium text-slate-300">
+                                  {percentage.toFixed(
+                                    1
+                                  )}
+                                  %
+                                </span>
+
+                              </div>
+
+                            </div>
+
+                            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 transition-all duration-500"
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    Math.max(
+                                      0,
+                                      percentage
+                                    )
+                                  )}%`,
+                                }}
+                              />
+
+                            </div>
+
+                          </div>
+                        );
+                      }
+                    )}
+
+                </div>
+
+                {roleData.length > 8 && (
+                  <p className="text-[11px] text-slate-600 text-center pt-1">
+                    Showing top 8 roles
+                  </p>
+                )}
+
+              </div>
+
+            )}
+
+          </section>
+
+        </div>
+
+        {/* ===================================================
+            YOUR PERFORMANCE
+        ==================================================== */}
+
+        <section className="xl:col-span-3 relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
+
+          <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
+
+          <div className="flex items-center gap-2 mb-7 relative z-10">
+
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+
               <Target className="w-5 h-5 text-cyan-400" />
-            }
-            title="Your Performance"
-          />
 
-          <div className="flex flex-col items-center justify-center">
+            </div>
 
-            <PerformanceRing
-              percentage={
-                performancePercentage
-              }
-            />
+            <div>
+
+              <h3 className="font-semibold text-white">
+                Your Performance
+              </h3>
+
+              <p className="text-[11px] text-slate-500">
+                Average interview score
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="flex flex-col items-center">
+
+            <div
+              className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-xl shadow-purple-950/20"
+              style={{
+                background: `conic-gradient(
+                  #7c3aed ${
+                    performancePercentage *
+                    3.6
+                  }deg,
+                  #172033 ${
+                    performancePercentage *
+                    3.6
+                  }deg
+                )`,
+              }}
+            >
+
+              <div className="absolute inset-3 rounded-full bg-[#090e1e] flex flex-col items-center justify-center">
+
+                <span className="text-3xl font-bold text-white">
+                  {performancePercentage.toFixed(
+                    1
+                  )}
+                  %
+                </span>
+
+                <span className="text-sm text-slate-500">
+                  Performance
+                </span>
+
+              </div>
+
+            </div>
 
             <h4 className="mt-6 text-lg font-semibold text-white">
-              {performanceLabel}
+              {performancePercentage > 0
+                ? performancePercentage >=
+                  70
+                  ? "Excellent Performance"
+                  : performancePercentage >=
+                    50
+                  ? "Good Progress"
+                  : "Keep Practicing"
+                : "Keep Practicing"}
             </h4>
 
             <p className="text-center text-sm text-slate-400 mt-2 leading-6">
-              {performanceDescription}
+
+              Average score from{" "}
+
+              <span className="text-white font-medium">
+                {completedInterviews}
+              </span>{" "}
+
+              completed interviews.
+
             </p>
+
+            {bestScore > 0 && (
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-2">
+
+                <Trophy className="w-4 h-4 text-emerald-400" />
+
+                <span className="text-xs text-slate-400">
+                  Best score:
+                </span>
+
+                <span className="text-xs font-bold text-emerald-400">
+                  {bestScore}
+                </span>
+
+              </div>
+            )}
 
           </div>
 
@@ -688,7 +1265,9 @@ const Dashboard = () => {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
 
-        {/* RECENT INTERVIEWS */}
+        {/* ===================================================
+            RECENT INTERVIEWS
+        ==================================================== */}
 
         <section className="xl:col-span-9 rounded-2xl border border-slate-800 bg-[#090e1e] overflow-hidden">
 
@@ -708,7 +1287,7 @@ const Dashboard = () => {
               onClick={() =>
                 navigate("/history")
               }
-              className="text-sm text-purple-400 hover:text-purple-300 transition"
+              className="text-sm text-purple-400 hover:text-purple-300"
             >
               View All →
             </button>
@@ -751,7 +1330,7 @@ const Dashboard = () => {
                       Status
                     </th>
 
-                    <th className="px-5 py-4 text-center">
+                    <th className="px-5 py-4">
                       Action
                     </th>
 
@@ -764,19 +1343,25 @@ const Dashboard = () => {
                   {history
                     .slice(0, 5)
                     .map(
-                      (item, index) => (
+                      (
+                        item,
+                        index
+                      ) => (
+
                         <tr
                           key={
                             item?.id ||
                             index
                           }
-                          className="border-b border-slate-800/70 last:border-0 hover:bg-white/[0.02] transition"
+                          className="border-b border-slate-800/70 last:border-0"
                         >
 
                           <td className="px-5 py-4 text-sm text-slate-300">
+
                             {formatDate(
                               item?.date
                             )}
+
                           </td>
 
                           <td className="px-5 py-4">
@@ -789,25 +1374,38 @@ const Dashboard = () => {
                                   : "bg-purple-500/10 text-purple-400"
                               }`}
                             >
+
                               {item?.type ===
                               "technical"
                                 ? "Technical"
                                 : "Non-Technical"}
+
                             </span>
 
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-white font-medium">
-                            {item?.role}
+                          <td className="px-5 py-4 text-sm text-white max-w-[260px]">
+
+                            <span
+                              title={
+                                item?.role
+                              }
+                              className="block truncate"
+                            >
+                              {item?.role}
+                            </span>
+
                           </td>
 
                           <td className="px-5 py-4">
 
                             {item?.status ===
                             "completed" ? (
+
                               <>
+
                                 <span className="font-semibold text-white">
-                                  {item?.score ??
+                                  {item?.score ||
                                     0}
                                 </span>
 
@@ -815,11 +1413,15 @@ const Dashboard = () => {
                                   {" "}
                                   / 100
                                 </span>
+
                               </>
+
                             ) : (
+
                               <span className="text-slate-500">
                                 --
                               </span>
+
                             )}
 
                           </td>
@@ -834,15 +1436,17 @@ const Dashboard = () => {
                                   : "bg-yellow-500/10 text-yellow-400"
                               }`}
                             >
+
                               {item?.status ===
                               "completed"
                                 ? "Completed"
                                 : "Incomplete"}
+
                             </span>
 
                           </td>
 
-                          <td className="px-5 py-4 text-center">
+                          <td className="px-5 py-4">
 
                             <button
                               onClick={() =>
@@ -850,14 +1454,17 @@ const Dashboard = () => {
                                   item?.actionUrl
                                 )
                               }
-                              className="mx-auto w-9 h-9 rounded-lg border border-slate-700 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 transition"
+                              className="w-9 h-9 rounded-lg border border-slate-700 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 transition"
                             >
+
                               <Eye className="w-4 h-4" />
+
                             </button>
 
                           </td>
 
                         </tr>
+
                       )
                     )}
 
@@ -871,7 +1478,9 @@ const Dashboard = () => {
 
         </section>
 
-        {/* TIPS */}
+        {/* ===================================================
+            TIPS FOR SUCCESS
+        ==================================================== */}
 
         <section className="xl:col-span-3 rounded-2xl border border-slate-800 bg-[#090e1e] p-5">
 
@@ -885,7 +1494,7 @@ const Dashboard = () => {
 
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-5">
 
             <Tip text="Practice regularly" />
 
@@ -906,7 +1515,7 @@ const Dashboard = () => {
 };
 
 // =============================================================
-// STAT CARD
+// STAT BOX
 // =============================================================
 
 const StatBox = ({
@@ -917,10 +1526,10 @@ const StatBox = ({
 }) => {
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 min-h-[145px] shadow-lg`}
+      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 min-h-[140px]`}
     >
 
-      <div className="relative z-10 flex items-start justify-between">
+      <div className="flex items-start justify-between">
 
         <div>
 
@@ -928,7 +1537,7 @@ const StatBox = ({
             {title}
           </p>
 
-          <p className="text-4xl font-bold text-white mt-3">
+          <p className="text-3xl font-bold text-white mt-3">
             {value}
           </p>
 
@@ -942,447 +1551,27 @@ const StatBox = ({
 
       </div>
 
-      <div className="absolute -bottom-8 -right-8 w-28 h-28 rounded-full bg-white/5" />
-
-      <div className="absolute -bottom-10 right-10 w-20 h-20 rounded-full bg-white/5" />
-
     </div>
   );
 };
 
 // =============================================================
-// PANEL TITLE
-// =============================================================
-
-const PanelTitle = ({
-  icon,
-  title,
-  badge,
-}) => {
-  return (
-    <div className="flex items-center justify-between gap-3 mb-5">
-
-      <div className="flex items-center gap-2">
-
-        {icon}
-
-        <h3 className="font-semibold text-white">
-          {title}
-        </h3>
-
-      </div>
-
-      {badge && (
-        <span className="rounded-lg bg-slate-800 px-3 py-1 text-xs text-slate-400">
-          {badge}
-        </span>
-      )}
-
-    </div>
-  );
-};
-
-// =============================================================
-// SCORE CHART
-// =============================================================
-
-const ScoreChart = ({ values }) => {
-
-  const width = 520;
-  const height = 230;
-
-  const paddingX = 25;
-  const paddingY = 25;
-
-  const maxValue = Math.max(
-    ...values,
-    5
-  );
-
-  const minValue = Math.min(
-    ...values,
-    0
-  );
-
-  const range =
-    maxValue - minValue === 0
-      ? 1
-      : maxValue - minValue;
-
-  const points = values.map(
-    (value, index) => {
-
-      const x =
-        values.length === 1
-          ? width / 2
-          : paddingX +
-            (index /
-              (values.length - 1)) *
-              (width -
-                paddingX * 2);
-
-      const y =
-        height -
-        paddingY -
-        ((value - minValue) /
-          range) *
-          (height -
-            paddingY * 2);
-
-      return {
-        x,
-        y,
-        value,
-      };
-    }
-  );
-
-  const linePoints = points
-    .map(
-      (point) =>
-        `${point.x},${point.y}`
-    )
-    .join(" ");
-
-  const areaPoints = [
-    `${points[0].x},${
-      height - paddingY
-    }`,
-
-    ...points.map(
-      (point) =>
-        `${point.x},${point.y}`
-    ),
-
-    `${points[
-      points.length - 1
-    ].x},${height - paddingY}`,
-  ].join(" ");
-
-  return (
-    <div className="h-[285px]">
-
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        className="w-full h-full"
-        preserveAspectRatio="none"
-      >
-
-        <defs>
-
-          <linearGradient
-            id="scoreGradient"
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
-
-            <stop
-              offset="0%"
-              stopColor="#8b5cf6"
-              stopOpacity="0.35"
-            />
-
-            <stop
-              offset="100%"
-              stopColor="#06b6d4"
-              stopOpacity="0"
-            />
-
-          </linearGradient>
-
-        </defs>
-
-        {[0, 1, 2, 3].map(
-          (row) => {
-
-            const y =
-              paddingY +
-              (row / 3) *
-                (height -
-                  paddingY * 2);
-
-            return (
-              <line
-                key={row}
-                x1={paddingX}
-                x2={
-                  width -
-                  paddingX
-                }
-                y1={y}
-                y2={y}
-                stroke="#1e293b"
-                strokeWidth="1"
-              />
-            );
-          }
-        )}
-
-        <polygon
-          points={areaPoints}
-          fill="url(#scoreGradient)"
-        />
-
-        <polyline
-          points={linePoints}
-          fill="none"
-          stroke="#8b5cf6"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {points.map(
-          (point, index) => (
-            <g key={index}>
-
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="5"
-                fill="#090e1e"
-                stroke="#a78bfa"
-                strokeWidth="3"
-              />
-
-              <text
-                x={point.x}
-                y={point.y - 12}
-                textAnchor="middle"
-                fill="#cbd5e1"
-                fontSize="12"
-              >
-                {point.value}
-              </text>
-
-            </g>
-          )
-        )}
-
-      </svg>
-
-      <div className="flex justify-between px-2 text-xs text-slate-600">
-        <span>Recent</span>
-        <span>Latest</span>
-      </div>
-
-    </div>
-  );
-};
-
-// =============================================================
-// ROLE CHART
-// =============================================================
-
-const RoleChart = ({
-  roleData,
-  total,
-}) => {
-
-  const colors = [
-    "#8b5cf6",
-    "#3b82f6",
-    "#06b6d4",
-    "#10b981",
-    "#f59e0b",
-    "#ec4899",
-  ];
-
-  let current = 0;
-
-  const segments = roleData.map(
-    (item, index) => {
-
-      const count = Number(
-        item?.count ??
-          item?.total ??
-          item?.value ??
-          0
-      );
-
-      const percentage =
-        total > 0
-          ? (count / total) * 100
-          : 0;
-
-      const start = current;
-
-      current += percentage;
-
-      return {
-        name:
-          item?.role ||
-          item?.name ||
-          "Role",
-
-        count,
-
-        percentage,
-
-        start,
-
-        color:
-          colors[
-            index % colors.length
-          ],
-      };
-    }
-  );
-
-  const gradient =
-    segments.length > 0
-      ? `conic-gradient(${segments
-          .map(
-            (segment) =>
-              `${segment.color} ${segment.start}% ${
-                segment.start +
-                segment.percentage
-              }%`
-          )
-          .join(", ")})`
-      : "#1e293b";
-
-  return (
-    <div className="min-h-[285px] flex flex-col justify-center">
-
-      <div className="flex items-center justify-center gap-7">
-
-        <div
-          className="relative w-36 h-36 shrink-0 rounded-full"
-          style={{
-            background: gradient,
-          }}
-        >
-
-          <div className="absolute inset-[14px] rounded-full bg-[#090e1e] flex flex-col items-center justify-center">
-
-            <span className="text-2xl font-bold text-white">
-              {total}
-            </span>
-
-            <span className="text-xs text-slate-500">
-              Total
-            </span>
-
-          </div>
-
-        </div>
-
-        <div className="flex-1 space-y-3 min-w-0">
-
-          {segments
-            .slice(0, 5)
-            .map(
-              (segment, index) => (
-                <div
-                  key={`${segment.name}-${index}`}
-                  className="flex items-center justify-between gap-3"
-                >
-
-                  <div className="flex items-center gap-2 min-w-0">
-
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{
-                        backgroundColor:
-                          segment.color,
-                      }}
-                    />
-
-                    <span className="text-xs text-slate-300 truncate">
-                      {segment.name}
-                    </span>
-
-                  </div>
-
-                  <span className="text-xs text-slate-400">
-                    {Math.round(
-                      segment.percentage
-                    )}
-                    %
-                  </span>
-
-                </div>
-              )
-            )}
-
-        </div>
-
-      </div>
-
-    </div>
-  );
-};
-
-// =============================================================
-// PERFORMANCE RING
-// =============================================================
-
-const PerformanceRing = ({
-  percentage,
-}) => {
-
-  return (
-    <div
-      className="relative w-44 h-44 rounded-full flex items-center justify-center"
-      style={{
-        background: `conic-gradient(
-          #7c3aed 0deg ${
-            percentage * 3.6
-          }deg,
-          #172033 ${
-            percentage * 3.6
-          }deg 360deg
-        )`,
-      }}
-    >
-
-      <div className="absolute inset-3 rounded-full bg-[#090e1e] flex flex-col items-center justify-center">
-
-        <span className="text-3xl font-bold text-white">
-          {percentage}%
-        </span>
-
-        <span className="text-sm text-slate-500 mt-1">
-          Performance
-        </span>
-
-      </div>
-
-    </div>
-  );
-};
-
-// =============================================================
-// LOADER
-// =============================================================
-
-const AnalyticsLoader = () => {
-  return (
-    <div className="h-[285px] flex items-center justify-center">
-
-      <Loader2 className="w-6 h-6 animate-spin text-purple-400" />
-
-    </div>
-  );
-};
-
-// =============================================================
-// EMPTY
+// EMPTY ANALYTICS
 // =============================================================
 
 const EmptyAnalytics = ({
   text,
 }) => {
-
   return (
-    <div className="h-[285px] flex flex-col items-center justify-center text-center">
+    <div className="h-56 flex flex-col items-center justify-center text-center">
 
-      <AlertCircle className="w-8 h-8 text-slate-600 mb-3" />
+      <div className="w-14 h-14 rounded-2xl bg-slate-800/70 flex items-center justify-center mb-4">
 
-      <p className="text-sm text-slate-500 max-w-xs">
+        <AlertCircle className="w-7 h-7 text-slate-600" />
+
+      </div>
+
+      <p className="text-sm text-slate-500">
         {text}
       </p>
 
@@ -1394,14 +1583,15 @@ const EmptyAnalytics = ({
 // TIP
 // =============================================================
 
-const Tip = ({ text }) => {
-
+const Tip = ({
+  text,
+}) => {
   return (
     <div className="flex items-start gap-3">
 
       <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
 
-      <span className="text-sm text-slate-300 leading-6">
+      <span className="text-sm text-slate-300">
         {text}
       </span>
 
@@ -1410,11 +1600,12 @@ const Tip = ({ text }) => {
 };
 
 // =============================================================
-// DATE
+// DATE FORMATTER
 // =============================================================
 
-const formatDate = (date) => {
-
+const formatDate = (
+  date
+) => {
   if (!date) {
     return "--";
   }

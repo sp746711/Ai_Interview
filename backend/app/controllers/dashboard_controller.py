@@ -108,9 +108,9 @@ class DashboardController:
         """
         Return analytics for the selected domain.
 
-        interview_type:
-            technical
-            non-technical
+        Supported values:
+        - technical
+        - non-technical
 
         This controls ONLY:
         - Score Overview
@@ -118,11 +118,26 @@ class DashboardController:
         - Your Performance
         """
 
+        # -----------------------------------------------------
+        # NORMALIZE TYPE
+        # -----------------------------------------------------
+
         normalized_type = str(
             interview_type or "technical"
         ).strip().lower()
 
+        # -----------------------------------------------------
+        # NON-TECHNICAL
+        # -----------------------------------------------------
+        # IMPORTANT:
+        # "non-technical" itself is included here.
+        # This fixes the 400 error when frontend sends:
+        #
+        # /api/dashboard/analytics?type=non-technical
+        # -----------------------------------------------------
+
         if normalized_type in {
+            "non-technical",
             "nontechnical",
             "non_technical",
             "non technical",
@@ -131,15 +146,32 @@ class DashboardController:
         }:
             normalized_type = "non-technical"
 
-        elif normalized_type != "technical":
+        # -----------------------------------------------------
+        # TECHNICAL
+        # -----------------------------------------------------
+
+        elif normalized_type in {
+            "technical",
+            "tech",
+        }:
+            normalized_type = "technical"
+
+        # -----------------------------------------------------
+        # INVALID TYPE
+        # -----------------------------------------------------
+
+        else:
             raise HTTPException(
                 status_code=400,
                 detail=(
                     "Invalid analytics type. "
-                    "Use 'technical' or "
-                    "'non-technical'."
+                    "Use 'technical' or 'non-technical'."
                 ),
             )
+
+        # -----------------------------------------------------
+        # GET USER INTERVIEWS
+        # -----------------------------------------------------
 
         interviews = await (
             DashboardController._get_user_interviews(
@@ -147,6 +179,10 @@ class DashboardController:
                 db,
             )
         )
+
+        # -----------------------------------------------------
+        # BUILD ANALYTICS
+        # -----------------------------------------------------
 
         return DashboardService.build_analytics(
             interviews,
