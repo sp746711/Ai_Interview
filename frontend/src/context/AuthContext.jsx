@@ -29,7 +29,10 @@ export const AuthProvider = ({ children }) => {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
         } catch (error) {
-          console.error("Failed to restore stored user:", error);
+          console.error(
+            "Failed to restore stored user:",
+            error
+          );
 
           localStorage.removeItem("token");
           localStorage.removeItem("user");
@@ -45,7 +48,10 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
-  // Login
+  // ======================================================
+  // LOGIN
+  // ======================================================
+
   const login = async (email, password) => {
     try {
       const response = await api.post("/auth/login", {
@@ -62,7 +68,10 @@ export const AuthProvider = ({ children }) => {
       console.log("LOGIN RESPONSE:", response.data);
 
       // Store JWT token
-      localStorage.setItem("token", access_token);
+      localStorage.setItem(
+        "token",
+        access_token
+      );
 
       // Store logged-in user
       const userData = {
@@ -97,8 +106,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register
-  const register = async (name, email, password) => {
+  // ======================================================
+  // REGISTER
+  // ======================================================
+
+  const register = async (
+    name,
+    email,
+    password
+  ) => {
     try {
       await api.post("/auth/register", {
         name,
@@ -123,7 +139,95 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
+  // ======================================================
+  // UPDATE PROFILE
+  // ======================================================
+
+  const updateProfile = async (name) => {
+    try {
+      const response = await api.put(
+        "/auth/profile",
+        {
+          name: name.trim(),
+        }
+      );
+
+      const updatedUser = {
+        ...user,
+        name: response.data.name,
+        email: response.data.email || user?.email,
+      };
+
+      // Update localStorage
+      localStorage.setItem(
+        "user",
+        JSON.stringify(updatedUser)
+      );
+
+      // Update React state
+      setUser(updatedUser);
+
+      return {
+        success: true,
+        user: updatedUser,
+      };
+    } catch (error) {
+      console.error(
+        "Update Profile API Error:",
+        error.response?.data || error.message
+      );
+
+      return {
+        success: false,
+        error:
+          error.response?.data?.detail ||
+          "Failed to update profile.",
+      };
+    }
+  };
+
+  // ======================================================
+  // CHANGE PASSWORD
+  // ======================================================
+
+  const changePassword = async (
+    currentPassword,
+    newPassword
+  ) => {
+    try {
+      const response = await api.post(
+        "/auth/change-password",
+        {
+          current_password: currentPassword,
+          new_password: newPassword,
+        }
+      );
+
+      return {
+        success: true,
+        message:
+          response.data?.message ||
+          "Password changed successfully.",
+      };
+    } catch (error) {
+      console.error(
+        "Change Password API Error:",
+        error.response?.data || error.message
+      );
+
+      return {
+        success: false,
+        error:
+          error.response?.data?.detail ||
+          "Failed to change password.",
+      };
+    }
+  };
+
+  // ======================================================
+  // LOGOUT
+  // ======================================================
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -144,6 +248,8 @@ export const AuthProvider = ({ children }) => {
         token,
         login,
         register,
+        updateProfile,
+        changePassword,
         logout,
         isAuthenticated: !!token,
       }}
@@ -153,7 +259,10 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Custom authentication hook
+// ======================================================
+// CUSTOM AUTHENTICATION HOOK
+// ======================================================
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
 

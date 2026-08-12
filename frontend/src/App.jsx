@@ -15,6 +15,7 @@ import Register from "./pages/auth/Register";
 
 import Dashboard from "./pages/dashboard/Dashboard";
 import History from "./pages/history/History";
+import Profile from "./pages/profile/Profile";
 
 import Setup from "./pages/interview/Setup";
 import Round1 from "./pages/interview/Round1";
@@ -82,11 +83,16 @@ const App = () => {
           path="/history"
           element={<History />}
         />
+
+        <Route
+          path="/profile"
+          element={<Profile />}
+        />
       </Route>
 
       {/* ==================================================
           ROUND 1 → ROUND 2 → SETUP
-          
+
           NO SIDEBAR
           WELCOME HEADER PRESENT
       ================================================== */}
@@ -116,7 +122,7 @@ const App = () => {
 
       {/* ==================================================
           FINAL INTERVIEW / FEEDBACK
-          
+
           KEEPING CURRENT ROUTING FOR NOW
           WE WILL FIX THEIR LAYOUT SEPARATELY
       ================================================== */}

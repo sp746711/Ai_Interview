@@ -601,7 +601,7 @@ const Dashboard = () => {
   // =========================================================
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="min-h-full space-y-6 pb-10 bg-[#050b1c]">
 
       {/* =====================================================
           ERROR
@@ -1603,27 +1603,40 @@ const Tip = ({
 // DATE FORMATTER
 // =============================================================
 
-const formatDate = (
-  date
-) => {
+const formatDate = (date) => {
   if (!date) {
     return "--";
   }
 
   try {
-    return new Date(
-      date
-    ).toLocaleDateString(
-      "en-US",
-      {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }
-    );
+    let dateString = String(date).trim();
+
+    // Backend/MongoDB timestamps may sometimes arrive
+    // without timezone information. Treat those timestamps
+    // as UTC so the correct India date is calculated.
+    if (
+      !dateString.endsWith("Z") &&
+      !/[+-]\d{2}:\d{2}$/.test(dateString)
+    ) {
+      dateString += "Z";
+    }
+
+    const parsedDate = new Date(dateString);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return "--";
+    }
+
+    return parsedDate.toLocaleDateString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return "--";
   }
 };
+
 
 export default Dashboard;

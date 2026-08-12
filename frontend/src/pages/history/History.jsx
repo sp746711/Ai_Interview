@@ -9,6 +9,7 @@ import {
   AlertCircle,
   RefreshCw,
 } from "lucide-react";
+import "./History.css";
 
 const API_BASE_URL = "http://127.0.0.1:8001";
 
@@ -31,7 +32,7 @@ const History = () => {
       setError("");
 
       const response = await fetch(
-        `${API_BASE_URL}/api/dashboard/overview`,
+        `${API_BASE_URL}/api/dashboard/history`,
         {
           method: "GET",
           headers: {
@@ -42,22 +43,32 @@ const History = () => {
       );
 
       if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
+        throw new Error(
+          `Request failed with status ${response.status}`
+        );
       }
 
       const data = await response.json();
 
       /*
-       * Backend may return recent interviews using
-       * recent_interviews.
+       * IMPORTANT:
+       * /api/dashboard/history returns:
+       *
+       * {
+       *   total: number,
+       *   avg_score: number,
+       *   best_score: number,
+       *   history: [...]
+       * }
        */
-      const recent =
-        data?.recent_interviews ||
-        data?.recentInterviews ||
-        data?.interviews ||
-        [];
 
-      setInterviews(Array.isArray(recent) ? recent : []);
+      const history = Array.isArray(data?.history)
+        ? data.history
+        : Array.isArray(data)
+        ? data
+        : [];
+
+      setInterviews(history);
     } catch (err) {
       console.error("Failed to load history:", err);
       setError("Unable to load interview history.");
@@ -69,45 +80,76 @@ const History = () => {
   const normalizedInterviews = useMemo(() => {
     return interviews.map((item, index) => {
       const score =
-        item?.score ??
         item?.final_score ??
-        item?.total_score ??
-        item?.percentage ??
+        item?.score ??
         null;
 
       const status =
         item?.status ||
-        (item?.completed ? "Completed" : "Incomplete");
+        (String(item?.stage || "").toLowerCase() === "feedback"
+          ? "completed"
+          : "incomplete");
 
       return {
-        id: item?.id || item?._id || item?.interview_id || index,
+        id:
+          item?.id ||
+          item?._id ||
+          item?.interview_id ||
+          index,
+
         date:
           item?.date ||
           item?.created_at ||
           item?.createdAt ||
           item?.timestamp ||
           null,
+
         type:
-          item?.type ||
           item?.interview_type ||
-          item?.interviewType ||
-          "Technical",
+          item?.type ||
+          "technical",
+
         role:
           item?.role ||
           item?.job_role ||
           item?.target_role ||
-          "Interview",
+          "Role Not Selected",
+
         score,
+
         status,
       };
     });
   }, [interviews]);
 
+  /*
+   * ONLY CHANGE:
+   * Convert timezone-less backend timestamps as UTC,
+   * then display the correct date in India Standard Time.
+   */
   const formatDate = (date) => {
-    if (!date) return "--";
+    if (!date) {
+      return "--";
+    }
 
     try {
-      return new Date(date).toLocaleDateString("en-US", {
+      let dateString = String(date).trim();
+
+      if (
+        !dateString.endsWith("Z") &&
+        !/[+-]\d{2}:\d{2}$/.test(dateString)
+      ) {
+        dateString += "Z";
+      }
+
+      const parsedDate = new Date(dateString);
+
+      if (Number.isNaN(parsedDate.getTime())) {
+        return "--";
+      }
+
+      return parsedDate.toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -118,7 +160,11 @@ const History = () => {
   };
 
   const getScore = (score) => {
-    if (score === null || score === undefined || score === "") {
+    if (
+      score === null ||
+      score === undefined ||
+      score === ""
+    ) {
       return "--";
     }
 
@@ -134,11 +180,14 @@ const History = () => {
   };
 
   const isCompleted = (status) => {
-    return String(status).toLowerCase() === "completed";
+    return (
+      String(status).toLowerCase() === "completed"
+    );
   };
 
   return (
     <div className="history-page">
+
       {/* Header */}
       <div className="history-header">
         <div>
@@ -153,6 +202,7 @@ const History = () => {
         </div>
 
         <div className="history-header-actions">
+
           <button
             className="history-refresh-btn"
             onClick={fetchHistory}
@@ -161,7 +211,9 @@ const History = () => {
           >
             <RefreshCw
               size={18}
-              className={loading ? "history-spin" : ""}
+              className={
+                loading ? "history-spin" : ""
+              }
             />
             Refresh
           </button>
@@ -173,32 +225,57 @@ const History = () => {
             <ArrowLeft size={18} />
             Dashboard
           </button>
+
         </div>
       </div>
 
-      {/* Main card */}
+      {/* Main Card */}
       <div className="history-card">
+
         <div className="history-card-header">
           <div>
             <h2>All Interviews</h2>
+
             <span>
               {normalizedInterviews.length} interview
-              {normalizedInterviews.length !== 1 ? "s" : ""}
+              {normalizedInterviews.length !== 1
+                ? "s"
+                : ""}
             </span>
           </div>
         </div>
 
         {loading ? (
+
           <div className="history-state">
-            <RefreshCw size={34} className="history-spin" />
-            <h3>Loading interview history...</h3>
-            <p>Please wait.</p>
+
+            <RefreshCw
+              size={34}
+              className="history-spin"
+            />
+
+            <h3>
+              Loading interview history...
+            </h3>
+
+            <p>
+              Please wait.
+            </p>
+
           </div>
+
         ) : error ? (
+
           <div className="history-state error-state">
+
             <AlertCircle size={40} />
+
             <h3>{error}</h3>
-            <p>Check that your backend is running and try again.</p>
+
+            <p>
+              Check that your backend is running
+              and try again.
+            </p>
 
             <button
               className="history-retry-btn"
@@ -207,14 +284,22 @@ const History = () => {
               <RefreshCw size={17} />
               Try Again
             </button>
+
           </div>
+
         ) : normalizedInterviews.length === 0 ? (
+
           <div className="history-state">
+
             <HistoryIcon size={42} />
-            <h3>No interviews found</h3>
+
+            <h3>
+              No interviews found
+            </h3>
+
             <p>
-              Complete your first mock interview and it will
-              appear here.
+              Complete your first mock interview
+              and it will appear here.
             </p>
 
             <button
@@ -223,10 +308,15 @@ const History = () => {
             >
               Start Interview
             </button>
+
           </div>
+
         ) : (
+
           <div className="history-table-wrapper">
+
             <table className="history-table">
+
               <thead>
                 <tr>
                   <th>DATE</th>
@@ -239,78 +329,111 @@ const History = () => {
               </thead>
 
               <tbody>
-                {normalizedInterviews.map((interview) => (
-                  <tr key={interview.id}>
-                    <td>
-                      <div className="history-date">
-                        {formatDate(interview.date)}
-                      </div>
-                    </td>
 
-                    <td>
-                      <span className="history-type">
-                        {interview.type}
-                      </span>
-                    </td>
+                {normalizedInterviews.map(
+                  (interview) => (
 
-                    <td>
-                      <span className="history-role">
-                        {interview.role}
-                      </span>
-                    </td>
+                    <tr
+                      key={interview.id}
+                    >
 
-                    <td>
-                      <span className="history-score">
-                        {getScore(interview.score)}
-                      </span>
+                      <td>
+                        <div className="history-date">
+                          {formatDate(
+                            interview.date
+                          )}
+                        </div>
+                      </td>
 
-                      {interview.score !== null &&
-                        interview.score !== undefined &&
-                        interview.score !== "" && (
-                          <span className="history-score-total">
-                            {" "}
-                            / 100
+                      <td>
+                        <span className="history-type">
+                          {interview.type}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span className="history-role">
+                          {interview.role}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span className="history-score">
+                          {getScore(
+                            interview.score
+                          )}
+                        </span>
+
+                        {interview.score !==
+                          null &&
+                          interview.score !==
+                            undefined &&
+                          interview.score !==
+                            "" && (
+                            <span className="history-score-total">
+                              {" "}
+                              / 100
+                            </span>
+                          )}
+                      </td>
+
+                      <td>
+
+                        {isCompleted(
+                          interview.status
+                        ) ? (
+
+                          <span className="history-status completed">
+                            <CheckCircle2
+                              size={15}
+                            />
+                            Completed
                           </span>
+
+                        ) : (
+
+                          <span className="history-status incomplete">
+                            <Clock3
+                              size={15}
+                            />
+                            Incomplete
+                          </span>
+
                         )}
-                    </td>
 
-                    <td>
-                      {isCompleted(interview.status) ? (
-                        <span className="history-status completed">
-                          <CheckCircle2 size={15} />
-                          Completed
-                        </span>
-                      ) : (
-                        <span className="history-status incomplete">
-                          <Clock3 size={15} />
-                          Incomplete
-                        </span>
-                      )}
-                    </td>
+                      </td>
 
-                    <td>
-                      <button
-                        className="history-view-btn"
-                        title="View interview"
-                        onClick={() => {
-                          /*
-                           * For now this safely returns to dashboard.
-                           * We can connect this later to the detailed
-                           * feedback/interview result page.
-                           */
-                          navigate("/dashboard");
-                        }}
-                      >
-                        <Eye size={19} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+
+                        <button
+                          className="history-view-btn"
+                          title="View interview"
+                          onClick={() =>
+                            navigate(
+                              "/dashboard"
+                            )
+                          }
+                        >
+                          <Eye size={19} />
+                        </button>
+
+                      </td>
+
+                    </tr>
+
+                  )
+                )}
+
               </tbody>
+
             </table>
+
           </div>
+
         )}
+
       </div>
+
     </div>
   );
 };

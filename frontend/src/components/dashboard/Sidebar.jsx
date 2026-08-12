@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Play, History, User, LogOut } from 'lucide-react';
+import { LayoutDashboard, History, User, LogOut } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -14,9 +14,8 @@ const Sidebar = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Start Interview', path: '/setup', icon: Play },
-    { name: 'History', path: '#history', icon: History },
-    { name: 'Profile', path: '#profile', icon: User },
+    { name: 'History', path: '/history', icon: History },
+    { name: 'Profile', path: '/profile', icon: User },
   ];
 
   return (
@@ -26,7 +25,7 @@ const Sidebar = () => {
           MockMind AI
         </h1>
       </div>
-      
+
       <nav className="flex-1 px-4 mt-8 space-y-2">
         {navItems.map((item) => (
           <NavLink

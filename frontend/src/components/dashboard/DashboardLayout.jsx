@@ -5,16 +5,16 @@ import { Outlet } from 'react-router-dom';
 
 const DashboardLayout = () => {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex">
-      {/* Sidebar fixed on the left */}
+    <div className="min-h-screen bg-[#020817] text-white flex">
+      {/* Sidebar */}
       <Sidebar />
-      
-      {/* Main content shifted right to accommodate sidebar */}
-      <div className="flex-1 ml-64 flex flex-col min-h-screen">
+
+      {/* Main content */}
+      <div className="flex-1 ml-64 flex flex-col min-h-screen bg-[#020817]">
         <Header />
-        
-        {/* Page Content area */}
-        <main className="flex-1 p-8">
+
+        {/* Page Content */}
+        <main className="flex-1 p-8 bg-[#020817]">
           <Outlet />
         </main>
       </div>
@@ -23,11 +23,3 @@ const DashboardLayout = () => {
 };
 
 export default DashboardLayout;
-
-
-
-
-
-
-
-
