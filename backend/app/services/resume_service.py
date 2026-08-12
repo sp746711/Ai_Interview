@@ -5,8 +5,10 @@ import uuid
 from fastapi import UploadFile
 
 from backend.app.utils.pdf_parser import extract_text_from_pdf
-from backend.app.utils.text_cleaner import analyze_resume
-
+from backend.app.utils.text_cleaner import (
+    analyze_resume,
+    validate_resume_document,
+)
 
 # ============================================================
 # UPLOAD DIRECTORY
@@ -89,7 +91,29 @@ class ResumeService:
             resume_text = text.strip()
 
             # =================================================
-            # 5. ORIGINAL PYTHON RESUME ANALYZER
+            # 5. TASK 10 — VALIDATE RESUME DOCUMENT
+            #
+            # This only checks whether the uploaded PDF
+            # appears to be an actual resume/CV.
+            #
+            # IMPORTANT:
+            # Existing resume analysis and scoring are NOT
+            # changed.
+            # =================================================
+
+            if not validate_resume_document(
+                resume_text
+            ):
+                raise ValueError(
+                    "Please upload a valid resume/CV. "
+                    "The uploaded document does not appear "
+                    "to be a resume."
+                )
+
+            # =================================================
+            # 6. ORIGINAL PYTHON RESUME ANALYZER
+            #
+            # DO NOT CHANGE THIS LOGIC.
             #
             # This remains responsible for:
             #
@@ -171,7 +195,7 @@ class ResumeService:
                 )
 
             # =================================================
-            # 6. SELECTED DOMAIN
+            # 7. SELECTED DOMAIN
             # =================================================
 
             selected_domain = str(
@@ -179,15 +203,13 @@ class ResumeService:
             ).strip()
 
             # =================================================
-            # 7. RETURN ROUND 1 IMMEDIATE RESULT
+            # 8. RETURN ROUND 1 IMMEDIATE RESULT
             #
-            # IMPORTANT:
-            #
-            # We return immediately after Python analysis.
-            #
-            # This restores the intended Round 1 behavior:
+            # Existing behavior remains unchanged:
             #
             # Upload PDF
+            #    ↓
+            # Resume validation
             #    ↓
             # ATS Score
             #    ↓
@@ -196,9 +218,6 @@ class ResumeService:
             # Show result on SAME Round 1 page
             #    ↓
             # User clicks Continue to Round 2
-            #
-            # Qwen3:4b will be used later for detailed
-            # Round 1 feedback.
             # =================================================
 
             return {
@@ -220,7 +239,7 @@ class ResumeService:
         finally:
 
             # =================================================
-            # 8. DELETE TEMPORARY PDF
+            # 9. DELETE TEMPORARY PDF
             # =================================================
 
             if os.path.exists(
