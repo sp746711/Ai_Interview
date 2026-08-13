@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import {
   Bot,
   Check,
@@ -3153,10 +3154,61 @@ const AIInterview = () => {
       ? 'Non-Technical Interview'
       : 'Technical Interview';
 
+  const { logout } = useAuth();
+
   const userName =
     currentInterview?.name ||
     JSON.parse(localStorage.getItem('user') || '{}')?.name ||
     'Candidate';
+
+  // ======================================================
+  // TASK 11 — STEP 2: USER MENU FOR PRE / FINAL INTERVIEW
+  // Only the user-menu behavior is added here.
+  // ======================================================
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleUserMenuOutsideClick = (event) => {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target)
+      ) {
+        setIsUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleUserMenuOutsideClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleUserMenuOutsideClick);
+    };
+  }, []);
+
+  const handleUserProfile = () => {
+    setIsUserMenuOpen(false);
+    navigate('/profile');
+  };
+
+  const handleUserLogout = () => {
+    setIsUserMenuOpen(false);
+
+    try {
+      logout();
+    } catch (error) {
+      console.warn('Logout handler failed:', error);
+    }
+
+    setAIInterviewActive(false);
+    stopMediaStream();
+
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      intentionalFullscreenExitRef.current = true;
+      void exitFullscreen();
+    }
+
+    navigate('/login', { replace: true });
+  };
 
   const totalTimeLabel = formatTime(totalTimeLeft);
   const answerProgress = Math.max(
@@ -3251,12 +3303,73 @@ const AIInterview = () => {
               </button>
             )}
 
-            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-slate-900/70 px-3 py-1.5 sm:flex">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-500 text-xs font-bold text-slate-900">
-                {userName.charAt(0).toUpperCase()}
-              </div>
-              <span className="max-w-[110px] truncate text-sm font-medium">{userName}</span>
-              <ChevronDown className="h-4 w-4 text-gray-400" />
+            {/* =================================================
+                TASK 11 — STEP 2: WORKING USER MENU
+                Pre-Interview + Final AI Interview
+                ================================================= */}
+            <div
+              ref={userMenuRef}
+              className="relative hidden sm:block"
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  setIsUserMenuOpen((previous) => !previous)
+                }
+                className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/70 px-3 py-1.5 transition hover:border-white/20 hover:bg-slate-800/80"
+                aria-expanded={isUserMenuOpen}
+                aria-haspopup="menu"
+              >
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-500 text-xs font-bold text-slate-900">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+
+                <span className="max-w-[110px] truncate text-sm font-medium">
+                  {userName}
+                </span>
+
+                <ChevronDown
+                  className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${
+                    isUserMenuOpen ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full z-[200] mt-3 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#0b1024] shadow-2xl shadow-black/50"
+                >
+                  <div className="border-b border-white/10 px-4 py-3">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {userName}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-slate-400">
+                      {JSON.parse(localStorage.getItem('user') || '{}')?.email || ''}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleUserProfile}
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-200 transition-colors hover:bg-white/5 hover:text-white"
+                  >
+                    <UserRound className="h-4 w-4 text-slate-400" />
+                    <span>Profile</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleUserLogout}
+                    className="flex w-full items-center gap-3 border-t border-white/10 px-4 py-3 text-left text-sm text-red-400 transition-colors hover:bg-red-500/10"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

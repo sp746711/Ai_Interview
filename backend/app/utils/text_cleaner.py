@@ -725,6 +725,8 @@ def validate_resume_document(text: str) -> bool:
     - Existing ATS scoring is NOT changed.
     - Existing skill extraction is NOT changed.
     - Existing analyze_resume() is NOT changed.
+    - Technical skills such as FastAPI, MongoDB, Express,
+      Uvicorn, React, etc. are NOT considered source code.
     - Random PDFs, source-code documents and project
       documentation should be rejected.
     """
@@ -751,6 +753,12 @@ def validate_resume_document(text: str) -> bool:
 
     # --------------------------------------------------------
     # 3. Reject obvious source-code documents
+    #
+    # IMPORTANT:
+    # Do NOT put technology names here.
+    #
+    # FastAPI, MongoDB, React, Express, Uvicorn, etc.
+    # can legitimately appear in a resume.
     # --------------------------------------------------------
 
     code_markers = [
@@ -779,13 +787,6 @@ def validate_resume_document(text: str) -> bool:
         "package.json",
         "requirements.txt",
         "model_dump(",
-        "pydantic",
-        "fastapi",
-        "motor.motor_asyncio",
-        "mongodb",
-        "mongoose",
-        "express",
-        "uvicorn",
         "axios.create(",
         "return {",
         "try:",
@@ -799,8 +800,8 @@ def validate_resume_document(text: str) -> bool:
         if marker in lower_text
     )
 
-    # A genuine resume may mention programming languages,
-    # but it should not contain several source-code markers.
+    # A genuine resume can contain programming technologies,
+    # but should not contain several actual source-code markers.
     if code_marker_count >= 2:
         return False
 
@@ -831,8 +832,6 @@ def validate_resume_document(text: str) -> bool:
         "run commands",
         "deployment instructions",
         "database schema",
-        "endpoint",
-        "endpoints",
         "request body",
         "response body",
         "project structure",
@@ -979,7 +978,6 @@ def validate_resume_document(text: str) -> bool:
     # --------------------------------------------------------
 
     return False
-
 
 # ============================================================
 # DYNAMIC ATS-STYLE RESUME QUALITY SCORE

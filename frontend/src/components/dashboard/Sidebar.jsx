@@ -1,17 +1,9 @@
 import React from 'react';
-import { LayoutDashboard, History, User, LogOut } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { LayoutDashboard, History, User } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import AIAvatar from '../ai/AIAvatar';
 
 const Sidebar = () => {
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'History', path: '/history', icon: History },
@@ -20,13 +12,25 @@ const Sidebar = () => {
 
   return (
     <div className="w-64 h-screen fixed top-0 left-0 bg-gradient-to-b from-slate-900 to-blue-950 text-white flex flex-col shadow-2xl z-20">
+
+      {/* =====================================================
+          MOCKMIND AI LOGO
+          UNCHANGED
+      ===================================================== */}
+
       <div className="p-6">
         <h1 className="text-2xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
           MockMind AI
         </h1>
       </div>
 
-      <nav className="flex-1 px-4 mt-8 space-y-2">
+      {/* =====================================================
+          NAVIGATION
+          UNCHANGED
+      ===================================================== */}
+
+      <nav className="px-4 mt-8 space-y-2">
+
         {navItems.map((item) => (
           <NavLink
             key={item.name}
@@ -40,20 +44,28 @@ const Sidebar = () => {
             }
           >
             <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.name}</span>
+
+            <span className="font-medium">
+              {item.name}
+            </span>
           </NavLink>
         ))}
+
       </nav>
 
-      <div className="p-4 border-t border-white/10">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-4 py-3 w-full text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all duration-300"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">Logout</span>
-        </button>
+      {/* =====================================================
+          TASK 13 — AI AVATAR AREA
+          Only avatar.
+          No text.
+          No chat box.
+          No buttons.
+          No logout.
+      ===================================================== */}
+
+      <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+        <AIAvatar />
       </div>
+
     </div>
   );
 };
