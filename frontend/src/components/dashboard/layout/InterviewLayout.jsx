@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ChevronDown, User, LogOut } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 import { Outlet, useNavigate } from "react-router-dom";
 
 const InterviewLayout = () => {

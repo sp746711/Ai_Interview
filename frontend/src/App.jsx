@@ -3,10 +3,11 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
 // Layouts
-import MainLayout from "./components/layout/MainLayout";
-import AuthLayout from "./components/layout/AuthLayout";
+// Layouts
+import MainLayout from "./components/dashboard/layout/MainLayout";
+import AuthLayout from "./components/dashboard/layout/AuthLayout";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
-import InterviewLayout from "./components/layout/InterviewLayout";
+import InterviewLayout from "./components/dashboard/layout/InterviewLayout";
 
 // Pages
 import Landing from "./pages/Landing";
