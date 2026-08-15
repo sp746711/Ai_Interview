@@ -1,8 +1,14 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 
-// Layouts
+// ======================================================
+// TASK 14 ONLY
+// Global avatar event listener
+// ======================================================
+
+import getAvatarMessage from "./components/ai/avatarLogic";
+
 // Layouts
 import MainLayout from "./components/dashboard/layout/MainLayout";
 import AuthLayout from "./components/dashboard/layout/AuthLayout";
@@ -25,6 +31,137 @@ import AIInterview from "./pages/interview/AIInterview";
 import Feedback from "./pages/interview/Feedback";
 
 // ======================================================
+// TASK 14 ONLY
+// GLOBAL AVATAR EVENT LISTENER
+// ======================================================
+
+const AvatarEventListener = () => {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    const handleAvatarEvent = (event) => {
+      const avatarEvent = event.detail;
+
+      if (!avatarEvent) {
+        return;
+      }
+
+      // ==================================================
+      // TASK 14 ONLY
+      // Consume the event immediately.
+      //
+      // This prevents an old Round 1 / Round 2 /
+      // Final Interview / Feedback event from being
+      // replayed later.
+      // ==================================================
+
+      localStorage.removeItem(
+        "mockmind_avatar_event"
+      );
+
+      // --------------------------------------------------
+      // Get current logged-in user
+      // --------------------------------------------------
+
+      let currentUser = user;
+
+      if (!currentUser) {
+        try {
+          const storedUser =
+            localStorage.getItem("user");
+
+          if (storedUser) {
+            currentUser = JSON.parse(
+              storedUser
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Avatar user data error:",
+            error
+          );
+        }
+      }
+
+      // --------------------------------------------------
+      // Existing Task 14 message logic
+      // --------------------------------------------------
+
+      const message = getAvatarMessage({
+        user: currentUser,
+
+        avatarEvent,
+
+        isNewUser: false,
+        isReturningUser: false,
+        hasIncompleteInterview: false,
+        interviewCompleted: false,
+
+        score: null,
+        previousBest: null,
+
+        totalInterviews: 0,
+        completedInterviews: 0,
+
+        interviewType: null,
+      });
+
+      if (!message) {
+        return;
+      }
+
+      // --------------------------------------------------
+      // Speak existing Task 14 message
+      // --------------------------------------------------
+
+      if (
+        typeof window === "undefined" ||
+        !("speechSynthesis" in window)
+      ) {
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const speech =
+        new SpeechSynthesisUtterance(
+          message
+        );
+
+      speech.rate = 0.95;
+      speech.pitch = 1;
+      speech.volume = 1;
+
+      window.speechSynthesis.speak(
+        speech
+      );
+    };
+
+    // ====================================================
+    // Same-tab Task 14 events
+    // ====================================================
+
+    window.addEventListener(
+      "mockmind-avatar-event",
+      handleAvatarEvent
+    );
+
+    // ====================================================
+    // Cleanup
+    // ====================================================
+
+    return () => {
+      window.removeEventListener(
+        "mockmind-avatar-event",
+        handleAvatarEvent
+      );
+    };
+  }, [user]);
+
+  return null;
+};
+
+// ======================================================
 // PROTECTED ROUTE
 // ======================================================
 
@@ -32,7 +169,12 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
   }
 
   return children;
@@ -44,118 +186,158 @@ const ProtectedRoute = ({ children }) => {
 
 const App = () => {
   return (
-    <Routes>
-
+    <>
       {/* ==================================================
-          PUBLIC ROUTES
+          TASK 14 ONLY
+
+          Global listener remains mounted during:
+
+          Dashboard
+             ↓
+          Round 1
+             ↓
+          Round 2
+             ↓
+          Final Interview
+             ↓
+          Feedback
       ================================================== */}
 
-      <Route element={<MainLayout />}>
-        <Route path="/" element={<Landing />} />
-      </Route>
+      <AvatarEventListener />
 
-      {/* ==================================================
-          AUTH ROUTES
-      ================================================== */}
+      <Routes>
 
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Route>
+        {/* ==================================================
+            PUBLIC ROUTES
+        ================================================== */}
 
-      {/* ==================================================
-          DASHBOARD ROUTES
-          Sidebar + Welcome Header
-      ================================================== */}
+        <Route element={<MainLayout />}>
+          <Route
+            path="/"
+            element={<Landing />}
+          />
+        </Route>
 
-      <Route
-        element={
-          <ProtectedRoute>
-            <DashboardLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route
-          path="/dashboard"
-          element={<Dashboard />}
-        />
+        {/* ==================================================
+            AUTH ROUTES
+        ================================================== */}
 
-        <Route
-          path="/history"
-          element={<History />}
-        />
+        <Route element={<AuthLayout />}>
 
-        <Route
-          path="/profile"
-          element={<Profile />}
-        />
-      </Route>
+          <Route
+            path="/login"
+            element={<Login />}
+          />
 
-      {/* ==================================================
-          ROUND 1 → ROUND 2 → SETUP
+          <Route
+            path="/register"
+            element={<Register />}
+          />
 
-          NO SIDEBAR
-          WELCOME HEADER PRESENT
-      ================================================== */}
+        </Route>
 
-      <Route
-        element={
-          <ProtectedRoute>
-            <InterviewLayout />
-          </ProtectedRoute>
-        }
-      >
-        <Route
-          path="/round1"
-          element={<Round1 />}
-        />
+        {/* ==================================================
+            DASHBOARD ROUTES
+            Sidebar + Welcome Header
+        ================================================== */}
 
         <Route
-          path="/test"
-          element={<Test />}
-        />
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
+        >
+
+          <Route
+            path="/dashboard"
+            element={<Dashboard />}
+          />
+
+          <Route
+            path="/history"
+            element={<History />}
+          />
+
+          <Route
+            path="/profile"
+            element={<Profile />}
+          />
+
+        </Route>
+
+        {/* ==================================================
+            ROUND 1 → ROUND 2 → SETUP
+
+            NO SIDEBAR
+            WELCOME HEADER PRESENT
+        ================================================== */}
 
         <Route
-          path="/setup"
-          element={<Setup />}
-        />
-      </Route>
+          element={
+            <ProtectedRoute>
+              <InterviewLayout />
+            </ProtectedRoute>
+          }
+        >
 
-      {/* ==================================================
-          FINAL INTERVIEW / FEEDBACK
+          <Route
+            path="/round1"
+            element={<Round1 />}
+          />
 
-          KEEPING CURRENT ROUTING FOR NOW
-          WE WILL FIX THEIR LAYOUT SEPARATELY
-      ================================================== */}
+          <Route
+            path="/test"
+            element={<Test />}
+          />
 
-      <Route
-        element={
-          <ProtectedRoute>
-            <MainLayout />
-          </ProtectedRoute>
-        }
-      >
+          <Route
+            path="/setup"
+            element={<Setup />}
+          />
+
+        </Route>
+
+        {/* ==================================================
+            FINAL INTERVIEW / FEEDBACK
+        ================================================== */}
+
         <Route
-          path="/ai-interview"
-          element={<AIInterview />}
-        />
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
+
+          <Route
+            path="/ai-interview"
+            element={<AIInterview />}
+          />
+
+          <Route
+            path="/feedback"
+            element={<Feedback />}
+          />
+
+        </Route>
+
+        {/* ==================================================
+            FALLBACK
+        ================================================== */}
 
         <Route
-          path="/feedback"
-          element={<Feedback />}
+          path="*"
+          element={
+            <Navigate
+              to="/dashboard"
+              replace
+            />
+          }
         />
-      </Route>
 
-      {/* ==================================================
-          FALLBACK
-      ================================================== */}
-
-      <Route
-        path="*"
-        element={<Navigate to="/dashboard" replace />}
-      />
-
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

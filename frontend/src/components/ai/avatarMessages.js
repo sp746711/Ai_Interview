@@ -1,7 +1,8 @@
 // ============================================================
 // MockMind AI — Avatar Messages
 // Task 13 + Task 14
-//
+// ============================================================
+
 // IMPORTANT:
 // These messages are spoken ONLY by the Dashboard AI Avatar.
 // They are selected automatically by avatarLogic.js.
@@ -147,7 +148,7 @@ export const getProgressMessage = (
 ) => {
 
   if (completedInterviews === 1) {
-    return `Congratulations, ${name.} You've completed your first interview.`;
+    return `Congratulations, ${name}. You've completed your first interview.`;
   }
 
   if (completedInterviews === 5) {
@@ -361,7 +362,10 @@ export const getRound1ReadyMessage = (
 // ============================================================
 
 
+// ============================================================
 // 27. ROUND 2 — ENTER
+// ============================================================
+
 export const getRound2StartMessage = (
   name = "there"
 ) => {
@@ -369,7 +373,10 @@ export const getRound2StartMessage = (
 };
 
 
+// ============================================================
 // 28. ROUND 2 — TEST START
+// ============================================================
+
 export const getRound2StartedMessage = (
   name = "there"
 ) => {
@@ -377,7 +384,10 @@ export const getRound2StartedMessage = (
 };
 
 
+// ============================================================
 // 29. ROUND 2 — IMPORTANT TIME WARNING
+// ============================================================
+
 export const getRound2TimeWarningMessage = (
   name = "there"
 ) => {
@@ -385,7 +395,10 @@ export const getRound2TimeWarningMessage = (
 };
 
 
+// ============================================================
 // 30. ROUND 2 — FINAL STAGE
+// ============================================================
+
 export const getRound2FinalStageMessage = (
   name = "there"
 ) => {
@@ -393,7 +406,10 @@ export const getRound2FinalStageMessage = (
 };
 
 
+// ============================================================
 // 31. ROUND 2 — COMPLETED
+// ============================================================
+
 export const getRound2CompletedMessage = (
   name = "there"
 ) => {

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import getAvatarMessage from '../../components/ai/avatarLogic';
 import {
   Bot,
   Check,
@@ -2994,6 +2995,22 @@ const AIInterview = () => {
 
     setInterviewComplete(true);
     setRound3State('completed');
+
+    // ============================================================
+    // TASK 14 ONLY — FINAL INTERVIEW COMPLETED MESSAGE
+    // Existing Round 3 interview functionality remains unchanged.
+    // ============================================================
+
+    const finalMessage = getAvatarMessage({
+      user: { name: userName },
+      avatarEvent: 'final_interview_completed',
+    });
+
+    if (finalMessage && 'speechSynthesis' in window) {
+      window.setTimeout(() => {
+        void speakQuestion(finalMessage);
+      }, 300);
+    }
 
     setInterviewStarted(false);
 

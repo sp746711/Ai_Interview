@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import getAvatarMessage from '../../components/ai/avatarLogic';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import {
   Loader2,
@@ -24,6 +26,7 @@ const Feedback = () => {
   const [error, setError] = useState('');
 
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // =========================================================
   // FETCH FINAL INTERVIEW RESULT
@@ -61,6 +64,34 @@ const Feedback = () => {
         console.log('RESUME SKILLS:', data?.resume_skills);
 
         setResult(data);
+
+        // =========================================================
+        // TASK 14 ONLY — FEEDBACK READY AVATAR MESSAGE
+        // Existing feedback/result logic remains unchanged.
+        // =========================================================
+
+        const feedbackMessage = getAvatarMessage({
+          user,
+          avatarEvent: 'feedback_ready',
+          score: data?.final_score ?? 0,
+        });
+
+        if (
+          feedbackMessage &&
+          typeof window !== 'undefined' &&
+          'speechSynthesis' in window
+        ) {
+          const speech = new SpeechSynthesisUtterance(
+            feedbackMessage
+          );
+
+          speech.rate = 0.95;
+          speech.pitch = 1;
+          speech.volume = 1;
+
+          window.speechSynthesis.cancel();
+          window.speechSynthesis.speak(speech);
+        }
 
         // -----------------------------------------------------
         // Save interview summary in localStorage history

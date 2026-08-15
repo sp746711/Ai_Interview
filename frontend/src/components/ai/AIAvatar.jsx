@@ -1,6 +1,81 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
-const AIAvatar = ({ isSpeaking = false }) => {
+const AIAvatar = ({
+  isSpeaking: externalSpeaking = false,
+  message = null,
+  avatarEvent = null,
+  autoSpeak = true,
+}) => {
+  const [internalSpeaking, setInternalSpeaking] = useState(false);
+  const speechRef = useRef(null);
+  const lastMessageRef = useRef("");
+
+  const isSpeaking = externalSpeaking || internalSpeaking;
+
+  // ============================================================
+  // TASK 13 + TASK 14 — SPEECH ONLY
+  // Does not change the avatar visual design, hologram, CSS,
+  // animation, size, position, or existing external isSpeaking prop.
+  // ============================================================
+  useEffect(() => {
+    if (!autoSpeak || !message || typeof window === "undefined") {
+      return undefined;
+    }
+
+    if (!("speechSynthesis" in window)) {
+      return undefined;
+    }
+
+    if (lastMessageRef.current === message) {
+      return undefined;
+    }
+
+    lastMessageRef.current = message;
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(message);
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find((voice) =>
+      /Microsoft|Google|Samantha|Daniel|Alex/i.test(voice.name)
+    );
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    utterance.onstart = () => {
+      setInternalSpeaking(true);
+    };
+
+    utterance.onend = () => {
+      setInternalSpeaking(false);
+    };
+
+    utterance.onerror = () => {
+      setInternalSpeaking(false);
+    };
+
+    speechRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+
+    return () => {
+      window.speechSynthesis.cancel();
+      setInternalSpeaking(false);
+    };
+  }, [message, avatarEvent, autoSpeak]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
   return (
     <div className="ai-avatar">
 

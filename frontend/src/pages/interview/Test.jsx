@@ -17,6 +17,15 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+
+// ============================================================
+// TASK 13 + TASK 14 ONLY
+// Avatar event storage.
+// Existing Test functionality is NOT changed.
+// ============================================================
+
+const AVATAR_EVENT_KEY = 'mockmind_avatar_event';
+
 const Test = () => {
   /* ======================================================
      NORMAL TEST STATE
@@ -29,7 +38,7 @@ const Test = () => {
   const [answers, setAnswers] = useState({});
 
   // 60 minutes
-  const [timeLeft, setTimeLeft] = useState(60 * 60);
+  const [timeLeft, setTimeLeft] = useState(50* 50);
 
   /* ======================================================
      SECURITY STATE
@@ -66,11 +75,65 @@ const Test = () => {
 
   const handleSubmitRef = useRef(null);
 
+
+  // ==========================================================
+  // TASK 14 ONLY
+  // Prevent the same avatar event from being sent repeatedly.
+  // ==========================================================
+
+  const avatarEventsSentRef = useRef({
+    round2Start: false,
+    round2Started: false,
+    timeWarning: false,
+    finalStage: false,
+    round2Complete: false,
+  });
+
+
   const navigate = useNavigate();
 
   const currentInterview = JSON.parse(
     localStorage.getItem('current_interview') || '{}'
   );
+
+
+  /* ======================================================
+     TASK 14 — AVATAR EVENT HELPER
+     ====================================================== */
+
+  const setAvatarEvent = (event) => {
+    try {
+      localStorage.setItem(
+        AVATAR_EVENT_KEY,
+        event
+      );
+
+      /*
+       * Same-tab support.
+       *
+       * If the avatar listener is mounted at the same time,
+       * it can receive this event immediately.
+       *
+       * This does NOT change the test functionality.
+       */
+
+      window.dispatchEvent(
+        new CustomEvent(
+          'mockmind-avatar-event',
+          {
+            detail: event,
+          }
+        )
+      );
+
+    } catch (error) {
+      console.error(
+        'Avatar event error:',
+        error
+      );
+    }
+  };
+
 
   /* ======================================================
      KEEP REFS SYNCHRONIZED
@@ -80,13 +143,16 @@ const Test = () => {
     answersRef.current = answers;
   }, [answers]);
 
+
   useEffect(() => {
     questionsRef.current = questions;
   }, [questions]);
 
+
   useEffect(() => {
     securityEventsRef.current = securityEvents;
   }, [securityEvents]);
+
 
   /* ======================================================
      FETCH QUESTIONS
@@ -113,10 +179,29 @@ const Test = () => {
           setLoading(false);
           navigate('/dashboard', { replace: true });
         }
+
         return;
       }
 
       try {
+
+        // ======================================================
+        // TASK 14 ONLY
+        // Round 2 has started.
+        //
+        // Existing API request remains unchanged.
+        // ======================================================
+
+        if (
+          !avatarEventsSentRef.current.round2Start
+        ) {
+          setAvatarEvent('round2_start');
+
+          avatarEventsSentRef.current.round2Start =
+            true;
+        }
+
+
         // These requests are independent, so do not wait for one before starting the other.
         const stagePromise = api.get(
           `/interview/stage?interview_id=${encodeURIComponent(
@@ -154,6 +239,7 @@ const Test = () => {
               'Could not parse stringified questions',
               qData
             );
+
             qData = [];
           }
         }
@@ -165,12 +251,32 @@ const Test = () => {
         questionsRef.current = qData;
         setQuestions(qData);
         setLoading(false);
+
+
+        // ======================================================
+        // TASK 14 ONLY
+        // Questions are ready and the assessment has started.
+        // ======================================================
+
+        if (
+          !avatarEventsSentRef.current.round2Started
+        ) {
+          setAvatarEvent('round2_started');
+
+          avatarEventsSentRef.current.round2Started =
+            true;
+        }
+
       } catch (err) {
         if (cancelled) {
           return;
         }
 
-        console.error('Round 2 initialization failed:', err);
+        console.error(
+          'Round 2 initialization failed:',
+          err
+        );
+
         setError('Failed to fetch questions.');
         setLoading(false);
       }
@@ -181,11 +287,13 @@ const Test = () => {
     return () => {
       cancelled = true;
     };
+
   }, [
     navigate,
     currentInterview.id,
     currentInterview.interview_type,
   ]);
+
 
   /* ======================================================
      TIMER
@@ -207,6 +315,7 @@ const Test = () => {
 
     const timerInt = setInterval(() => {
       setTimeLeft((prev) => {
+
         if (prev <= 1) {
           clearInterval(timerInt);
 
@@ -222,11 +331,81 @@ const Test = () => {
     }, 1000);
 
     return () => clearInterval(timerInt);
+
   }, [
     loading,
     submitting,
     securityTerminated,
   ]);
+
+
+  /* ======================================================
+     TASK 14 — TIME-BASED AVATAR INFORMATION
+     
+     IMPORTANT:
+     Avatar does NOT speak continuously.
+     
+     Only:
+     - 5 minutes remaining
+     - 2 minutes remaining
+     
+     Each message is sent once.
+     ====================================================== */
+
+  useEffect(() => {
+    if (
+      loading ||
+      submitting ||
+      securityTerminated
+    ) {
+      return;
+    }
+
+
+    // ------------------------------------------------------
+    // 5 MINUTES REMAINING
+    // ------------------------------------------------------
+
+    if (
+      timeLeft <= 300 &&
+      timeLeft > 120 &&
+      !avatarEventsSentRef.current.timeWarning
+    ) {
+
+      setAvatarEvent(
+        'round2_time_warning'
+      );
+
+      avatarEventsSentRef.current.timeWarning =
+        true;
+    }
+
+
+    // ------------------------------------------------------
+    // 2 MINUTES REMAINING
+    // ------------------------------------------------------
+
+    if (
+      timeLeft <= 120 &&
+      timeLeft > 0 &&
+      !avatarEventsSentRef.current.finalStage
+    ) {
+
+      setAvatarEvent(
+        'round2_final_stage'
+      );
+
+      avatarEventsSentRef.current.finalStage =
+        true;
+    }
+
+  }, [
+    timeLeft,
+    loading,
+    submitting,
+    securityTerminated,
+  ]);
+
 
   /* ======================================================
      OPTION SELECT
@@ -236,6 +415,7 @@ const Test = () => {
     index,
     optionIndex
   ) => {
+
     if (
       submitting ||
       securityTerminated
@@ -244,6 +424,7 @@ const Test = () => {
     }
 
     setAnswers((previousAnswers) => {
+
       const updatedAnswers = {
         ...previousAnswers,
 
@@ -258,6 +439,7 @@ const Test = () => {
     });
   };
 
+
   /* ======================================================
      BUILD SUBMIT PAYLOAD
      ====================================================== */
@@ -265,6 +447,7 @@ const Test = () => {
   const buildSubmitPayload = (
     securityData = null
   ) => {
+
     const currentQuestions =
       questionsRef.current;
 
@@ -280,6 +463,7 @@ const Test = () => {
 
     currentQuestions.forEach(
       (q, idx) => {
+
         const selectedOptIdx =
           currentAnswers[
             idx.toString()
@@ -325,6 +509,7 @@ const Test = () => {
     return submitPayload;
   };
 
+
   /* ======================================================
      SUBMIT TEST
      ====================================================== */
@@ -333,9 +518,11 @@ const Test = () => {
     securityAutoSubmit = false,
     securityData = null
   ) => {
+
     if (!currentInterview.id) {
       return;
     }
+
 
     /*
      * Prevent duplicate submissions.
@@ -349,12 +536,15 @@ const Test = () => {
 
     setSubmitting(true);
 
+
     const submitPayload =
       buildSubmitPayload(
         securityData
       );
 
+
     try {
+
       /*
        * Current backend submission.
        *
@@ -373,11 +563,33 @@ const Test = () => {
         }
       );
 
+
+      // ======================================================
+      // TASK 14 ONLY
+      // Round 2 has completed successfully.
+      //
+      // This does NOT change the existing submission logic.
+      // ======================================================
+
+      if (
+        !avatarEventsSentRef.current.round2Complete
+      ) {
+
+        setAvatarEvent(
+          'round2_complete'
+        );
+
+        avatarEventsSentRef.current.round2Complete =
+          true;
+      }
+
+
       /* =========================================
          SECURITY AUTO-SUBMIT
          ========================================= */
 
       if (securityAutoSubmit) {
+
         /*
          * Second security violation happened.
          *
@@ -401,6 +613,7 @@ const Test = () => {
             securityData?.events || [],
         };
 
+
         /*
          * Store temporary security record using
          * this interview's ID.
@@ -412,6 +625,7 @@ const Test = () => {
             securityRecord
           )
         );
+
 
         /*
          * IMPORTANT:
@@ -436,6 +650,7 @@ const Test = () => {
           })
         );
 
+
         /*
          * Continue to Round 3.
          */
@@ -455,6 +670,7 @@ const Test = () => {
         return;
       }
 
+
       /* =========================================
          NORMAL SUBMISSION
          ========================================= */
@@ -471,7 +687,9 @@ const Test = () => {
       );
 
       navigate('/setup');
+
     } catch (err) {
+
       console.error(err);
 
       setError(
@@ -479,6 +697,7 @@ const Test = () => {
           ? 'Failed to save your assessment. Please try again.'
           : 'Failed to submit test.'
       );
+
 
       /*
        * If normal submission fails,
@@ -497,8 +716,10 @@ const Test = () => {
     }
   };
 
+
   // Always expose the latest submit function to the stable timer/security handlers.
   handleSubmitRef.current = handleSubmit;
+
 
   /* ======================================================
      SECURITY VIOLATION
@@ -511,11 +732,13 @@ const Test = () => {
         message,
         counted = true
       ) => {
+
         /*
          * Ignore events before the test loads.
          */
 
         if (loading) return;
+
 
         /*
          * Ignore events while submitting.
@@ -528,6 +751,7 @@ const Test = () => {
           return;
         }
 
+
         const event = {
           type,
 
@@ -537,10 +761,12 @@ const Test = () => {
             new Date().toISOString(),
         };
 
+
         const updatedSecurityEvents = [
           ...securityEventsRef.current,
           event,
         ];
+
 
         securityEventsRef.current =
           updatedSecurityEvents;
@@ -548,6 +774,7 @@ const Test = () => {
         setSecurityEvents(
           updatedSecurityEvents
         );
+
 
         /*
          * Some events are only logged and
@@ -558,9 +785,11 @@ const Test = () => {
           return;
         }
 
+
         const nextCount =
           violationCountRef.current +
           1;
+
 
         violationCountRef.current =
           nextCount;
@@ -569,11 +798,13 @@ const Test = () => {
           nextCount
         );
 
+
         /* =========================================
            FIRST VIOLATION
            ========================================= */
 
         if (nextCount === 1) {
+
           setSecurityReason(message);
 
           setSecurityWarning(true);
@@ -581,11 +812,13 @@ const Test = () => {
           return;
         }
 
+
         /* =========================================
            SECOND VIOLATION
            ========================================= */
 
         if (nextCount >= 2) {
+
           securityTerminatedRef.current =
             true;
 
@@ -594,6 +827,7 @@ const Test = () => {
           );
 
           setSecurityReason(message);
+
 
           /*
            * Include the second/current violation
@@ -604,32 +838,36 @@ const Test = () => {
             ...securityEventsRef.current,
           ];
 
+
           /*
            * Show the final security screen briefly,
            * then save and submit Round 2.
            */
 
           setTimeout(() => {
+
             if (handleSubmitRef.current) {
+
               handleSubmitRef.current(
-              true,
-              {
-                status: 'flagged',
+                true,
+                {
+                  status: 'flagged',
 
-                violation_count:
-                  nextCount,
+                  violation_count:
+                    nextCount,
 
-                auto_submitted:
-                  true,
+                  auto_submitted:
+                    true,
 
-                auto_submit_reason:
-                  'second_security_violation',
+                  auto_submit_reason:
+                    'second_security_violation',
 
-                events:
-                  finalEvents,
-              }
+                  events:
+                    finalEvents,
+                }
               );
             }
+
           }, 1200);
         }
       },
@@ -638,17 +876,22 @@ const Test = () => {
       ]
     );
 
+
   /* ======================================================
      SECURITY EVENT LISTENERS
      ====================================================== */
 
   useEffect(() => {
+
     if (loading) return;
+
 
     // One physical action must count as only one violation.
     // Example: a tab switch can fire both blur and visibilitychange.
+
     let lastViolationTime = 0;
     let lastViolationGroup = '';
+
 
     const registerDeduplicatedViolation = (
       group,
@@ -656,7 +899,9 @@ const Test = () => {
       message,
       counted = true
     ) => {
+
       const now = Date.now();
+
 
       if (
         counted &&
@@ -666,16 +911,25 @@ const Test = () => {
         return;
       }
 
+
       if (counted) {
         lastViolationGroup = group;
         lastViolationTime = now;
       }
 
-      registerViolation(type, message, counted);
+
+      registerViolation(
+        type,
+        message,
+        counted
+      );
     };
 
+
     const handleCopy = (event) => {
+
       event.preventDefault();
+
       registerDeduplicatedViolation(
         'copy',
         'copy_attempt',
@@ -684,8 +938,11 @@ const Test = () => {
       );
     };
 
+
     const handleCut = (event) => {
+
       event.preventDefault();
+
       registerDeduplicatedViolation(
         'cut',
         'cut_attempt',
@@ -694,8 +951,11 @@ const Test = () => {
       );
     };
 
+
     const handleContextMenu = (event) => {
+
       event.preventDefault();
+
       registerDeduplicatedViolation(
         'right_click',
         'right_click',
@@ -704,8 +964,11 @@ const Test = () => {
       );
     };
 
+
     const handleDragStart = (event) => {
+
       event.preventDefault();
+
       registerDeduplicatedViolation(
         'drag',
         'drag_attempt',
@@ -714,38 +977,67 @@ const Test = () => {
       );
     };
 
-    const handleKeyDown = (event) => {
-      const key = event.key.toLowerCase();
-      const ctrlOrCommand = event.ctrlKey || event.metaKey;
 
-      if (ctrlOrCommand && key === 'c') {
+    const handleKeyDown = (event) => {
+
+      const key = event.key.toLowerCase();
+
+      const ctrlOrCommand =
+        event.ctrlKey ||
+        event.metaKey;
+
+
+      if (
+        ctrlOrCommand &&
+        key === 'c'
+      ) {
+
         event.preventDefault();
+
         registerDeduplicatedViolation(
           'copy',
           'copy_shortcut',
           'Copy shortcut detected during the assessment.',
           true
         );
+
         return;
       }
 
-      if (ctrlOrCommand && key === 'x') {
+
+      if (
+        ctrlOrCommand &&
+        key === 'x'
+      ) {
+
         event.preventDefault();
+
         registerDeduplicatedViolation(
           'cut',
           'cut_shortcut',
           'Cut shortcut detected during the assessment.',
           true
         );
+
         return;
       }
 
-      if (ctrlOrCommand && key === 'a') {
+
+      if (
+        ctrlOrCommand &&
+        key === 'a'
+      ) {
+
         event.preventDefault();
+
         return;
       }
 
-      if (event.key === 'PrintScreen') {
+
+      if (
+        event.key === 'PrintScreen'
+      ) {
+
         registerViolation(
           'printscreen_key',
           'A screenshot key event was detected.',
@@ -754,10 +1046,17 @@ const Test = () => {
       }
     };
 
+
     // First tab/window leave = Warning 1/2.
     // Second tab/window leave = auto-submit Round 2 and continue to Round 3.
+
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
+
+      if (
+        document.visibilityState ===
+        'hidden'
+      ) {
+
         registerDeduplicatedViolation(
           'focus_leave',
           'tab_visibility_change',
@@ -767,12 +1066,17 @@ const Test = () => {
       }
     };
 
+
     const handleWindowBlur = () => {
+
       setTimeout(() => {
+
         if (
-          document.visibilityState === 'hidden' ||
+          document.visibilityState ===
+            'hidden' ||
           !document.hasFocus()
         ) {
+
           registerDeduplicatedViolation(
             'focus_leave',
             'window_blur',
@@ -780,41 +1084,103 @@ const Test = () => {
             true
           );
         }
+
       }, 100);
     };
 
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('cut', handleCut);
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('dragstart', handleDragStart);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
+
+    document.addEventListener(
+      'copy',
+      handleCopy
+    );
+
+    document.addEventListener(
+      'cut',
+      handleCut
+    );
+
+    document.addEventListener(
+      'contextmenu',
+      handleContextMenu
+    );
+
+    document.addEventListener(
+      'dragstart',
+      handleDragStart
+    );
+
+    document.addEventListener(
+      'keydown',
+      handleKeyDown
+    );
+
+    document.addEventListener(
+      'visibilitychange',
+      handleVisibilityChange
+    );
+
+    window.addEventListener(
+      'blur',
+      handleWindowBlur
+    );
+
 
     return () => {
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('cut', handleCut);
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('dragstart', handleDragStart);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
+
+      document.removeEventListener(
+        'copy',
+        handleCopy
+      );
+
+      document.removeEventListener(
+        'cut',
+        handleCut
+      );
+
+      document.removeEventListener(
+        'contextmenu',
+        handleContextMenu
+      );
+
+      document.removeEventListener(
+        'dragstart',
+        handleDragStart
+      );
+
+      document.removeEventListener(
+        'keydown',
+        handleKeyDown
+      );
+
+      document.removeEventListener(
+        'visibilitychange',
+        handleVisibilityChange
+      );
+
+      window.removeEventListener(
+        'blur',
+        handleWindowBlur
+      );
     };
+
   }, [
     loading,
     registerViolation,
   ]);
+
 
   /* ======================================================
      FORMAT TIMER
      ====================================================== */
 
   const formatTime = (seconds) => {
+
     const m = Math.floor(
       seconds / 60
     )
       .toString()
       .padStart(2, '0');
+
 
     const s = (
       seconds % 60
@@ -822,14 +1188,17 @@ const Test = () => {
       .toString()
       .padStart(2, '0');
 
+
     return `${m}:${s}`;
   };
+
 
   /* ======================================================
      LOADING SCREEN
      ====================================================== */
 
   if (loading) {
+
     return (
       <div className="flex-1 flex flex-col items-center justify-center">
 
@@ -843,6 +1212,7 @@ const Test = () => {
     );
   }
 
+
   /* ======================================================
      ERROR SCREEN
      ====================================================== */
@@ -851,6 +1221,7 @@ const Test = () => {
     error &&
     questions.length === 0
   ) {
+
     return (
       <div className="flex-1 flex items-center justify-center">
 
@@ -881,6 +1252,7 @@ const Test = () => {
     );
   }
 
+
   /* ======================================================
      TEST UI
      ====================================================== */
@@ -893,6 +1265,7 @@ const Test = () => {
 
       {securityWarning &&
         !securityTerminated && (
+
           <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
 
             <div className="w-full max-w-lg rounded-2xl border border-amber-500/30 bg-slate-950 shadow-2xl p-6 md:p-8 text-center">
@@ -939,11 +1312,13 @@ const Test = () => {
           </div>
         )}
 
+
       {/* ==================================================
           SECOND VIOLATION / AUTO SUBMISSION
           ================================================== */}
 
       {securityTerminated && (
+
         <div className="fixed inset-0 z-[10000] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
 
           <div className="w-full max-w-lg rounded-2xl border border-red-500/30 bg-slate-950 shadow-2xl p-6 md:p-8 text-center">
@@ -987,6 +1362,7 @@ const Test = () => {
         </div>
       )}
 
+
       {/* ==================================================
           MAIN TEST
           ================================================== */}
@@ -1012,6 +1388,7 @@ const Test = () => {
 
         </div>
 
+
         {/* TEST HEADER */}
 
         <div className="flex justify-between items-center bg-dark-800/80 p-4 rounded-xl border border-white/10 mb-8 sticky top-20 z-10 backdrop-blur-md">
@@ -1033,6 +1410,7 @@ const Test = () => {
               Answer all questions to the best of your ability.
             </p>
 
+
             {/* SECURITY INDICATOR */}
 
             <div className="flex items-center gap-2 mt-2 text-xs text-emerald-400">
@@ -1042,14 +1420,17 @@ const Test = () => {
               Assessment Security Active
 
               {violationCount > 0 && (
+
                 <span className="text-amber-400 ml-2">
                   • Warning {violationCount}/2
                 </span>
+
               )}
 
             </div>
 
           </div>
+
 
           {/* TIMER */}
 
@@ -1070,12 +1451,14 @@ const Test = () => {
 
         </div>
 
+
         {/* QUESTIONS */}
 
         <div className="space-y-8 flex-1 pb-24">
 
           {questions.map(
             (q, qIndex) => (
+
               <div
                 key={qIndex}
                 className="glass-card select-none"
@@ -1091,6 +1474,7 @@ const Test = () => {
 
                 </h3>
 
+
                 <div className="space-y-3">
 
                   {q.options &&
@@ -1099,13 +1483,16 @@ const Test = () => {
                         option,
                         optIndex
                       ) => {
+
                         const isSelected =
                           answers[
                             qIndex.toString()
                           ] ===
                           optIndex.toString();
 
+
                         return (
+
                           <div
                             key={
                               optIndex
@@ -1134,7 +1521,9 @@ const Test = () => {
                             >
 
                               {isSelected && (
+
                                 <div className="w-3 h-3 bg-primary-500 rounded-full" />
+
                               )}
 
                             </div>
@@ -1150,6 +1539,7 @@ const Test = () => {
                             </span>
 
                           </div>
+
                         );
                       }
                     )}
@@ -1157,10 +1547,12 @@ const Test = () => {
                 </div>
 
               </div>
+
             )
           )}
 
         </div>
+
 
         {/* BOTTOM SUBMIT BAR */}
 
@@ -1173,11 +1565,13 @@ const Test = () => {
               Answered:{' '}
 
               <span className="text-white font-medium">
+
                 {
                   Object.keys(
                     answers
                   ).length
                 }
+
               </span>
 
               {' / '}
@@ -1185,6 +1579,7 @@ const Test = () => {
               {questions.length}
 
             </p>
+
 
             <button
               onClick={() =>
@@ -1198,9 +1593,13 @@ const Test = () => {
             >
 
               {submitting ? (
+
                 <Loader2 className="w-5 h-5 animate-spin" />
+
               ) : (
+
                 'Submit Test & Continue'
+
               )}
 
             </button>

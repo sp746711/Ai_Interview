@@ -238,6 +238,110 @@ const Dashboard = () => {
         );
 
         setHistory(mappedHistory);
+
+        // =========================================================
+        // TASK 13 ONLY — AVATAR DASHBOARD DATA BRIDGE
+        // Only Task 13 data preparation is changed here.
+        // Existing Dashboard UI, API calls, functions and interview flow remain unchanged.
+
+        // Only the MOST RECENT interview controls the incomplete message.
+        const latestInterview = mappedHistory[0] || null;
+
+        const latestIsCompleted =
+          latestInterview?.status === "completed";
+
+        const latestIsIncomplete =
+          Boolean(latestInterview) && !latestIsCompleted;
+
+        const completedHistory = mappedHistory.filter(
+          (item) => item?.status === "completed"
+        );
+
+        const technicalCompleted = completedHistory.filter(
+          (item) => item?.type === "technical"
+        ).length;
+
+        const nonTechnicalCompleted = completedHistory.filter(
+          (item) => item?.type === "non-technical"
+        ).length;
+
+        const latestCompletedInterview =
+          latestIsCompleted
+            ? latestInterview
+            : completedHistory[0] || null;
+
+        const previousCompletedInterview =
+          latestIsCompleted
+            ? completedHistory[1] || null
+            : completedHistory[0] || null;
+
+        const latestScore =
+          latestCompletedInterview?.score ?? null;
+
+        const previousScore =
+          previousCompletedInterview?.score ?? null;
+
+        const bestScore = Number(
+          overviewStats.best_score ?? 0
+        );
+
+        const previousBest =
+          completedHistory.length > 1
+            ? Math.max(
+                ...completedHistory
+                  .slice(latestIsCompleted ? 1 : 0)
+                  .map((item) => Number(item?.score ?? 0))
+              )
+            : 0;
+
+        const avatarDashboardData = {
+          totalInterviews: Number(
+            overviewStats.total_interviews ??
+              overviewStats.total ??
+              mappedHistory.length
+          ),
+
+          completedInterviews: Number(
+            overviewStats.completed_interviews ??
+              overviewStats.completed ??
+              completedHistory.length
+          ),
+
+          technicalInterviews: technicalCompleted,
+          nonTechnicalInterviews: nonTechnicalCompleted,
+
+          // Task 13: only the latest interview can trigger incomplete.
+          hasIncompleteInterview: latestIsIncomplete,
+          interviewCompleted: latestIsCompleted,
+
+          score: latestScore,
+          previousScore: previousScore,
+          previousBest: previousBest,
+          bestScore: bestScore,
+
+          interviewType:
+            latestCompletedInterview?.type ||
+            latestInterview?.type ||
+            null,
+
+          // Task 13 scheduler state.
+          latestInterviewId: latestInterview?.id || null,
+          latestInterviewStatus: latestInterview?.status || null,
+        };
+
+        localStorage.setItem(
+          "mockmind_dashboard_avatar_data",
+          JSON.stringify(avatarDashboardData)
+        );
+
+        window.dispatchEvent(
+          new CustomEvent(
+            "mockmind-dashboard-data",
+            {
+              detail: avatarDashboardData,
+            }
+          )
+        );
       } catch (err) {
         console.error(
           "Dashboard loading error:",
@@ -617,9 +721,10 @@ const Dashboard = () => {
 
       {/* =====================================================
           4 GLOBAL STATISTICS
+          DESKTOP ALIGNMENT: 4 CARDS IN ONE ROW
       ====================================================== */}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
 
         <StatBox
           title="Total Interviews"
@@ -653,11 +758,12 @@ const Dashboard = () => {
 
       {/* =====================================================
           READY FOR YOUR NEXT INTERVIEW
+          DESKTOP ALIGNMENT: IMAGE | TEXT | SELECT | BUTTON
       ====================================================== */}
 
       <section className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-[#11103b] via-[#15133d] to-[#11142e] p-5">
 
-        <div className="flex flex-col xl:flex-row items-center gap-5">
+        <div className="flex flex-col lg:flex-row items-center gap-5">
 
           <div className="hidden md:flex w-32 h-24 items-center justify-center rounded-xl bg-purple-500/10">
             <div className="text-5xl">
@@ -665,7 +771,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div className="flex-1 text-center xl:text-left">
+          <div className="flex-1 text-center lg:text-left">
 
             <h2 className="text-xl font-bold text-white">
               Ready for your next interview?
@@ -787,15 +893,16 @@ const Dashboard = () => {
 
       {/* =====================================================
           ANALYTICS AREA
+          DESKTOP ALIGNMENT: 9-COLUMN LEFT + 3-COLUMN RIGHT
       ====================================================== */}
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* ===================================================
             LEFT SIDE
         ==================================================== */}
 
-        <div className="xl:col-span-9 grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="lg:col-span-9 grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* =================================================
               SCORE OVERVIEW
@@ -1152,7 +1259,7 @@ const Dashboard = () => {
             YOUR PERFORMANCE
         ==================================================== */}
 
-        <section className="xl:col-span-3 relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
+        <section className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
 
           <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
 
@@ -1263,13 +1370,13 @@ const Dashboard = () => {
           RECENT INTERVIEWS + TIPS
       ====================================================== */}
 
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
         {/* ===================================================
             RECENT INTERVIEWS
         ==================================================== */}
 
-        <section className="xl:col-span-9 rounded-2xl border border-slate-800 bg-[#090e1e] overflow-hidden">
+        <section className="lg:col-span-9 rounded-2xl border border-slate-800 bg-[#090e1e] overflow-hidden">
 
           <div className="flex items-center justify-between px-5 py-5 border-b border-slate-800">
 
@@ -1482,7 +1589,7 @@ const Dashboard = () => {
             TIPS FOR SUCCESS
         ==================================================== */}
 
-        <section className="xl:col-span-3 rounded-2xl border border-slate-800 bg-[#090e1e] p-5">
+        <section className="lg:col-span-3 rounded-2xl border border-slate-800 bg-[#090e1e] p-5">
 
           <div className="flex items-center gap-2 mb-6">
 

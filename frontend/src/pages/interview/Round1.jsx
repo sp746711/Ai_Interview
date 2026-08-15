@@ -1,8 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
-import { UploadCloud, File, AlertCircle, Loader2 } from 'lucide-react';
+import {
+  UploadCloud,
+  File,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react';
 
+const AVATAR_EVENT_KEY = 'mockmind_avatar_event';
 
 const Round1 = () => {
   const [file, setFile] = useState(null);
@@ -12,11 +18,48 @@ const Round1 = () => {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
+  // ============================================================
+  // TASK 14 ONLY
+  // Send an avatar situation without changing existing logic.
+  // ============================================================
+
+  const setAvatarEvent = (event) => {
+    try {
+      // Store event so it can be consumed when Dashboard returns.
+      localStorage.setItem(
+        AVATAR_EVENT_KEY,
+        event
+      );
+
+      // TASK 14 ONLY:
+      // Also send the event immediately in the same browser tab.
+      window.dispatchEvent(
+        new CustomEvent(
+          'mockmind-avatar-event',
+          {
+            detail: event,
+          }
+        )
+      );
+
+    } catch (error) {
+      console.error(
+        'Avatar event error:',
+        error
+      );
+    }
+  };
+
+  // ============================================================
+  // EXISTING STAGE VALIDATION
+  // ============================================================
 
   useEffect(() => {
     const validateStage = async () => {
       const currentInterview = JSON.parse(
-        localStorage.getItem('current_interview') || '{}'
+        localStorage.getItem(
+          'current_interview'
+        ) || '{}'
       );
 
       if (!currentInterview?.id) {
@@ -31,7 +74,18 @@ const Round1 = () => {
 
         if (res.data.stage !== 'round1') {
           navigate('/dashboard');
+          return;
         }
+
+        // ======================================================
+        // TASK 14
+        // Round 1 has actually started.
+        // ======================================================
+
+        setAvatarEvent(
+          'round1_start'
+        );
+
       } catch {
         navigate('/dashboard');
       }
@@ -40,6 +94,9 @@ const Round1 = () => {
     validateStage();
   }, [navigate]);
 
+  // ============================================================
+  // EXISTING FILE CHANGE
+  // ============================================================
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -50,22 +107,40 @@ const Round1 = () => {
     ) {
       setFile(selected);
       setError('');
+
+      // ========================================================
+      // TASK 14
+      // A valid resume has been selected.
+      // ========================================================
+
+      setAvatarEvent(
+        'round1_resume_required'
+      );
+
     } else {
-      setError('Please upload a valid PDF file.');
+      setError(
+        'Please upload a valid PDF file.'
+      );
       setFile(null);
     }
   };
 
+  // ============================================================
+  // EXISTING UPLOAD
+  // ============================================================
 
   const handleUpload = async () => {
     if (!file) {
-      setError('Please select a file to upload.');
+      setError(
+        'Please select a file to upload.'
+      );
       return;
     }
 
-
     const currentInterview = JSON.parse(
-      localStorage.getItem('current_interview')
+      localStorage.getItem(
+        'current_interview'
+      )
     );
 
     if (
@@ -73,19 +148,32 @@ const Round1 = () => {
       !currentInterview.id ||
       currentInterview.stage !== 'round1'
     ) {
-      setError('Interview ID not found. Please start over.');
+      setError(
+        'Interview ID not found. Please start over.'
+      );
       navigate('/dashboard');
       return;
     }
 
-
     setLoading(true);
     setError('');
 
+    // ==========================================================
+    // TASK 14
+    // Resume analysis starts.
+    // ==========================================================
+
+    setAvatarEvent(
+      'round1_resume_analysis'
+    );
 
     const formData = new FormData();
 
-    formData.append('file', file);
+    formData.append(
+      'file',
+      file
+    );
+
     formData.append(
       'interview_id',
       currentInterview.id
@@ -93,9 +181,9 @@ const Round1 = () => {
 
     formData.append(
       'interview_type',
-      currentInterview.interview_type || 'technical'
+      currentInterview.interview_type ||
+        'technical'
     );
-
 
     try {
       const res = await api.post(
@@ -103,13 +191,22 @@ const Round1 = () => {
         formData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type':
+              'multipart/form-data',
           },
         }
       );
 
-
       setScoreData(res.data);
+
+      // ========================================================
+      // TASK 14
+      // Resume was successfully received.
+      // ========================================================
+
+      setAvatarEvent(
+        'round1_resume_uploaded'
+      );
 
       localStorage.setItem(
         'current_interview',
@@ -124,10 +221,7 @@ const Round1 = () => {
 
       // ====================================================
       // TASK 10 ONLY
-      // Show the actual backend validation message when
-      // the uploaded PDF is not a valid resume.
-      //
-      // Existing successful upload logic is unchanged.
+      // Existing backend validation handling.
       // ====================================================
 
       const backendMessage =
@@ -144,6 +238,9 @@ const Round1 = () => {
     }
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4">
@@ -159,7 +256,6 @@ const Round1 = () => {
         </p>
 
       </div>
-
 
       <div className="glass-card max-w-xl w-full">
 
@@ -187,7 +283,6 @@ const Round1 = () => {
                 accept="application/pdf"
                 className="hidden"
               />
-
 
               {file ? (
 
@@ -225,7 +320,6 @@ const Round1 = () => {
 
             </div>
 
-
             {error && (
 
               <div className="mt-4 flex items-center gap-2 text-red-400 text-sm">
@@ -238,7 +332,6 @@ const Round1 = () => {
 
             )}
 
-
             <div className="mt-8">
 
               <button
@@ -248,9 +341,13 @@ const Round1 = () => {
               >
 
                 {loading ? (
+
                   <Loader2 className="w-5 h-5 animate-spin" />
+
                 ) : (
+
                   'Analyze Resume'
+
                 )}
 
               </button>
@@ -282,7 +379,6 @@ const Round1 = () => {
               </p>
 
             </div>
-
 
             <div className="bg-dark-800/80 rounded-lg p-5 border border-white/10 mb-6">
 
@@ -320,9 +416,19 @@ const Round1 = () => {
 
             </div>
 
-
             <button
-              onClick={() => navigate('/test')}
+              onClick={() => {
+                // ==================================================
+                // TASK 14
+                // Round 1 is complete.
+                // ==================================================
+
+                setAvatarEvent(
+                  'round1_complete'
+                );
+
+                navigate('/test');
+              }}
               className="btn-primary w-full"
             >
               Proceed to Next Round (Online Test)
@@ -337,6 +443,5 @@ const Round1 = () => {
     </div>
   );
 };
-
 
 export default Round1;
