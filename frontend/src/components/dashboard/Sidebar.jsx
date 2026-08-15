@@ -42,6 +42,11 @@ const DASHBOARD_LAST_COMPLETED_KEY =
 const DASHBOARD_QUEUE_INDEX_KEY =
   'mockmind_dashboard_queue_index';
 
+// TASK 14 ONLY:
+// One-time marker used only for Feedback -> Dashboard.
+const FEEDBACK_DASHBOARD_PENDING_KEY =
+  'mockmind_feedback_dashboard_pending';
+
 
 // ============================================================
 // SIDEBAR
@@ -830,6 +835,70 @@ const Sidebar = () => {
           }
         }
 
+        // ========================================================
+        // TASK 14 ONLY — FEEDBACK -> DASHBOARD
+        //
+        // This takes priority over the normal Dashboard queue.
+        // A completed interview must first say "Welcome back..."
+        // when the user returns from Feedback.
+        // ========================================================
+        const feedbackDashboardPending =
+          sessionStorage.getItem(
+            FEEDBACK_DASHBOARD_PENDING_KEY
+          ) === 'true';
+
+        if (
+          feedbackDashboardPending &&
+          dashboardData.latestInterviewStatus ===
+            'completed' &&
+          dashboardData.latestInterviewId
+        ) {
+          sessionStorage.removeItem(
+            FEEDBACK_DASHBOARD_PENDING_KEY
+          );
+
+          sessionStorage.setItem(
+            DASHBOARD_LAST_COMPLETED_KEY,
+            String(
+              dashboardData.latestInterviewId
+            )
+          );
+
+          const currentUser =
+            getCurrentUser();
+
+          const welcomeBack =
+            getAvatarMessage({
+              user: currentUser,
+              isNewUser: false,
+              isReturningUser: true,
+              hasIncompleteInterview: false,
+              interviewCompleted: false,
+              score: null,
+              previousBest: null,
+              totalInterviews:
+                Number(
+                  dashboardData.totalInterviews || 0
+                ),
+              completedInterviews:
+                Number(
+                  dashboardData.completedInterviews || 0
+                ),
+              interviewType: null,
+              technicalInterviews: 0,
+              nonTechnicalInterviews: 0,
+              previousScore: null,
+              avatarEvent: null,
+            });
+
+          startDashboardScheduler(
+            dashboardData,
+            welcomeBack
+          );
+
+          return;
+        }
+
         // A newly completed interview means the user
         // has just returned from Feedback to Dashboard.
         const latestCompletedId =
@@ -929,6 +998,14 @@ const Sidebar = () => {
       );
 
     if (storedAvatarEvent) {
+      // TASK 14 ONLY:
+      // Preserve the existing Task 14 event as a one-time
+      // Feedback -> Dashboard trigger before consuming it.
+      sessionStorage.setItem(
+        FEEDBACK_DASHBOARD_PENDING_KEY,
+        'true'
+      );
+
       localStorage.removeItem(
         AVATAR_EVENT_KEY
       );
@@ -965,6 +1042,28 @@ const Sidebar = () => {
 
     return () => {
       stopDashboardScheduler();
+
+      // TASK 14 ONLY:
+      // If authentication was actually cleared, reset the login
+      // marker so the next successful login speaks Welcome again.
+      // Navigation between Dashboard/Round 1/Round 2/Round 3/Feedback
+      // keeps the marker because token + user still exist.
+      let stillLoggedIn = false;
+
+      try {
+        stillLoggedIn = Boolean(
+          localStorage.getItem('token') &&
+          localStorage.getItem('user')
+        );
+      } catch {
+        stillLoggedIn = false;
+      }
+
+      if (!stillLoggedIn) {
+        sessionStorage.removeItem(
+          LOGIN_SESSION_KEY
+        );
+      }
     };
   }, [
     handleDashboardData,
@@ -1025,6 +1124,23 @@ const Sidebar = () => {
 
     const handleStorageChange =
       (event) => {
+
+        // TASK 14 ONLY:
+        // A real logout removes token/user. Reset the login marker
+        // so the next login can speak the welcome message again.
+        if (
+          (
+            event.key === 'token' ||
+            event.key === 'user'
+          ) &&
+          event.newValue === null
+        ) {
+          sessionStorage.removeItem(
+            LOGIN_SESSION_KEY
+          );
+
+          return;
+        }
 
         if (
           event.key !==
