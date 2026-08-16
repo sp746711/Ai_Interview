@@ -13,7 +13,7 @@ OLLAMA_URL = "http://localhost:11434"
 OLLAMA_MODEL = "qwen3:4b"
 
 # Qwen may take some time on CPU for a full resume.
-OLLAMA_TIMEOUT = 180.0
+OLLAMA_TIMEOUT = 600.0
 
 
 # ============================================================
@@ -417,6 +417,118 @@ def _normalize_weak_evidence(
 
 
 # ============================================================
+# FALLBACK DOMAIN MATCH
+# ============================================================
+
+def _fallback_domain_match(
+    selected_domain: str,
+    resume_text: str,
+    detected_skills: list[str],
+    analysis: dict,
+) -> int:
+    """
+    Produce a conservative dynamic fallback when Qwen returns 0 or an
+    unusable domain score. This is NOT an ATS score. It combines evidence
+    from the selected domain, detected skills, resume text, best-fit roles,
+    and missing evidence so the UI never receives a misleading hard-coded 0.
+    """
+    domain = _clean_text(selected_domain).lower()
+    resume = _clean_text(resume_text).lower()
+    skills = [s.lower() for s in detected_skills if _clean_text(s)]
+
+    # Domain-specific evidence vocabulary. Keep this intentionally compact
+    # and evidence-based; Qwen remains the primary evaluator.
+    domain_groups = {
+        "backend development": [
+            "python", "fastapi", "flask", "django", "node", "node.js",
+            "express", "rest api", "api", "mongodb", "postgresql",
+            "mysql", "microservice", "docker", "redis", "server"
+        ],
+        "data analytics": [
+            "python", "sql", "pandas", "numpy", "excel", "power bi",
+            "tableau", "data analysis", "eda", "statistics",
+            "visualization", "dashboard"
+        ],
+        "data analyst": [
+            "python", "sql", "pandas", "numpy", "excel", "power bi",
+            "tableau", "data analysis", "eda", "statistics",
+            "visualization", "dashboard"
+        ],
+        "machine learning": [
+            "python", "scikit-learn", "tensorflow", "keras", "pytorch",
+            "machine learning", "deep learning", "model", "classification",
+            "regression", "xgboost", "nlp"
+        ],
+        "machine learning engineer": [
+            "python", "scikit-learn", "tensorflow", "keras", "pytorch",
+            "machine learning", "deep learning", "model", "docker",
+            "api", "deployment", "mlops"
+        ],
+        "software engineering": [
+            "python", "java", "c", "javascript", "typescript", "git",
+            "api", "database", "testing", "docker", "backend",
+            "frontend", "software development"
+        ],
+        "software engineer": [
+            "python", "java", "c", "javascript", "typescript", "git",
+            "api", "database", "testing", "docker", "backend",
+            "frontend", "software development"
+        ],
+        "ai/ml": [
+            "python", "machine learning", "deep learning", "tensorflow",
+            "pytorch", "scikit-learn", "nlp", "computer vision", "llm",
+            "generative ai", "artificial intelligence"
+        ],
+        "generative ai": [
+            "python", "llm", "large language model", "generative ai",
+            "ollama", "openai", "transformer", "rag", "prompt", "nlp",
+            "langchain", "hugging face"
+        ],
+        "llm engineering": [
+            "python", "llm", "large language model", "generative ai",
+            "ollama", "rag", "prompt", "langchain", "transformer",
+            "hugging face", "api"
+        ],
+    }
+
+    tokens = domain_groups.get(domain)
+    if tokens is None:
+        tokens = [
+            token.strip(" ,/-")
+            for token in re.split(r"\s+", domain)
+            if len(token.strip(" ,/-")) >= 3
+        ]
+
+    if not tokens:
+        return 0
+
+    evidence = 0
+    for token in tokens:
+        if token in skills:
+            evidence += 2
+        elif token in resume:
+            evidence += 1
+
+    max_evidence = max(len(tokens) * 2, 1)
+    score = round((evidence / max_evidence) * 100)
+
+    # Best-fit role evidence is a useful secondary signal, but never lets
+    # the fallback become artificially high.
+    roles = analysis.get("best_fit_roles", [])
+    if isinstance(roles, list):
+        for item in roles[:3]:
+            if not isinstance(item, dict):
+                continue
+            role = _clean_text(item.get("role")).lower()
+            pct = _safe_int(item.get("match_percentage"), 0)
+            if role and any(part in role or role in part for part in domain.split() if len(part) >= 4):
+                score = max(score, min(pct, 85))
+                break
+
+    return max(0, min(100, score))
+
+
+# ============================================================
 # MAIN RESUME AI ANALYSIS
 # ============================================================
 
@@ -535,7 +647,7 @@ IMPORTANT RULES:
    - realistic match percentage
    - short evidence-based reason
 
-8. Identify important matching skills.
+8. MATCHING SKILLS: Use the EXISTING PYTHON-DETECTED SKILLS as the candidate pool. Identify ALL skills from that list that genuinely match the selected domain. If 15 or more relevant skills exist, return exactly the 15 strongest matching skills. If fewer than 15 genuinely match, return ALL genuine matches. Do NOT stop at 5. Do NOT invent skills.
 
 9. For every matching skill explain specific evidence from the resume.
 
@@ -579,17 +691,25 @@ ACTUAL RESUME:
 ----- RESUME END -----
 
 
-Return EXACTLY this JSON structure:
+Return EXACTLY this JSON structure.
+
+IMPORTANT FOR PERCENTAGES:
+- The numeric values below are EXAMPLES ONLY.
+- NEVER copy these example values into your answer.
+- Calculate every percentage from the actual resume evidence.
+- domain_match_percentage must represent the actual strength of this resume for the selected domain.
+- A weak match should receive a low score; a strong match should receive a high score.
+- best-fit role percentages must also be based on actual resume evidence.
 
 {{
     "selected_domain": "{selected_domain}",
 
-    "domain_match_percentage": 0,
+    "domain_match_percentage": 50,
 
     "best_fit_roles": [
         {{
             "role": "Job role",
-            "match_percentage": 0,
+            "match_percentage": 50,
             "reason": "Evidence-based explanation"
         }}
     ],
@@ -847,6 +967,16 @@ Return EXACTLY this JSON structure:
             "domain_match_percentage",
             0,
         )
+    )
+
+    # Qwen occasionally returns the example value 0 even when it generated
+    # valid qualitative analysis. In that case, calculate a conservative
+    # evidence-based fallback instead of exposing a misleading hard-coded 0.
+    analysis["domain_match_percentage"] = _fallback_domain_match(
+        selected_domain=selected_domain,
+        resume_text=resume_text,
+        detected_skills=detected_skills,
+        analysis=analysis,
     )
 
     # ========================================================

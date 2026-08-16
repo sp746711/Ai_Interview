@@ -41,7 +41,6 @@ const Round1 = () => {
           }
         )
       );
-
     } catch (error) {
       console.error(
         'Avatar event error:',
@@ -85,7 +84,6 @@ const Round1 = () => {
         setAvatarEvent(
           'round1_start'
         );
-
       } catch {
         navigate('/dashboard');
       }
@@ -116,7 +114,6 @@ const Round1 = () => {
       setAvatarEvent(
         'round1_resume_required'
       );
-
     } else {
       setError(
         'Please upload a valid PDF file.'
@@ -215,7 +212,6 @@ const Round1 = () => {
           stage: 'test',
         })
       );
-
     } catch (err) {
       console.error(err);
 
@@ -230,9 +226,8 @@ const Round1 = () => {
 
       setError(
         backendMessage ||
-        'Please upload a valid resume/CV.'
+          'Please upload a valid resume/CV.'
       );
-
     } finally {
       setLoading(false);
     }
@@ -418,6 +413,7 @@ const Round1 = () => {
 
             <button
               onClick={() => {
+
                 // ==================================================
                 // TASK 14
                 // Round 1 is complete.
@@ -427,7 +423,14 @@ const Round1 = () => {
                   'round1_complete'
                 );
 
+                // ==================================================
+                // TASK 15
+                // DO NOT show Round 1 feedback here.
+                // Continue directly to Round 2.
+                // ==================================================
+
                 navigate('/test');
+
               }}
               className="btn-primary w-full"
             >

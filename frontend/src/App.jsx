@@ -26,6 +26,14 @@ import Profile from "./pages/profile/Profile";
 
 import Setup from "./pages/interview/Setup";
 import Round1 from "./pages/interview/Round1";
+
+// ======================================================
+// TASK 15
+// Round 1 Feedback
+// ======================================================
+
+import Round1Feedback from "./pages/interview/Round1Feedback";
+
 import Test from "./pages/interview/Test";
 import AIInterview from "./pages/interview/AIInterview";
 import Feedback from "./pages/interview/Feedback";
@@ -49,10 +57,6 @@ const AvatarEventListener = () => {
       // ==================================================
       // TASK 14 ONLY
       // Consume the event immediately.
-      //
-      // This prevents an old Round 1 / Round 2 /
-      // Final Interview / Feedback event from being
-      // replayed later.
       // ==================================================
 
       localStorage.removeItem(
@@ -196,6 +200,8 @@ const App = () => {
              ↓
           Round 1
              ↓
+          Round 1 Feedback
+             ↓
           Round 2
              ↓
           Final Interview
@@ -267,7 +273,7 @@ const App = () => {
         </Route>
 
         {/* ==================================================
-            ROUND 1 → ROUND 2 → SETUP
+            ROUND 1 → ROUND 1 FEEDBACK → ROUND 2 → SETUP
 
             NO SIDEBAR
             WELCOME HEADER PRESENT
@@ -281,15 +287,31 @@ const App = () => {
           }
         >
 
+          {/* ROUND 1 */}
+
           <Route
             path="/round1"
             element={<Round1 />}
           />
 
+          {/* ==================================================
+              TASK 15
+              ROUND 1 FEEDBACK
+          ================================================== */}
+
+          <Route
+            path="/round1-feedback"
+            element={<Round1Feedback />}
+          />
+
+          {/* ROUND 2 */}
+
           <Route
             path="/test"
             element={<Test />}
           />
+
+          {/* SETUP */}
 
           <Route
             path="/setup"
@@ -299,7 +321,8 @@ const App = () => {
         </Route>
 
         {/* ==================================================
-            FINAL INTERVIEW / FEEDBACK
+            FINAL INTERVIEW
+            KEEP EXISTING LAYOUT
         ================================================== */}
 
         <Route
@@ -315,12 +338,35 @@ const App = () => {
             element={<AIInterview />}
           />
 
-          <Route
-            path="/feedback"
-            element={<Feedback />}
-          />
-
         </Route>
+
+        {/* ==================================================
+            TASK 15
+            FINAL FEEDBACK
+
+            IMPORTANT:
+            Feedback is intentionally OUTSIDE MainLayout.
+
+            Therefore:
+            ❌ No left sidebar
+            ❌ No Dashboard menu
+            ❌ No Start Interview menu
+            ❌ No History menu
+            ❌ No Profile menu
+            ❌ No Logout menu
+
+            ✅ Feedback page only
+            ✅ Round 1 → Round 2 → Round 3
+            ================================================== */}
+
+        <Route
+          path="/feedback"
+          element={
+            <ProtectedRoute>
+              <Feedback />
+            </ProtectedRoute>
+          }
+        />
 
         {/* ==================================================
             FALLBACK

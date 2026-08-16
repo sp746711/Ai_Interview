@@ -65,18 +65,55 @@ class InterviewController:
                 resume_data = {}
 
             # -------------------------------------------------
-            # If already generated successfully, do nothing
+            # Existing feedback guard
             # -------------------------------------------------
+            # Keep an existing result only when it belongs to the
+            # same selected domain. If the user selected a new
+            # domain, regenerate the Round 1 analysis for that
+            # domain.
 
             existing_feedback = resume_data.get(
                 "round1_feedback",
                 {},
             )
 
+            existing_domain = ""
+            if isinstance(existing_feedback, dict):
+                existing_domain = str(
+                    existing_feedback.get(
+                        "analysis_domain",
+                        existing_feedback.get(
+                            "selected_domain",
+                            "",
+                        ),
+                    )
+                    or ""
+                ).strip().lower()
+
+            # -------------------------------------------------
+            # Decide selected domain BEFORE checking the cache
+            # -------------------------------------------------
+
+            selected_domain = str(
+                interview.get(
+                    "role",
+                    resume_data.get(
+                        "selected_domain",
+                        interview.get(
+                            "interview_type",
+                            "technical",
+                        ),
+                    ),
+                )
+                or ""
+            ).strip()
+
             if (
                 isinstance(existing_feedback, dict)
                 and existing_feedback
                 and not existing_feedback.get("generation_error")
+                and existing_domain
+                and existing_domain == selected_domain.lower()
             ):
                 return
 
@@ -97,31 +134,24 @@ class InterviewController:
                 detected_skills = []
 
             # -------------------------------------------------
-            # Decide selected domain
+            # Final domain used by the LLM
             # -------------------------------------------------
-
-            selected_domain = str(
-                resume_data.get(
-                    "selected_domain",
-                    interview.get(
-                        "interview_type",
-                        "technical",
-                    ),
-                )
-            ).strip()
-
-            target_role = str(
-                interview.get("role", "")
-            ).strip()
+            # The selected Round 3/setup role has priority over the
+            # original interview type. This makes the analysis
+            # dynamic for Data Analyst, ML Engineer, Software
+            # Engineer, etc.
 
             selected_domain_for_feedback = (
-                target_role
-                or selected_domain
+                selected_domain
                 or str(
-                    interview.get(
-                        "interview_type",
-                        "technical",
+                    resume_data.get(
+                        "selected_domain",
+                        interview.get(
+                            "interview_type",
+                            "technical",
+                        ),
                     )
+                    or "technical"
                 ).strip()
             )
 
@@ -132,6 +162,9 @@ class InterviewController:
             if not resume_text:
                 feedback = {
                     "selected_domain":
+                        selected_domain_for_feedback,
+
+                    "analysis_domain":
                         selected_domain_for_feedback,
 
                     "domain_match_percentage": 0,
@@ -170,7 +203,7 @@ class InterviewController:
                 return
 
             # -------------------------------------------------
-            # Mark Qwen processing
+            # Mark LLM processing
             # -------------------------------------------------
 
             await db["interviews"].update_one(
@@ -187,7 +220,7 @@ class InterviewController:
             )
 
             # -------------------------------------------------
-            # QWEN ANALYSIS
+            # DOMAIN-SPECIFIC LLM ANALYSIS
             # -------------------------------------------------
 
             feedback = await analyze_resume_with_llm(
@@ -202,7 +235,18 @@ class InterviewController:
                 )
 
             # -------------------------------------------------
-            # Save complete successful Qwen result
+            # Normalize the LLM result with the actual domain used
+            # -------------------------------------------------
+            feedback["selected_domain"] = (
+                feedback.get("selected_domain")
+                or selected_domain_for_feedback
+            )
+            feedback["analysis_domain"] = (
+                selected_domain_for_feedback
+            )
+
+            # -------------------------------------------------
+            # Save complete successful LLM result
             # -------------------------------------------------
 
             await db["interviews"].update_one(
@@ -387,21 +431,14 @@ class InterviewController:
         )
 
         # =====================================================
-        # START QWEN IN BACKGROUND
+        # DO NOT RUN DOMAIN-SPECIFIC LLM ANALYSIS HERE
         # =====================================================
         #
-        # DO NOT await.
-        #
-        # Candidate immediately continues to Round 2 while
-        # Qwen generates detailed Round 1 feedback.
+        # At this point the resume is processed, but the user may
+        # not have selected the final target role/domain yet.
+        # The detailed Round 1 LLM analysis is therefore started
+        # after the role/domain is saved in setup().
         # =====================================================
-
-        asyncio.create_task(
-            InterviewController._generate_round1_feedback(
-                interview_id,
-                db,
-            )
-        )
 
         # =====================================================
         # RETURN ATS + SKILLS IMMEDIATELY
@@ -417,7 +454,7 @@ class InterviewController:
                 resume_data["skills"],
 
             "feedback_status":
-                "processing",
+                "pending",
 
             "stage": "test",
         }
@@ -462,18 +499,12 @@ class InterviewController:
             )
 
         # =====================================================
-        # IMPORTANT FIX
+        # SAVE THE ACTUAL TARGET DOMAIN
         # =====================================================
         #
-        # Save the Round 3 selected role.
-        #
-        # DO NOT:
-        # - delete round1_feedback
-        # - reset feedback_status
-        # - reset feedback_error
-        # - run Qwen again
-        #
-        # The Round 1 Qwen result must remain stored.
+        # Round 1 resume processing already happened. Now the
+        # selected domain/role is known, so this is the correct
+        # point to run the detailed LLM analysis.
         # =====================================================
 
         await db["interviews"].update_one(
@@ -482,6 +513,9 @@ class InterviewController:
                 "$set": {
                     "role": role,
                     "stage": "ai",
+                    "resume_data.selected_domain": role,
+                    "resume_data.feedback_status": "processing",
+                    "resume_data.feedback_error": None,
                 },
 
                 "$unset": {
@@ -491,10 +525,27 @@ class InterviewController:
             },
         )
 
+        # =====================================================
+        # START DOMAIN-SPECIFIC LLM ANALYSIS IN BACKGROUND
+        # =====================================================
+        #
+        # The user can continue into the AI interview immediately.
+        # The generated Round 1 analysis is cached in MongoDB and
+        # is later displayed by the final feedback page.
+        # =====================================================
+
+        asyncio.create_task(
+            InterviewController._generate_round1_feedback(
+                data.interview_id,
+                db,
+            )
+        )
+
         return {
             "message": "AI Interview setup complete",
             "role": role,
             "stage": "ai",
+            "feedback_status": "processing",
         }
 
     # =========================================================
