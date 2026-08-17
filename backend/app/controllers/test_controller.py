@@ -341,6 +341,11 @@ class TestController:
                 else str(value)
             )
 
+        # =====================================================
+        # TASK 16 ONLY — QUESTION TIMING
+        # =====================================================
+        question_times = getattr(data, "question_times", {}) or {}
+
         # -----------------------------------------------------
         # 5. GET STORED QUESTION SET
         #
@@ -405,6 +410,34 @@ class TestController:
             question_id = str(
                 question.get("mongo_id", "")
             )
+
+            question_text = str(
+                question.get("question", "")
+            ).strip()
+
+            # =================================================
+            # TASK 16 ONLY — GET ACTUAL TIME FOR THIS QUESTION
+            #
+            # Test.jsx sends question_times using question text.
+            # Fallbacks keep compatibility with question id/number.
+            # =================================================
+            question_time = question_times.get(question_text)
+
+            if question_time is None:
+                question_time = question_times.get(question_id)
+
+            if question_time is None and question_number is not None:
+                question_time = question_times.get(
+                    str(question_number)
+                )
+
+            try:
+                question_time = max(
+                    0,
+                    int(question_time or 0)
+                )
+            except (TypeError, ValueError):
+                question_time = 0
 
             category = TestController._safe_lower(
                 question.get("category"),
@@ -522,7 +555,12 @@ class TestController:
                 "category": category,
                 "selected_answer": selected_answer,
                 "correct_answer": correct_answer,
-                "result": result_status
+                "result": result_status,
+
+                # =================================================
+                # TASK 16 ONLY
+                # =================================================
+                "time_taken": question_time
             })
 
         # -----------------------------------------------------
@@ -585,6 +623,54 @@ class TestController:
                     )
                 }
 
+        # =====================================================
+        # TASK 16 ONLY — TIME ANALYSIS
+        # =====================================================
+
+        time_values = [
+            float(result.get("time_taken", 0))
+            for result in question_results
+            if float(result.get("time_taken", 0)) >= 0
+        ]
+
+        average_time = (
+            round(
+                sum(time_values) / len(time_values),
+                2
+            )
+            if time_values
+            else 0
+        )
+
+        fastest_time = (
+            min(time_values)
+            if time_values
+            else 0
+        )
+
+        slowest_time = (
+            max(time_values)
+            if time_values
+            else 0
+        )
+
+        # Task 16 target: 1 minute per question.
+        time_efficiency = (
+            round(
+                (
+                    sum(
+                        1
+                        for value in time_values
+                        if value <= 60
+                    )
+                    / len(time_values)
+                ) * 100,
+                2
+            )
+            if time_values
+            else 0
+        )
+
         # -----------------------------------------------------
         # 9. CREATE TASK 16 ROUND 2 RESULT
         # -----------------------------------------------------
@@ -604,7 +690,26 @@ class TestController:
 
             "category_scores": category_scores,
 
-            "question_results": question_results
+            "question_results": question_results,
+
+            # =================================================
+            # TASK 16 ONLY — TIME DATA
+            # =================================================
+            "average_time_seconds": average_time,
+            "fastest_time": fastest_time,
+            "fastest_average_time": fastest_time,
+            "slowest_time": slowest_time,
+            "slowest_average_time": slowest_time,
+            "time_efficiency": time_efficiency,
+
+            "time_analysis": {
+                "average_time_seconds": average_time,
+                "fastest_time": fastest_time,
+                "fastest_average_time": fastest_time,
+                "slowest_time": slowest_time,
+                "slowest_average_time": slowest_time,
+                "time_efficiency": time_efficiency
+            }
         }
 
         # -----------------------------------------------------
@@ -629,6 +734,11 @@ class TestController:
 
                     # User's submitted answers
                     "test_answers": safe_answers,
+
+                    # =================================================
+                    # TASK 16 ONLY
+                    # =================================================
+                    "question_times": question_times,
 
                     # Existing score field used by
                     # interview_controller.py

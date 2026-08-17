@@ -37,8 +37,18 @@ const Test = () => {
   const [error, setError] = useState('');
   const [answers, setAnswers] = useState({});
 
+  // ==========================================================
+  // TASK 16 — PER-QUESTION TIME TRACKING
+  // ==========================================================
+  const [questionTimes, setQuestionTimes] = useState({});
+
+  // Stores elapsed seconds for each question key.
+  const questionTimesRef = useRef({});
+  const activeQuestionRef = useRef(null);
+  const questionStartedAtRef = useRef(null);
+
   // 40 minutes
-  const [timeLeft, setTimeLeft] = useState(40* 60);
+  const [timeLeft, setTimeLeft] = useState(50* 60);
 
   /* ======================================================
      SECURITY STATE
@@ -147,6 +157,135 @@ const Test = () => {
   useEffect(() => {
     questionsRef.current = questions;
   }, [questions]);
+
+
+  // ==========================================================
+  // TASK 16 — TRACK TIME SPENT ON EACH QUESTION
+  // ==========================================================
+  useEffect(() => {
+    if (loading || questions.length === 0) {
+      return;
+    }
+
+    // Initialize all question times once the questions are loaded.
+    const initialTimes = {};
+    questions.forEach((q, index) => {
+      const key = String(q.question || `q_${index}`);
+      initialTimes[key] = 0;
+    });
+
+    questionTimesRef.current = initialTimes;
+    setQuestionTimes(initialTimes);
+
+    const questionElements = document.querySelectorAll(
+      '[data-question-index]'
+    );
+
+    if (!questionElements.length) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (a, b) =>
+              b.intersectionRatio - a.intersectionRatio
+          );
+
+        if (!visibleEntries.length) {
+          return;
+        }
+
+        const nextIndex = Number(
+          visibleEntries[0].target.dataset.questionIndex
+        );
+
+        if (Number.isNaN(nextIndex)) {
+          return;
+        }
+
+        const now = Date.now();
+
+        // Add elapsed time to the previously active question.
+        if (
+          activeQuestionRef.current !== null &&
+          questionStartedAtRef.current !== null
+        ) {
+          const previousQuestion =
+            questions[activeQuestionRef.current];
+
+          if (previousQuestion) {
+            const previousKey = String(
+              previousQuestion.question ||
+                `q_${activeQuestionRef.current}`
+            );
+
+            const elapsedSeconds = Math.max(
+              0,
+              Math.floor(
+                (now - questionStartedAtRef.current) / 1000
+              )
+            );
+
+            questionTimesRef.current[previousKey] =
+              (questionTimesRef.current[previousKey] || 0) +
+              elapsedSeconds;
+          }
+        }
+
+        activeQuestionRef.current = nextIndex;
+        questionStartedAtRef.current = now;
+
+        setQuestionTimes({
+          ...questionTimesRef.current,
+        });
+      },
+      {
+        threshold: [0.4, 0.6, 0.8],
+      }
+    );
+
+    questionElements.forEach((element) =>
+      observer.observe(element)
+    );
+
+    return () => {
+      const now = Date.now();
+
+      // Save the time currently being spent on the active question.
+      if (
+        activeQuestionRef.current !== null &&
+        questionStartedAtRef.current !== null
+      ) {
+        const activeQuestion =
+          questions[activeQuestionRef.current];
+
+        if (activeQuestion) {
+          const activeKey = String(
+            activeQuestion.question ||
+              `q_${activeQuestionRef.current}`
+          );
+
+          const elapsedSeconds = Math.max(
+            0,
+            Math.floor(
+              (now - questionStartedAtRef.current) / 1000
+            )
+          );
+
+          questionTimesRef.current[activeKey] =
+            (questionTimesRef.current[activeKey] || 0) +
+            elapsedSeconds;
+        }
+      }
+
+      observer.disconnect();
+      activeQuestionRef.current = null;
+      questionStartedAtRef.current = null;
+    };
+  }, [loading, questions]);
 
 
   useEffect(() => {
@@ -456,11 +595,47 @@ const Test = () => {
     const currentAnswers =
       answersRef.current;
 
+    // ==========================================================
+    // TASK 16 — FINALIZE CURRENT QUESTION TIME
+    // ==========================================================
+    if (
+      activeQuestionRef.current !== null &&
+      questionStartedAtRef.current !== null
+    ) {
+      const activeIndex = activeQuestionRef.current;
+      const activeQuestion = currentQuestions[activeIndex];
+
+      if (activeQuestion) {
+        const activeKey = String(
+          activeQuestion.question ||
+            `q_${activeIndex}`
+        );
+
+        const elapsedSeconds = Math.max(
+          0,
+          Math.floor(
+            (Date.now() - questionStartedAtRef.current) / 1000
+          )
+        );
+
+        questionTimesRef.current[activeKey] =
+          (questionTimesRef.current[activeKey] || 0) +
+          elapsedSeconds;
+
+        questionStartedAtRef.current = Date.now();
+      }
+    }
+
     const submitPayload = {
       interview_id:
         currentInterview.id,
 
       answers: {},
+
+      // TASK 16 — Backend-required per-question timing.
+      question_times: {
+        ...questionTimesRef.current,
+      },
     };
 
     currentQuestions.forEach(
@@ -562,6 +737,9 @@ const Test = () => {
 
           answers:
             submitPayload.answers,
+
+          question_times:
+            submitPayload.question_times,
         }
       );
 
@@ -1463,6 +1641,7 @@ const Test = () => {
 
               <div
                 key={qIndex}
+                data-question-index={qIndex}
                 className="glass-card select-none"
               >
 

@@ -1316,16 +1316,109 @@ const Feedback = () => {
       round2.category_scores?.[specialistKey]?.correct
     );
 
-    const timeTaken = textValue(
+    // =========================================================
+    // TASK 16 — TIME DATA
+    // Use backend time values when available. If they are missing,
+    // calculate the values from the backend question_results.
+    // =========================================================
+    const formatDuration = (value) => {
+      if (value === null || value === undefined || value === '') {
+        return null;
+      }
+
+      const text = String(value).trim();
+
+      // Keep already formatted values such as 08:42 or 12 sec.
+      if (text.includes(':') || /(?:sec|second|seconds)$/i.test(text)) {
+        return text;
+      }
+
+      const seconds = Number(value);
+      if (!Number.isFinite(seconds)) return text;
+
+      const safeSeconds = Math.max(0, Math.round(seconds));
+      const minutes = Math.floor(safeSeconds / 60);
+      const secs = safeSeconds % 60;
+
+      return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+    };
+
+    const timeQuestionResults = Array.isArray(round2.question_results)
+      ? round2.question_results
+      : [];
+
+    const getQuestionSeconds = (question) => {
+      const raw =
+        question?.time ??
+        question?.time_taken ??
+        question?.duration ??
+        question?.time_seconds ??
+        question?.time_spent ??
+        question?.seconds;
+
+      if (raw === null || raw === undefined || raw === '') return null;
+
+      const seconds = Number(raw);
+      return Number.isFinite(seconds) ? Math.max(0, seconds) : null;
+    };
+
+    const calculatedTotalSeconds = timeQuestionResults.reduce(
+      (sum, question) => sum + (getQuestionSeconds(question) || 0),
+      0
+    );
+
+    const calculatedAttemptedCount = timeQuestionResults.filter((question) => {
+      const normalizedResult = String(
+        question?.result ?? question?.status ?? ''
+      ).trim().toLowerCase();
+
+      return !(
+        normalizedResult === 'skipped' ||
+        normalizedResult === 'skip' ||
+        question?.is_skipped === true ||
+        question?.skipped === true
+      );
+    }).length;
+
+    const backendTimeTaken = firstValue(
       round2.time_taken,
       result?.time_taken,
       result?.test_time_taken
     );
 
-    const averageTime = textValue(
+    const backendAverageTime = firstValue(
       round2.average_time_per_question,
+      round2.average_time_seconds,
+      round2.time_analysis?.average_time_per_question,
+      round2.time_analysis?.average_time_seconds,
       result?.average_time_per_question
     );
+
+    const timeTaken =
+      formatDuration(backendTimeTaken) ||
+      (timeQuestionResults.length > 0
+        ? formatDuration(calculatedTotalSeconds)
+        : null);
+
+    const calculatedAverageSeconds =
+      calculatedAttemptedCount > 0
+        ? calculatedTotalSeconds / calculatedAttemptedCount
+        : 0;
+
+    const backendAverageNumber = Number(
+      String(backendAverageTime ?? '').replace(/[^0-9.]/g, '')
+    );
+
+    const averageTime =
+      backendAverageTime !== undefined &&
+      backendAverageTime !== null &&
+      backendAverageTime !== ''
+        ? Number.isFinite(backendAverageNumber)
+          ? `${backendAverageNumber.toFixed(2)} sec`
+          : String(backendAverageTime)
+        : timeQuestionResults.length > 0
+          ? `${calculatedAverageSeconds.toFixed(2)} sec`
+          : null;
 
     const fastestCategory = textValue(
       round2.fastest_category,
@@ -2002,11 +2095,31 @@ const Feedback = () => {
                         ? 'Incorrect'
                         : '—');
 
-                  const questionTime =
-                    question?.time ||
-                    question?.time_taken ||
-                    question?.duration ||
-                    '—';
+                  const normalizedResult = String(questionResult).trim().toLowerCase();
+
+                  const isSkipped =
+                    normalizedResult === 'skipped' ||
+                    normalizedResult === 'skip' ||
+                    question?.is_skipped === true ||
+                    question?.skipped === true;
+
+                  const rawQuestionTime =
+                    question?.time ??
+                    question?.time_taken ??
+                    question?.duration ??
+                    question?.time_seconds ??
+                    question?.time_spent ??
+                    question?.seconds;
+
+                  const questionTime = isSkipped
+                    ? 'Skipped'
+                    : rawQuestionTime !== null &&
+                        rawQuestionTime !== undefined &&
+                        rawQuestionTime !== ''
+                      ? String(rawQuestionTime).match(/(?:sec|second|seconds|s)$/i)
+                        ? String(rawQuestionTime)
+                        : `${rawQuestionTime} sec`
+                      : '—';
 
                   return (
                     <div

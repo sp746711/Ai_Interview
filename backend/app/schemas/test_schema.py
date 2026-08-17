@@ -1,9 +1,12 @@
 from pydantic import BaseModel
 from typing import Dict
 
+
 class TestSubmit(BaseModel):
     interview_id: str
-    answers: Dict[str, str] # question -> selected_option
+    answers: Dict[str, str]  # question -> selected_option
+    question_times: Dict[str, int]  # question -> time spent in seconds
+
 
 class TestResult(BaseModel):
     score: int
