@@ -1121,168 +1121,1021 @@ const Feedback = () => {
 
 
   // =========================================================
-  // ROUND 2
+  // TASK 16 — ROUND 2 ASSESSMENT FEEDBACK
+  // Backend-driven Round 2 UI.
+  // No demo/fallback assessment values are used.
+  // Technical: 10 Reasoning + 10 Aptitude + 30 Technical
+  // Non-Technical: 10 Reasoning + 10 Aptitude + 30 Verbal
   // =========================================================
 
-  const renderRound2 = () => (
+  const renderRound2 = () => {
+    const rawInterviewType = String(
+      result?.interview_type ||
+      result?.interviewType ||
+      result?.test_type ||
+      result?.assessment_type ||
+      result?.category ||
+      result?.selected_type ||
+      result?.selected_category ||
+      ''
+    ).toLowerCase();
 
-    <section className="space-y-6">
+    const isNonTechnical =
+      rawInterviewType.includes('non') &&
+      rawInterviewType.includes('technical');
 
-      <div className="flex items-start gap-4">
+    const interviewType = isNonTechnical ? 'NON-TECHNICAL' : 'TECHNICAL';
+    const specialistLabel = isNonTechnical ? 'Verbal' : 'Technical';
+    const specialistKey = isNonTechnical ? 'verbal' : 'technical';
 
-        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
-          <Target className="w-6 h-6 text-blue-400" />
+    const round2 =
+      result?.round2_result &&
+      typeof result.round2_result === 'object'
+        ? result.round2_result
+        : {};
+
+    const readPath = (object, path) =>
+      path.split('.').reduce(
+        (value, key) =>
+          value !== undefined && value !== null ? value[key] : undefined,
+        object
+      );
+
+    const firstValue = (...values) =>
+      values.find(
+        (value) =>
+          value !== undefined &&
+          value !== null &&
+          value !== ''
+      );
+
+    const numberValue = (...values) => {
+      const value = firstValue(...values);
+      if (value === undefined) return null;
+
+      const number = Number(value);
+      return Number.isFinite(number)
+        ? Math.max(0, Math.min(100, Math.round(number)))
+        : null;
+    };
+
+    const countValue = (...values) => {
+      const value = firstValue(...values);
+      if (value === undefined) return null;
+
+      const number = Number(value);
+      return Number.isFinite(number)
+        ? Math.max(0, Math.round(number))
+        : null;
+    };
+
+    const textValue = (...values) => {
+      const value = firstValue(...values);
+      return value === undefined ? null : String(value);
+    };
+
+    const normalizeFeedbackItems = (value) => {
+      if (!Array.isArray(value)) return [];
+
+      return value
+        .map((item) => {
+          if (Array.isArray(item)) {
+            return [
+              item[0] || 'Assessment Feedback',
+              item[1] || '',
+            ];
+          }
+
+          if (typeof item === 'string') {
+            return [item, ''];
+          }
+
+          if (item && typeof item === 'object') {
+            return [
+              item.title ||
+                item.name ||
+                item.area ||
+                item.category ||
+                'Assessment Feedback',
+              item.description ||
+                item.detail ||
+                item.reason ||
+                item.message ||
+                '',
+            ];
+          }
+
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    const normalizeRecommendations = (value) => {
+      if (!Array.isArray(value)) return [];
+
+      return value
+        .map((item) => {
+          if (typeof item === 'string') return item;
+
+          if (item && typeof item === 'object') {
+            return (
+              item.text ||
+              item.recommendation ||
+              item.description ||
+              item.message ||
+              item.title ||
+              ''
+            );
+          }
+
+          return '';
+        })
+        .filter(Boolean);
+    };
+
+    // Every value below comes from the backend result.
+    // Missing values remain null/empty instead of being replaced by demo data.
+    const totalQuestions = countValue(
+      round2.total_questions,
+      result?.total_questions,
+      result?.test_total_questions
+    );
+
+    const correct = countValue(
+      round2.correct_answers,
+      round2.correct,
+      result?.correct_answers,
+      result?.correct,
+      result?.test_correct
+    );
+
+    const incorrect = countValue(
+      round2.incorrect_answers,
+      round2.incorrect,
+      result?.incorrect_answers,
+      result?.incorrect,
+      result?.test_incorrect
+    );
+
+    const skipped = countValue(
+      round2.skipped_answers,
+      round2.skipped,
+      result?.skipped_answers,
+      result?.skipped,
+      result?.test_skipped
+    );
+
+    const overallScore = numberValue(
+      round2.score,
+      round2.test_score,
+      result?.test_score,
+      result?.assessment_score
+    );
+
+    const reasoningScore = numberValue(
+      round2.category_scores?.reasoning?.percentage
+    );
+
+    const aptitudeScore = numberValue(
+      round2.category_scores?.aptitude?.percentage
+    );
+
+    const specialistScore = numberValue(
+      round2.category_scores?.[specialistKey]?.percentage
+    );
+
+    const reasoningCorrect = countValue(
+      round2.category_scores?.reasoning?.correct
+    );
+
+    const aptitudeCorrect = countValue(
+      round2.category_scores?.aptitude?.correct
+    );
+
+    const specialistCorrect = countValue(
+      round2.category_scores?.[specialistKey]?.correct
+    );
+
+    const timeTaken = textValue(
+      round2.time_taken,
+      result?.time_taken,
+      result?.test_time_taken
+    );
+
+    const averageTime = textValue(
+      round2.average_time_per_question,
+      result?.average_time_per_question
+    );
+
+    const fastestCategory = textValue(
+      round2.fastest_category,
+      round2.time_analysis?.fastest_category,
+      result?.fastest_category
+    );
+
+    const fastestTime = textValue(
+      round2.fastest_time,
+      round2.fastest_average_time,
+      round2.time_analysis?.fastest_time,
+      result?.fastest_time
+    );
+
+    const slowestCategory = textValue(
+      round2.slowest_category,
+      round2.time_analysis?.slowest_category,
+      result?.slowest_category
+    );
+
+    const slowestTime = textValue(
+      round2.slowest_time,
+      round2.slowest_average_time,
+      round2.time_analysis?.slowest_time,
+      result?.slowest_time
+    );
+
+    const performanceLabel = textValue(
+      round2.performance_label,
+      round2.performance_status,
+      result?.performance_label
+    );
+
+    const performanceMessage = textValue(
+      round2.performance_message,
+      round2.summary,
+      round2.assessment_summary,
+      result?.assessment_summary,
+      result?.performance_message
+    );
+
+    const sectionData = [
+      {
+        name: 'Reasoning',
+        total: 10,
+        correct: reasoningCorrect,
+        score: reasoningScore,
+        icon: Brain,
+        gradient: 'from-violet-500 to-purple-500',
+      },
+      {
+        name: 'Aptitude',
+        total: 10,
+        correct: aptitudeCorrect,
+        score: aptitudeScore,
+        icon: Target,
+        gradient: 'from-blue-500 to-cyan-400',
+      },
+      {
+        name: specialistLabel,
+        total: 30,
+        correct: specialistCorrect,
+        score: specialistScore,
+        icon: specialistLabel === 'Technical' ? FileText : Sparkles,
+        gradient: 'from-cyan-400 to-teal-400',
+      },
+    ];
+
+    const answerBreakdown = [
+      {
+        label: 'Correct',
+        value: correct,
+        color: '#2dd4bf',
+        icon: CheckCircle2,
+      },
+      {
+        label: 'Incorrect',
+        value: incorrect,
+        color: '#fb7185',
+        icon: CircleAlert,
+      },
+      {
+        label: 'Skipped',
+        value: skipped,
+        color: '#fbbf24',
+        icon: CircleAlert,
+      },
+    ];
+
+    const donutTotal = Math.max(Number(totalQuestions) || 0, 1);
+
+    const strengthItems = normalizeFeedbackItems(
+      firstValue(
+        round2.strengths,
+        round2.strength_items,
+        round2.strengths_and_weaknesses?.strengths,
+        result?.round2_strengths
+      )
+    );
+
+    const improvementItems = normalizeFeedbackItems(
+      firstValue(
+        round2.improvements,
+        round2.areas_to_improve,
+        round2.weaknesses,
+        round2.strengths_and_weaknesses?.improvements,
+        result?.round2_improvements
+      )
+    );
+
+    const recommendations = normalizeRecommendations(
+      firstValue(
+        round2.recommendations,
+        round2.ai_recommendations,
+        result?.recommendations,
+        result?.round2_recommendations
+      )
+    );
+
+    const normalizedQuestionAnalysis = Array.isArray(
+      round2.question_results
+    )
+      ? round2.question_results
+      : [];
+
+    return (
+      <section className="space-y-5">
+        {/* =====================================================
+            ROUND STEPPER
+        ===================================================== */}
+        <div className="border-b border-blue-200/[0.10] pb-5">
+          <div className="flex items-center">
+            <div className="shrink-0">
+              <p className="text-sm font-bold tracking-[0.08em] text-cyan-300">
+                ROUND 2 / 3
+              </p>
+            </div>
+
+            <div className="flex flex-1 items-center justify-center">
+              {[1, 2, 3].map((round, index) => (
+                <React.Fragment key={round}>
+                  <div className="flex min-w-[105px] flex-col items-center">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold ${
+                        round === 2
+                          ? 'border-cyan-300 bg-[linear-gradient(135deg,#2563eb_0%,#4f46e5_52%,#7c3aed_100%)] text-white shadow-[0_0_32px_rgba(34,211,238,0.62),0_0_55px_rgba(124,58,237,0.28)]'
+                          : round < 2
+                            ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
+                            : 'border-slate-700 bg-[#111b35] text-slate-400'
+                      }`}
+                    >
+                      {round < 2 ? (
+                        <CheckCircle2 className="h-5 w-5" />
+                      ) : (
+                        round
+                      )}
+                    </div>
+
+                    <span
+                      className={`mt-2 text-[11px] font-semibold ${
+                        round === 2
+                          ? 'text-white'
+                          : round < 2
+                            ? 'text-emerald-300'
+                            : 'text-slate-500'
+                      }`}
+                    >
+                      {round === 1
+                        ? 'Resume Analysis'
+                        : round === 2
+                          ? 'Assessment'
+                          : 'AI Interview'}
+                    </span>
+                  </div>
+
+                  {index < 2 && (
+                    <div
+                      className={`h-[2px] flex-1 ${
+                        round < 2
+                          ? 'bg-gradient-to-r from-emerald-400 to-blue-500'
+                          : 'bg-gradient-to-r from-blue-500/80 to-violet-500/40'
+                      }`}
+                    />
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div>
-
-          <p className="text-xs font-semibold tracking-widest uppercase mb-1 text-blue-400">
-            Round 2 • Assessment
-          </p>
-
-          <h2 className="text-2xl font-bold text-white">
-            Round 2 — Assessment Feedback
-          </h2>
-
-          <p className="text-gray-400 text-sm mt-1">
-            Your multiple-choice assessment performance.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div className="glass-card p-8 flex flex-col md:flex-row items-center gap-8">
-
-        <ScoreRing
-          score={testScore}
-          size={150}
-          strokeWidth={10}
-          colorCls={getScoreColor(testScore)}
-        />
-
-        <div>
-
-          <p className="text-xs text-blue-400 font-semibold uppercase tracking-wider mb-2">
-            Assessment Result
-          </p>
-
-          <h3 className="text-2xl font-semibold mb-2">
-            Assessment Score
-          </h3>
-
-          <p className="text-gray-400 leading-relaxed max-w-2xl">
-            Your Round 2 score is based on your
-            multiple-choice assessment.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-
-        <div className="glass-card p-6">
-
-          <div className="flex items-center gap-3 mb-4">
-
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Target className="w-5 h-5 text-blue-400" />
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-400/45 bg-[linear-gradient(135deg,rgba(124,58,237,0.18),rgba(37,99,235,0.10))] shadow-[0_0_30px_rgba(124,58,237,0.20)]">
+              <Target className="h-7 w-7 text-violet-300" />
             </div>
 
             <div>
-
-              <p className="text-xs text-gray-500">
-                Round 2
+              <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+                Round 2 — Assessment Feedback
+              </h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Your performance in the online assessment
               </p>
-
-              <p className="font-semibold">
-                Test Performance
-              </p>
-
             </div>
-
           </div>
 
-          <p
-            className={`text-xl font-bold ${getScoreColor(
-              testScore
-            )}`}
-          >
-            {getScoreLabel(testScore)}
-          </p>
+          <div className="flex flex-col items-start gap-2 md:items-end">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-400/50 bg-emerald-400/[0.06] px-4 py-2 shadow-[0_0_24px_rgba(16,185,129,0.10)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
+              <span className="text-xs font-bold text-emerald-300">
+                AI ANALYSIS READY
+              </span>
+            </div>
 
+            <div className="flex items-center gap-3 rounded-xl border border-blue-400/30 bg-[#07122a]/80 px-4 py-2">
+              {isNonTechnical ? (
+                <Sparkles className="h-5 w-5 text-violet-300" />
+              ) : (
+                <FileText className="h-5 w-5 text-cyan-300" />
+              )}
+              <div>
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                  Interview Type
+                </p>
+                <p className="text-sm font-bold text-cyan-300">
+                  {interviewType}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* =====================================================
+            HERO SCORE + SUMMARY COUNTERS
+        ===================================================== */}
+        <div className="relative overflow-hidden rounded-2xl border border-violet-500/50 bg-[linear-gradient(135deg,#05091b_0%,#0a1030_38%,#10153a_60%,#06162c_100%)] p-5 shadow-[0_0_55px_rgba(37,99,235,0.14)] md:p-6">
+          <div className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full bg-violet-600/[0.15] blur-[100px]" />
+          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-cyan-400/[0.09] blur-[100px]" />
 
-        <div className="glass-card p-6">
+          <div className="relative grid grid-cols-1 items-center md:grid-cols-[1.15fr_1fr_1fr_1fr_1fr]">
+            <div className="flex min-h-[210px] flex-col items-center justify-center border-b border-blue-300/[0.10] pb-6 md:border-b-0 md:border-r md:pb-0">
+              {overallScore !== null ? (
+                <ScoreRing
+                  score={overallScore}
+                  size={185}
+                  strokeWidth={11}
+                  colorCls="text-white"
+                />
+              ) : (
+                <div className="flex h-[185px] w-[185px] items-center justify-center rounded-full border-[11px] border-slate-800">
+                  <span className="text-4xl font-extrabold text-slate-500">—</span>
+                </div>
+              )}
+              <p className="mt-3 text-xs font-bold tracking-wide text-emerald-300">
+                {performanceLabel || (overallScore !== null ? 'ASSESSMENT FEEDBACK' : 'DATA NOT AVAILABLE')}
+              </p>
+            </div>
 
-          <p className="text-xs text-gray-500 mb-2">
-            Assessment Score
-          </p>
+            {[
+              {
+                label: 'TOTAL QUESTIONS',
+                value: totalQuestions,
+                sub: 'Questions',
+                icon: Target,
+                color: 'text-blue-300',
+              },
+              {
+                label: 'CORRECT',
+                value: correct,
+                sub: `${overallScore}%`,
+                icon: CheckCircle2,
+                color: 'text-emerald-400',
+              },
+              {
+                label: 'INCORRECT',
+                value: incorrect,
+                sub: `${Math.round((incorrect / Math.max(totalQuestions, 1)) * 100)}%`,
+                icon: CircleAlert,
+                color: 'text-red-400',
+              },
+              {
+                label: 'SKIPPED',
+                value: skipped,
+                sub: `${Math.round((skipped / Math.max(totalQuestions, 1)) * 100)}%`,
+                icon: CircleAlert,
+                color: 'text-amber-400',
+              },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.label}
+                  className="flex min-h-[150px] flex-col items-center justify-center border-b border-blue-300/[0.10] px-4 py-5 md:border-b-0 md:border-r last:md:border-r-0"
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <Icon className={`h-5 w-5 ${item.color}`} />
+                    <p className="text-[11px] font-bold text-slate-200">
+                      {item.label}
+                    </p>
+                  </div>
+                  <p className="text-4xl font-extrabold text-white">
+                    {item.value}
+                  </p>
+                  <p className={`mt-1 text-xs font-medium ${item.color}`}>
+                    {item.sub}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
 
-          <p
-            className={`text-3xl font-bold ${getScoreColor(
-              testScore
-            )}`}
-          >
-            {Math.round(testScore)}%
-          </p>
-
-          <p className="text-sm text-gray-500 mt-2">
-            Based on your submitted answers
-          </p>
-
+          {performanceMessage && (
+            <div className="relative mt-4 rounded-xl border border-blue-200/[0.08] bg-white/[0.025] px-4 py-3 text-sm text-slate-200">
+              <span className="mr-2">🏆</span>
+              {performanceMessage}
+            </div>
+          )}
         </div>
 
+        {/* =====================================================
+            PERFORMANCE OVERVIEW + CATEGORY PERFORMANCE
+        ===================================================== */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.85fr_1.65fr]">
+          <div className="rounded-2xl border border-blue-500/45 bg-[linear-gradient(145deg,#070d24_0%,#0a1026_48%,#071a31_100%)] p-5 shadow-[0_0_45px_rgba(59,130,246,0.12)]">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/35 bg-cyan-400/[0.08]">
+                <Sparkles className="h-5 w-5 text-cyan-300" />
+              </div>
+              <h3 className="text-lg font-bold text-white">
+                PERFORMANCE OVERVIEW
+              </h3>
+            </div>
 
-        <div className="glass-card p-6">
+            <div className="space-y-3">
+              {[
+                ['Accuracy', `${overallScore}%`, 'Good', 'text-cyan-300'],
+                ['Time Taken', timeTaken, 'of 30:00', 'text-white'],
+                ['Average Time / Question', averageTime, 'Good', 'text-violet-300'],
+                [
+                  'Questions Attempted',
+                  `${Math.min(totalQuestions, correct + incorrect)} / ${totalQuestions}`,
+                  `${Math.round(((correct + incorrect) / Math.max(totalQuestions, 1)) * 100)}%`,
+                  'text-cyan-300',
+                ],
+              ].map(([label, value, sub, color]) => (
+                <div
+                  key={label}
+                  className="rounded-xl border border-blue-200/[0.08] bg-[#091329]/70 p-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-medium text-slate-300">
+                      {label}
+                    </span>
+                    <span className={`text-lg font-bold ${color}`}>
+                      {value}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-500">{sub}</p>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          <p className="text-xs text-gray-500 mb-2">
-            Next Stage
-          </p>
+          <div className="rounded-2xl border border-violet-500/45 bg-[linear-gradient(145deg,#080d25_0%,#0b1028_48%,#071a30_100%)] p-5 shadow-[0_0_45px_rgba(124,58,237,0.11)]">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/35 bg-violet-400/[0.08]">
+                <Award className="h-5 w-5 text-violet-300" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  CATEGORY PERFORMANCE
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Score and accuracy by assessment category
+                </p>
+              </div>
+            </div>
 
-          <p className="text-lg font-semibold text-purple-300">
-            AI Interview
-          </p>
+            <div className="space-y-5">
+              {sectionData.map((section) => {
+                const Icon = section.icon;
+                return (
+                  <div key={section.name}>
+                    <div className="mb-2 flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-300/20 bg-blue-400/[0.06]">
+                        <Icon className="h-4 w-4 text-cyan-300" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-semibold text-slate-100">
+                            {section.name}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {section.correct !== null ? `${section.correct} / ${section.total}` : `— / ${section.total}`}
+                          </span>
+                        </div>
 
-          <p className="text-sm text-gray-500 mt-2">
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                          <div
+                            className={`h-full rounded-full bg-gradient-to-r ${section.gradient} shadow-[0_0_12px_rgba(34,211,238,0.18)]`}
+                            style={{ width: `${section.score ?? 0}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <span
+                        className={`w-12 text-right text-sm font-bold ${
+                          section.score === null
+                            ? 'text-slate-500'
+                            : section.score >= 80
+                              ? 'text-emerald-400'
+                              : section.score >= 60
+                                ? 'text-amber-400'
+                                : 'text-red-400'
+                        }`}
+                      >
+                        {section.score !== null ? `${section.score}%` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <div className="border-t border-blue-200/[0.10] pt-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-white">
+                    Overall Performance
+                  </span>
+                  <span className="text-sm font-bold text-cyan-300">
+                    {correct !== null && totalQuestions !== null
+                      ? `${correct} / ${totalQuestions}`
+                      : '—'}
+                  </span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-300"
+                    style={{ width: `${overallScore ?? 0}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            ANSWER BREAKDOWN + CATEGORY COMPARISON + TIME ANALYSIS
+        ===================================================== */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+          <div className="h-[260px] overflow-hidden rounded-2xl border border-blue-500/40 bg-[#070e23]/95 p-4">
+            <h3 className="mb-3 text-sm font-bold text-white">
+              ANSWER BREAKDOWN
+            </h3>
+
+            <div className="flex items-center gap-5">
+              <div
+                className="relative h-24 w-24 shrink-0 translate-y-7 rounded-full"
+                style={{
+                  background:
+                    correct !== null || incorrect !== null || skipped !== null
+                      ? `conic-gradient(
+                          #2dd4bf 0 ${((correct || 0) / donutTotal) * 360}deg,
+                          #fb7185 ${((correct || 0) / donutTotal) * 360}deg ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg,
+                          #fbbf24 ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg 360deg
+                        )`
+                      : '#1e293b',
+                }}
+              >
+                <div className="absolute inset-2 flex items-center justify-center rounded-full bg-[#070e23]">
+                  <span className="text-xl font-extrabold text-white">
+                    {overallScore !== null ? `${overallScore}%` : '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {answerBreakdown.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-xs text-slate-300">
+                      {item.label}
+                    </span>
+                    <span className="text-[11px] font-bold text-white">
+                      {item.value !== null ? item.value : '—'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="h-[260px] overflow-hidden rounded-2xl border border-violet-500/40 bg-[#080e24]/95 p-4">
+            <h3 className="mb-3 text-sm font-bold text-white">
+              CATEGORY COMPARISON
+            </h3>
+
+            <div className="relative top-10 flex h-28 items-end justify-around gap-3 border-b border-blue-200/[0.10] px-2">
+              {sectionData.map((section) => (
+                <div
+                  key={section.name}
+                  className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+                >
+                  <span className="text-xs font-bold text-white">
+                    {section.score !== null ? `${section.score}%` : '—'}
+                  </span>
+                  <div
+                    className={`w-full max-w-16 rounded-t-lg bg-gradient-to-t ${section.gradient} shadow-[0_0_20px_rgba(59,130,246,0.18)]`}
+                    style={{
+                      height:
+                        section.score !== null
+                          ? `${Math.max(12, section.score * 0.95)}px`
+                          : '0px',
+                    }}
+                  />
+                  <span className="text-center text-[9px] text-slate-400">
+                    {section.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-[260px] overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#061225]/95 p-4">
+            <h3 className="mb-3 text-sm font-bold text-white">
+              TIME ANALYSIS
+            </h3>
+
+            <div className="space-y-2.5">
+              <div className="rounded-lg border border-emerald-400/10 bg-emerald-400/[0.035] p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                  Fastest Avg. Time
+                </p>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-200">
+                    {fastestCategory || '—'}
+                  </span>
+                  <span className="text-sm font-bold text-emerald-400">
+                    {fastestTime || '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-red-400/10 bg-red-400/[0.035] p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                  Slowest Avg. Time
+                </p>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-slate-200">
+                    {slowestCategory || '—'}
+                  </span>
+                  <span className="text-sm font-bold text-red-400">
+                    {slowestTime || '—'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-cyan-400/10 bg-cyan-400/[0.035] p-2.5">
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                  Time Efficiency
+                </p>
+                <p className="mt-1 text-sm font-bold text-emerald-400">
+                  {textValue(
+                    round2.time_efficiency,
+                    round2.time_efficiency_label,
+                    result?.time_efficiency
+                  ) || '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            STRENGTHS + AREAS TO IMPROVE + QUESTION ANALYSIS
+        ===================================================== */}
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr_1.3fr]">
+          <div className="h-[320px] overflow-hidden rounded-2xl border border-emerald-500/35 bg-[#071725]/95 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
+              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+              STRENGTHS
+            </h3>
+
+            <div className="h-[245px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-emerald-400/45">
+              {strengthItems.length > 0 ? (
+                strengthItems.map(([title, description], index) => (
+                  <div key={`${title}-${index}`} className="flex gap-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-100">
+                        {title}
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">
+                  Backend strength feedback is not available.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="h-[320px] overflow-hidden rounded-2xl border border-amber-500/35 bg-[#171322]/95 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
+              <AlertTriangle className="h-5 w-5 text-amber-400" />
+              AREAS TO IMPROVE
+            </h3>
+
+            <div className="h-[245px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-amber-400/45">
+              {improvementItems.length > 0 ? (
+                improvementItems.map(([title, description], index) => (
+                  <div key={`${title}-${index}`} className="flex gap-3">
+                    <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-100">
+                        {title}
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
+                        {description}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">
+                  Backend improvement feedback is not available.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="h-[320px] overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#061225]/95 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+                <FileText className="h-5 w-5 text-cyan-300" />
+                QUESTION ANALYSIS
+              </h3>
+              <span className="text-xs font-bold text-cyan-300">
+                View All ({totalQuestions})
+              </span>
+            </div>
+
+            <div className="h-[245px] overflow-y-auto overflow-x-hidden rounded-lg border border-blue-200/[0.08] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/45">
+              <div className="grid grid-cols-[35px_1fr_70px_60px] bg-white/[0.025] px-3 py-2 text-[10px] font-bold uppercase text-slate-500 sticky top-0 z-10">
+                <span>Q#</span>
+                <span>Category</span>
+                <span>Result</span>
+                <span>Time</span>
+              </div>
+
+              {normalizedQuestionAnalysis.length > 0 ? (
+                normalizedQuestionAnalysis.map((question, index) => {
+                  const category =
+                    question?.category ||
+                    question?.type ||
+                    question?.section ||
+                    '—';
+
+                  const questionResult =
+                    question?.result ||
+                    question?.status ||
+                    (question?.is_correct === true
+                      ? 'Correct'
+                      : question?.is_correct === false
+                        ? 'Incorrect'
+                        : '—');
+
+                  const questionTime =
+                    question?.time ||
+                    question?.time_taken ||
+                    question?.duration ||
+                    '—';
+
+                  return (
+                    <div
+                      key={question?.id || question?._id || index}
+                      className="grid grid-cols-[35px_1fr_70px_60px] items-center border-t border-blue-200/[0.08] px-3 py-3 text-xs"
+                    >
+                      <span className="text-slate-500">{index + 1}</span>
+                      <span className="truncate text-slate-200">{category}</span>
+                      <span
+                        className={
+                          String(questionResult).toLowerCase() === 'correct'
+                            ? 'font-semibold text-emerald-400'
+                            : String(questionResult).toLowerCase() === 'incorrect'
+                              ? 'font-semibold text-red-400'
+                              : 'font-semibold text-slate-400'
+                        }
+                      >
+                        {questionResult}
+                      </span>
+                      <span className="text-slate-400">{questionTime}</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="border-t border-blue-200/[0.08] px-3 py-5 text-center text-xs text-slate-500">
+                  Question-level analysis is not available in the backend result.
+                </div>
+              )}
+            </div>
+
+            <p className="mt-2 text-center text-[9px] text-slate-500">
+              {normalizedQuestionAnalysis.length > 0
+                ? `Showing all ${normalizedQuestionAnalysis.length} backend question results`
+                : 'No question-level backend data available'}
+            </p>
+          </div>
+        </div>
+
+        {/* =====================================================
+            AI RECOMMENDATIONS + AI ASSESSMENT SUMMARY
+        ===================================================== */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="rounded-2xl border border-cyan-500/35 bg-[linear-gradient(145deg,#061728_0%,#071326_55%,#061b2b_100%)] p-5 shadow-[0_0_38px_rgba(34,211,238,0.07)]">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/[0.08]">
+                <Lightbulb className="h-5 w-5 text-cyan-300" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  AI RECOMMENDATIONS
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Personalized assessment improvement suggestions
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {recommendations.length > 0 ? (
+                recommendations.map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="flex items-start gap-3 rounded-xl border border-blue-300/[0.08] bg-white/[0.025] px-3 py-3"
+                  >
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    <p className="text-sm leading-relaxed text-slate-300">
+                      {item}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-slate-500">
+                  Backend recommendations are not available.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-violet-500/40 bg-[linear-gradient(110deg,#090d28_0%,#17133e_48%,#071a34_100%)] p-5 shadow-[0_0_45px_rgba(124,58,237,0.10)]">
+            <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-violet-500/[0.10] blur-[60px]" />
+
+            <div className="relative">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-300/35 bg-violet-400/[0.08]">
+                  <Sparkles className="h-5 w-5 text-violet-300" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">
+                    AI ASSESSMENT SUMMARY
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Round 2 performance overview
+                  </p>
+                </div>
+              </div>
+
+              <p className="max-w-3xl text-sm leading-7 text-slate-300">
+                {performanceMessage ||
+                  'Backend assessment summary is not available.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            ACTIONS
+        ===================================================== */}
+        <div className="flex flex-col items-center justify-center gap-4 pb-6 pt-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setCurrentRound(1)}
+            className="flex min-w-[220px] items-center justify-center gap-2 rounded-xl border border-blue-300/55 bg-[#050a1b]/70 px-7 py-3.5 text-sm font-bold text-white shadow-[0_0_18px_rgba(59,130,246,0.08)] transition hover:border-cyan-300/80 hover:bg-cyan-400/[0.04] hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Round 1
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentRound(3)}
+            className="flex min-w-[270px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-blue-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_34px_rgba(124,58,237,0.42),0_0_60px_rgba(37,99,235,0.18)] transition hover:scale-[1.01] hover:shadow-[0_0_42px_rgba(59,130,246,0.35)]"
+          >
             Continue to Round 3
-          </p>
-
+            <ArrowRight className="h-4 w-4" />
+          </button>
         </div>
-
-      </div>
-
-
-      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-5 pb-2">
-
-        <button
-          type="button"
-          onClick={() => setCurrentRound(1)}
-          className="btn-secondary flex items-center justify-center gap-2 px-7 py-3"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Round 1
-        </button>
-
-
-        <button
-          type="button"
-          onClick={() => setCurrentRound(3)}
-          className="btn-primary flex items-center justify-center gap-2 px-7 py-3"
-        >
-          Continue to Round 3
-          <ArrowRight className="w-5 h-5" />
-        </button>
-
-      </div>
-
-    </section>
-  );
-
+      </section>
+    );
+  };
 
   // =========================================================
   // ROUND 3
@@ -1465,46 +2318,6 @@ const Feedback = () => {
       </div>
 
       <div className="mx-auto max-w-[1320px] px-4 py-6 sm:px-6 md:py-8">
-
-        {currentRound !== 1 && (
-          <div className="mb-8">
-            <div className="flex items-center justify-center rounded-2xl border border-blue-200/[0.10] bg-[#050b1c]/80 p-4">
-              {[1, 2, 3].map((round, index) => {
-                const active = currentRound === round;
-                const completed = currentRound > round;
-
-                return (
-                  <React.Fragment key={round}>
-                    <div className="flex min-w-[90px] flex-col items-center">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold ${
-                          active
-                            ? 'border-cyan-300 bg-blue-600 text-white shadow-[0_0_22px_rgba(34,211,238,0.45)]'
-                            : completed
-                              ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
-                              : 'border-slate-700 bg-slate-900 text-slate-500'
-                        }`}
-                      >
-                        {completed ? <CheckCircle2 className="h-5 w-5" /> : round}
-                      </div>
-                      <span className="mt-2 text-[11px] font-semibold text-slate-400">
-                        Round {round}
-                      </span>
-                    </div>
-
-                    {index < 2 && (
-                      <div className={`h-[2px] flex-1 max-w-[180px] ${
-                        completed
-                          ? 'bg-gradient-to-r from-emerald-400 to-blue-400'
-                          : 'bg-slate-800'
-                      }`} />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
 
         {/* =====================================================

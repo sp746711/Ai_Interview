@@ -713,6 +713,158 @@ class InterviewController:
         # RESULT RESPONSE
         # =====================================================
 
+        # =================================================
+        # TASK 16 — ROUND 2 FEEDBACK DATA
+        #
+        # No demo/static assessment values are used here.
+        # Everything is derived from the real round2_result
+        # saved by TestController.
+        # =================================================
+
+        round2_result = interview.get(
+            "round2_result",
+            {}
+        )
+
+        if not isinstance(round2_result, dict):
+            round2_result = {}
+
+        category_scores = round2_result.get(
+            "category_scores",
+            {}
+        )
+
+        if not isinstance(category_scores, dict):
+            category_scores = {}
+
+        # Technical:
+        #   Reasoning + Aptitude + Technical
+        #
+        # Non-Technical:
+        #   Reasoning + Aptitude + Verbal Ability
+
+        interview_type_value = str(
+            interview.get(
+                "interview_type",
+                "technical"
+            ) or "technical"
+        ).strip().lower()
+
+        if interview_type_value == "non-technical":
+            feedback_categories = [
+                ("reasoning", "Reasoning"),
+                ("aptitude", "Aptitude"),
+                ("verbal", "Verbal Ability"),
+            ]
+        else:
+            feedback_categories = [
+                ("reasoning", "Reasoning"),
+                ("aptitude", "Aptitude"),
+                ("technical", "Technical"),
+            ]
+
+        # Strengths from real category percentages
+        strengths = []
+
+        for key, label in feedback_categories:
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
+            if not isinstance(category_data, dict):
+                continue
+
+            percentage = category_data.get("percentage")
+
+            if percentage is None:
+                continue
+
+            try:
+                percentage = int(percentage)
+            except (TypeError, ValueError):
+                continue
+
+            if percentage >= 70:
+                strengths.append(f"Strong {label}")
+
+        if not strengths and round2_result:
+            strengths.append(
+                "Consistent assessment attempt"
+            )
+
+        # Areas to improve from real category percentages
+        weaknesses = []
+
+        for key, label in feedback_categories:
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
+            if not isinstance(category_data, dict):
+                continue
+
+            percentage = category_data.get("percentage")
+
+            if percentage is None:
+                continue
+
+            try:
+                percentage = int(percentage)
+            except (TypeError, ValueError):
+                continue
+
+            if percentage < 70:
+                weaknesses.append(f"{label} Concepts")
+
+        if (
+            not weaknesses
+            and round2_result
+            and test_s < 80
+        ):
+            weaknesses.append(
+                "Advanced Problem Solving"
+            )
+
+        # Rule-based Task 16 recommendations for now.
+        # LLM recommendations can be added later.
+        suggestions = []
+
+        for key, label in feedback_categories:
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
+            if not isinstance(category_data, dict):
+                continue
+
+            percentage = category_data.get("percentage")
+
+            if percentage is None:
+                continue
+
+            try:
+                percentage = int(percentage)
+            except (TypeError, ValueError):
+                continue
+
+            if percentage < 70:
+                suggestions.append(
+                    f"Practice more {label.lower()} questions."
+                )
+
+        if test_s < 80:
+            suggestions.append(
+                "Improve speed and accuracy through timed mock tests."
+            )
+
+        if not suggestions and round2_result:
+            suggestions.append(
+                "Continue practicing to maintain your assessment performance."
+            )
+
         return {
             "id": str(interview["_id"]),
 
@@ -763,6 +915,9 @@ class InterviewController:
             "test_score":
                 test_s,
 
+            "round2_result":
+                interview.get("round2_result", {}),
+
             # =================================================
             # ROUND 3
             # =================================================
@@ -778,43 +933,26 @@ class InterviewController:
                 final_score,
 
             # =================================================
-            # EXISTING FRONTEND COMPATIBILITY
+            # TASK 16 — ROUND 2
             # =================================================
 
-            "strengths": [
-                (
-                    "Strong core fundamentals"
-                    if test_s >= 60
-                    else "Shows learning potential"
-                ),
+            "test_score":
+                test_s,
 
-                (
-                    "Good communication clarity"
-                    if ai_s >= 60
-                    else "Can improve answer structure"
-                ),
-            ],
+            "round2_result":
+                round2_result,
 
-            "weaknesses": [
-                (
-                    "Resume alignment needs improvement"
-                    if resume_s < 60
-                    else "Minor resume gaps"
-                ),
+            "strengths":
+                strengths,
 
-                (
-                    "Technical depth can be improved"
-                    if test_s < 60
-                    else "Advanced topics can be strengthened"
-                ),
-            ],
+            "weaknesses":
+                weaknesses,
 
-            "suggestions": [
-                "Practice role-specific MCQs daily",
-                "Use STAR format for behavioral answers",
-                "Tailor resume keywords to your target role",
-            ],
-        }
+            "suggestions":
+                suggestions,
+
+            # =================================================
+            }
 
     # =========================================================
     # GET CURRENT INTERVIEW STAGE

@@ -37,8 +37,8 @@ const Test = () => {
   const [error, setError] = useState('');
   const [answers, setAnswers] = useState({});
 
-  // 60 minutes
-  const [timeLeft, setTimeLeft] = useState(50* 50);
+  // 40 minutes
+  const [timeLeft, setTimeLeft] = useState(40* 60);
 
   /* ======================================================
      SECURITY STATE
@@ -210,7 +210,9 @@ const Test = () => {
         );
 
         const questionsPromise = api.get(
-          `/test/questions?interview_type=${encodeURIComponent(
+          `/test/questions?interview_id=${encodeURIComponent(
+            currentInterview.id
+          )}&interview_type=${encodeURIComponent(
             currentInterview.interview_type || 'technical'
           )}&difficulty=easy`
         );
