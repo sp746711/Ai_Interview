@@ -11,9 +11,6 @@ from backend.app.services.scoring_service import ScoringService
 from backend.app.services.resume_intelligence_service import (
     analyze_resume_with_llm,
 )
-from backend.app.services.test_feedback_service import (
-    generate_test_feedback,
-)
 
 
 class InterviewController:
@@ -286,102 +283,6 @@ class InterviewController:
 
                             "resume_data.feedback_error":
                                 str(exc),
-                        }
-                    },
-                )
-
-            except Exception:
-                pass
-
-    # =========================================================
-    # BACKGROUND TASK 16 — ROUND 2 LLM FEEDBACK
-    # =========================================================
-    # Task 16 only. This never blocks GET /result.
-    # Existing Round 2 scoring/timing/question logic is untouched.
-    # =========================================================
-
-    @staticmethod
-    async def _generate_round2_llm_feedback(
-        interview_id: str,
-        db: AsyncIOMotorDatabase,
-    ):
-        """
-        Task 16 only.
-
-        The caller marks the cached feedback as "processing" before
-        starting this background task. This prevents a feedback-page
-        reload from starting multiple Ollama requests for the same
-        interview.
-        """
-        try:
-            oid = ObjectId(interview_id)
-
-            interview = await db["interviews"].find_one(
-                {"_id": oid}
-            )
-
-            if not interview:
-                return
-
-            round2_result = interview.get(
-                "round2_result",
-                {}
-            )
-
-            if not isinstance(round2_result, dict):
-                return
-
-            interview_type_value = str(
-                interview.get(
-                    "interview_type",
-                    "technical",
-                ) or "technical"
-            ).strip().lower()
-
-            llm_feedback = await generate_test_feedback(
-                round2_result=round2_result,
-                interview_type=interview_type_value,
-            )
-
-            if not isinstance(llm_feedback, dict):
-                llm_feedback = {
-                    "strengths": [],
-                    "weaknesses": [],
-                    "suggestions": [],
-                    "recommendations": [],
-                    "assessment_summary": "",
-                    "llm_status": "error",
-                    "llm_error": "Invalid LLM feedback response.",
-                }
-
-            # Always cache the complete Task 16 result.
-            await db["interviews"].update_one(
-                {"_id": oid},
-                {
-                    "$set": {
-                        "round2_result.task16_ai_feedback":
-                            llm_feedback,
-                    }
-                },
-            )
-
-        except Exception as exc:
-            try:
-                oid = ObjectId(interview_id)
-
-                await db["interviews"].update_one(
-                    {"_id": oid},
-                    {
-                        "$set": {
-                            "round2_result.task16_ai_feedback": {
-                                "strengths": [],
-                                "weaknesses": [],
-                                "suggestions": [],
-                                "recommendations": [],
-                                "assessment_summary": "",
-                                "llm_status": "error",
-                                "llm_error": str(exc),
-                            }
                         }
                     },
                 )
@@ -862,39 +763,20 @@ class InterviewController:
                 ("technical", "Technical"),
             ]
 
-        # =================================================
-        # TASK 16 — AI FEEDBACK
-        # =================================================
-        # Existing Round 2 score/timing/category/question logic is
-        # untouched. GET /result never waits for Ollama.
-        # Cached Qwen feedback is used when available; otherwise
-        # the existing rule-based values are returned immediately
-        # while Qwen runs in the background.
-        # =================================================
-
-        task16_ai_feedback = round2_result.get(
-            "task16_ai_feedback",
-            {}
-        )
-
-        if not isinstance(task16_ai_feedback, dict):
-            task16_ai_feedback = {}
-
-        llm_status = task16_ai_feedback.get(
-            "llm_status",
-            ""
-        )
-
-        # Existing fallback values keep the working Round 2 page
-        # working immediately while the AI feedback is generated.
+        # Strengths from real category percentages
         strengths = []
 
         for key, label in feedback_categories:
-            category_data = category_scores.get(key, {})
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
             if not isinstance(category_data, dict):
                 continue
 
             percentage = category_data.get("percentage")
+
             if percentage is None:
                 continue
 
@@ -907,16 +789,24 @@ class InterviewController:
                 strengths.append(f"Strong {label}")
 
         if not strengths and round2_result:
-            strengths.append("Consistent assessment attempt")
+            strengths.append(
+                "Consistent assessment attempt"
+            )
 
+        # Areas to improve from real category percentages
         weaknesses = []
 
         for key, label in feedback_categories:
-            category_data = category_scores.get(key, {})
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
             if not isinstance(category_data, dict):
                 continue
 
             percentage = category_data.get("percentage")
+
             if percentage is None:
                 continue
 
@@ -933,16 +823,25 @@ class InterviewController:
             and round2_result
             and test_s < 80
         ):
-            weaknesses.append("Advanced Problem Solving")
+            weaknesses.append(
+                "Advanced Problem Solving"
+            )
 
+        # Rule-based Task 16 recommendations for now.
+        # LLM recommendations can be added later.
         suggestions = []
 
         for key, label in feedback_categories:
-            category_data = category_scores.get(key, {})
+            category_data = category_scores.get(
+                key,
+                {}
+            )
+
             if not isinstance(category_data, dict):
                 continue
 
             percentage = category_data.get("percentage")
+
             if percentage is None:
                 continue
 
@@ -965,111 +864,6 @@ class InterviewController:
             suggestions.append(
                 "Continue practicing to maintain your assessment performance."
             )
-
-        assessment_summary = ""
-
-        # Use cached Qwen feedback when it is ready.
-        if llm_status == "success":
-            ai_strengths = task16_ai_feedback.get("strengths", [])
-            ai_weaknesses = task16_ai_feedback.get("weaknesses", [])
-            ai_suggestions = task16_ai_feedback.get(
-                "recommendations",
-                task16_ai_feedback.get("suggestions", [])
-            )
-            ai_summary = task16_ai_feedback.get(
-                "assessment_summary",
-                ""
-            )
-
-            if isinstance(ai_strengths, list) and ai_strengths:
-                strengths = ai_strengths
-
-            if isinstance(ai_weaknesses, list) and ai_weaknesses:
-                weaknesses = ai_weaknesses
-
-            if isinstance(ai_suggestions, list) and ai_suggestions:
-                suggestions = ai_suggestions
-
-            if isinstance(ai_summary, str):
-                assessment_summary = ai_summary.strip()
-
-        # =================================================
-        # TASK 16 — START QWEN ONCE
-        # =================================================
-        # IMPORTANT:
-        # - success    -> never start another request
-        # - processing -> another request is already running
-        # - error      -> allow a retry on a later result request
-        # - empty/missing status -> start the first request
-        #
-        # The database update is conditional, so a browser reload
-        # cannot create duplicate Ollama tasks.
-        # =================================================
-
-        if llm_status != "success" and llm_status != "processing":
-            claim_result = await db["interviews"].update_one(
-                {
-                    "_id": oid,
-                    "round2_result.task16_ai_feedback.llm_status": {
-                        "$nin": ["success", "processing"]
-                    },
-                },
-                {
-                    "$set": {
-                        "round2_result.task16_ai_feedback.llm_status":
-                            "processing",
-                        "round2_result.task16_ai_feedback.llm_error":
-                            None,
-                    }
-                },
-            )
-
-            if claim_result.modified_count == 1:
-                task16_ai_feedback = dict(
-                    task16_ai_feedback
-                )
-                task16_ai_feedback["llm_status"] = "processing"
-                task16_ai_feedback["llm_error"] = None
-
-                asyncio.create_task(
-                    InterviewController._generate_round2_llm_feedback(
-                        str(interview["_id"]),
-                        db,
-                    )
-                )
-
-        # =================================================
-        # TASK 16 — MERGED ROUND 2 RESPONSE
-        # =================================================
-        # Keep every existing Round 2 score, timing, category and
-        # question field unchanged. Only add the Task 16 AI result.
-        # =================================================
-
-        round2_result_response = dict(round2_result)
-
-        round2_result_response[
-            "task16_ai_feedback"
-        ] = task16_ai_feedback
-
-        round2_result_response[
-            "strengths"
-        ] = strengths
-
-        round2_result_response[
-            "weaknesses"
-        ] = weaknesses
-
-        round2_result_response[
-            "suggestions"
-        ] = suggestions
-
-        round2_result_response[
-            "recommendations"
-        ] = suggestions
-
-        round2_result_response[
-            "assessment_summary"
-        ] = assessment_summary
 
         return {
             "id": str(interview["_id"]),
@@ -1122,7 +916,7 @@ class InterviewController:
                 test_s,
 
             "round2_result":
-                round2_result_response,
+                interview.get("round2_result", {}),
 
             # =================================================
             # ROUND 3
@@ -1139,8 +933,14 @@ class InterviewController:
                 final_score,
 
             # =================================================
-            # TASK 16 — TOP LEVEL COMPATIBILITY
+            # TASK 16 — ROUND 2
             # =================================================
+
+            "test_score":
+                test_s,
+
+            "round2_result":
+                round2_result,
 
             "strengths":
                 strengths,
@@ -1151,24 +951,8 @@ class InterviewController:
             "suggestions":
                 suggestions,
 
-            "recommendations":
-                suggestions,
-
-            "assessment_summary":
-                assessment_summary,
-
-            "llm_status":
-                task16_ai_feedback.get(
-                    "llm_status",
-                    "processing",
-                ),
-
-            "llm_error":
-                task16_ai_feedback.get(
-                    "llm_error",
-                    "",
-                ),
-        }
+            # =================================================
+            }
 
     # =========================================================
     # GET CURRENT INTERVIEW STAGE
