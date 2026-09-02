@@ -171,26 +171,50 @@ async def generate_test_feedback(
         50,
     )
 
+    # ========================================================
+    # REAL ROUND 2 PERFORMANCE DATA
+    # TASK 16 ONLY
+    # ========================================================
+    # Current Round 2 records use:
+    #   correct_answers
+    #   incorrect_answers
+    #   skipped_answers
+    #
+    # Keep fallback support for older records that use:
+    #   correct / incorrect / skipped
+
     correct = round2_result.get(
-        "correct",
-        0,
+        "correct_answers",
+        round2_result.get(
+            "correct",
+            0,
+        ),
     )
 
     incorrect = round2_result.get(
-        "incorrect",
-        0,
+        "incorrect_answers",
+        round2_result.get(
+            "incorrect",
+            0,
+        ),
     )
 
     skipped = round2_result.get(
-        "skipped",
-        0,
+        "skipped_answers",
+        round2_result.get(
+            "skipped",
+            0,
+        ),
     )
 
     test_score = round2_result.get(
         "score",
         round2_result.get(
-            "percentage",
-            0,
+            "test_score",
+            round2_result.get(
+                "percentage",
+                0,
+            ),
         ),
     )
 

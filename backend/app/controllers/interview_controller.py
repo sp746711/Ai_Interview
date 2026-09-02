@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
@@ -10,6 +11,9 @@ from backend.app.services.resume_service import ResumeService
 from backend.app.services.scoring_service import ScoringService
 from backend.app.services.resume_intelligence_service import (
     analyze_resume_with_llm,
+)
+from backend.app.services.test_feedback_service import (
+    generate_test_feedback,
 )
 
 
@@ -549,6 +553,213 @@ class InterviewController:
         }
 
     # =========================================================
+    # TASK 16 — ROUND 2 LLM FEEDBACK
+    # =========================================================
+    # TASK 16 ONLY.
+    #
+    # Uses the REAL saved round2_result and sends it to the
+    # existing Task 16 LLM service. Nothing here changes Round 2
+    # scoring, timing, questions, Round 1, Round 3, or UI.
+    # =========================================================
+
+    @staticmethod
+    async def _generate_round2_llm_feedback(
+        interview_id: str,
+        db: AsyncIOMotorDatabase,
+    ):
+        try:
+            oid = InterviewController._parse_object_id(
+                interview_id
+            )
+
+            interview = await db["interviews"].find_one(
+                {"_id": oid}
+            )
+
+            if not interview:
+                return None
+
+            round2_result = interview.get(
+                "round2_result",
+                {},
+            )
+
+            if not isinstance(round2_result, dict):
+                round2_result = {}
+
+            if not round2_result:
+                return None
+
+            interview_type_value = str(
+                interview.get(
+                    "interview_type",
+                    "technical",
+                )
+                or "technical"
+            ).strip().lower()
+
+            # Generate feedback from the REAL Round 2 result.
+            llm_feedback = await generate_test_feedback(
+                round2_result=round2_result,
+                interview_type=interview_type_value,
+            )
+
+            if not isinstance(llm_feedback, dict):
+                raise RuntimeError(
+                    "Invalid response returned by Task 16 LLM service."
+                )
+
+            task16_result = dict(llm_feedback)
+
+            # Keep the existing frontend-compatible field names.
+            strengths = task16_result.get(
+                "strengths",
+                [],
+            )
+
+            weaknesses = task16_result.get(
+                "weaknesses",
+                task16_result.get(
+                    "areas_to_improve",
+                    [],
+                ),
+            )
+
+            recommendations = task16_result.get(
+                "recommendations",
+                task16_result.get(
+                    "suggestions",
+                    [],
+                ),
+            )
+
+            summary = task16_result.get(
+                "assessment_summary",
+                "",
+            )
+
+            if not isinstance(strengths, list):
+                strengths = []
+
+            if not isinstance(weaknesses, list):
+                weaknesses = []
+
+            if not isinstance(recommendations, list):
+                recommendations = []
+
+            task16_result["strengths"] = strengths[:5]
+            task16_result["weaknesses"] = weaknesses[:5]
+            task16_result["suggestions"] = recommendations[:5]
+            task16_result["recommendations"] = recommendations[:5]
+            task16_result["assessment_summary"] = (
+                str(summary or "").strip()
+            )
+            task16_result["llm_finished_at"] = time.time()
+
+            # Remove the nested started-at field before replacing
+            # the complete Task 16 object. This avoids MongoDB
+            # parent/child update-path conflicts.
+            task16_result.pop(
+                "llm_started_at",
+                None,
+            )
+
+            status = str(
+                task16_result.get(
+                    "llm_status",
+                    "error",
+                )
+                or "error"
+            ).strip().lower()
+
+            if status not in {
+                "success",
+                "error",
+            }:
+                status = "error"
+
+            task16_result["llm_status"] = status
+
+            # ONE $set only for the complete Task 16 object.
+            await db["interviews"].update_one(
+                {"_id": oid},
+                {
+                    "$set": {
+                        "round2_result.task16_ai_feedback":
+                            task16_result,
+                    }
+                },
+            )
+
+            print(
+                "TASK 16 LLM RESULT SAVED:",
+                {
+                    "interview_id": interview_id,
+                    "status": status,
+                    "strengths": len(strengths),
+                    "weaknesses": len(weaknesses),
+                    "recommendations": len(
+                        recommendations
+                    ),
+                },
+            )
+
+            return task16_result
+
+        except Exception as exc:
+            print(
+                "TASK 16 LLM ERROR:",
+                interview_id,
+                str(exc),
+            )
+
+            # Always move Task 16 out of "processing" on failure.
+            try:
+                oid = InterviewController._parse_object_id(
+                    interview_id
+                )
+
+                error_feedback = {
+                    "strengths": [],
+                    "weaknesses": [],
+                    "suggestions": [],
+                    "recommendations": [],
+                    "assessment_summary": "",
+                    "llm_status": "error",
+                    "llm_error": str(exc),
+                    "llm_finished_at": time.time(),
+                }
+
+                await db["interviews"].update_one(
+                    {"_id": oid},
+                    {
+                        "$set": {
+                            "round2_result.task16_ai_feedback":
+                                error_feedback,
+                        }
+                    },
+                )
+
+                return error_feedback
+
+            except Exception as save_error:
+                print(
+                    "TASK 16 ERROR SAVE FAILED:",
+                    interview_id,
+                    str(save_error),
+                )
+
+                return {
+                    "strengths": [],
+                    "weaknesses": [],
+                    "suggestions": [],
+                    "recommendations": [],
+                    "assessment_summary": "",
+                    "llm_status": "error",
+                    "llm_error": str(exc),
+                }
+
+    # =========================================================
     # FINAL RESULT
     # =========================================================
     #
@@ -728,6 +939,71 @@ class InterviewController:
 
         if not isinstance(round2_result, dict):
             round2_result = {}
+
+        # =========================================================
+        # TASK 16 — START LLM FEEDBACK IF NEEDED
+        # =========================================================
+        # This only starts Task 16. Existing Round 2 scoring and
+        # timing data are read as-is and are never modified here.
+        # =========================================================
+        task16_ai_feedback = round2_result.get(
+            "task16_ai_feedback",
+            {}
+        )
+
+        if not isinstance(task16_ai_feedback, dict):
+            task16_ai_feedback = {}
+
+        task16_status = str(
+            task16_ai_feedback.get(
+                "llm_status",
+                "",
+            )
+            or ""
+        ).strip().lower()
+
+        if (
+            round2_result
+            and task16_status not in {
+                "processing",
+                "success",
+            }
+        ):
+            started_feedback = dict(
+                task16_ai_feedback
+            )
+
+            started_feedback["llm_status"] = (
+                "processing"
+            )
+            started_feedback["llm_error"] = None
+            started_feedback["llm_started_at"] = (
+                time.time()
+            )
+
+            # Replace the complete Task 16 object with one $set.
+            await db["interviews"].update_one(
+                {"_id": oid},
+                {
+                    "$set": {
+                        "round2_result.task16_ai_feedback":
+                            started_feedback,
+                    }
+                },
+            )
+
+            asyncio.create_task(
+                InterviewController._generate_round2_llm_feedback(
+                    interview_id,
+                    db,
+                )
+            )
+
+            # Keep the response's local copy in sync so the
+            # current feedback page immediately sees processing.
+            round2_result[
+                "task16_ai_feedback"
+            ] = started_feedback
 
         category_scores = round2_result.get(
             "category_scores",
