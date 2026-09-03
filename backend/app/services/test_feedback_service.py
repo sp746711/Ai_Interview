@@ -5,41 +5,25 @@ from typing import Any
 
 
 # ============================================================
-# OLLAMA CONFIGURATION
-# ============================================================
-
-OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "qwen3:4b"
-OLLAMA_TIMEOUT = 180.0
-
-
-# ============================================================
-# SAFE JSON EXTRACTION
+# TASK 16 — HELPER FUNCTIONS
 # ============================================================
 
 def _extract_json(raw_output: str) -> dict:
-    if not raw_output:
-        raise RuntimeError("LLM returned an empty response.")
+    """
+    Safely extract a JSON object from Qwen output.
+
+    Handles:
+    1. Normal JSON
+    2. JSON surrounded by extra text
+    3. Markdown ```json code fences
+    """
+
+    if not isinstance(raw_output, str):
+        raise ValueError("Qwen output is not a string.")
 
     text = raw_output.strip()
 
-    # --------------------------------------------------------
-    # Direct JSON
-    # --------------------------------------------------------
-
-    try:
-        data = json.loads(text)
-
-        if isinstance(data, dict):
-            return data
-
-    except json.JSONDecodeError:
-        pass
-
-    # --------------------------------------------------------
-    # Remove markdown code fences
-    # --------------------------------------------------------
-
+    # Remove markdown code fences if Qwen returns them.
     text = re.sub(
         r"^```(?:json)?\s*",
         "",
@@ -53,10 +37,8 @@ def _extract_json(raw_output: str) -> dict:
         text,
     )
 
-    text = text.strip()
-
     # --------------------------------------------------------
-    # JSON after removing code fence
+    # First attempt: direct JSON parsing
     # --------------------------------------------------------
 
     try:
@@ -69,91 +51,98 @@ def _extract_json(raw_output: str) -> dict:
         pass
 
     # --------------------------------------------------------
-    # Find JSON object inside additional text
+    # Second attempt: find JSON object inside extra text
     # --------------------------------------------------------
 
     start = text.find("{")
     end = text.rfind("}")
 
-    if start != -1 and end > start:
+    if start != -1 and end != -1 and end > start:
+        candidate = text[start:end + 1]
 
         try:
-            data = json.loads(
-                text[start:end + 1]
-            )
+            data = json.loads(candidate)
 
             if isinstance(data, dict):
                 return data
 
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Could not parse Qwen JSON response: {exc}"
+            ) from exc
 
-    raise RuntimeError(
-        "LLM did not return valid JSON."
+    raise ValueError(
+        "Qwen did not return a valid JSON object."
     )
 
-
-# ============================================================
-# CLEAN LIST
-# ============================================================
 
 def _clean_list(
     value: Any,
     limit: int = 5,
 ) -> list[str]:
+    """
+    Clean AI-generated list values.
+    """
 
     if not isinstance(value, list):
         return []
 
-    result = []
+    cleaned = []
 
     for item in value:
 
-        if isinstance(item, dict):
+        if isinstance(item, str):
 
-            text = (
-                item.get("text")
-                or item.get("recommendation")
-                or item.get("message")
-                or item.get("reason")
-                or item.get("area")
-                or item.get("strength")
-            )
+            item = item.strip()
 
-        else:
-            text = item
+            if item:
+                cleaned.append(item)
 
-        if text is None:
-            continue
+        elif item is not None:
 
-        text = str(text).strip()
+            item = str(item).strip()
 
-        if not text:
-            continue
+            if item:
+                cleaned.append(item)
 
-        if text not in result:
-            result.append(text)
-
-        if len(result) >= limit:
-            break
-
-    return result
+    return cleaned[:limit]
 
 
 # ============================================================
-# LLM FEEDBACK
+# TASK 16 — OLLAMA CONFIGURATION
+# ============================================================
+
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_MODEL = "qwen3:4b"
+OLLAMA_TIMEOUT = 180.0
+
+
+# ============================================================
+# TASK 16 — GENERATE TEST FEEDBACK
 # ============================================================
 
 async def generate_test_feedback(
     round2_result: dict,
     interview_type: str = "technical",
 ) -> dict:
+    """
+    TASK 16 ONLY.
+
+    Generates personalized Round 2 AI feedback from the ACTUAL
+    Round 2 result saved by TestController.
+
+    No Round 1 / Round 3 / UI / interview-flow changes.
+    """
+
+    # ========================================================
+    # SAFETY CHECK
+    # ========================================================
 
     if not isinstance(round2_result, dict):
         round2_result = {}
 
     # ========================================================
-    # ROUND 2 DATA
+    # REAL ROUND 2 DATA
     # ========================================================
 
     category_scores = round2_result.get(
@@ -161,27 +150,31 @@ async def generate_test_feedback(
         {},
     )
 
+    if not isinstance(category_scores, dict):
+        category_scores = {}
+
     question_results = round2_result.get(
         "question_results",
         [],
     )
+
+    if not isinstance(question_results, list):
+        question_results = []
 
     total_questions = round2_result.get(
         "total_questions",
         50,
     )
 
-    # ========================================================
-    # REAL ROUND 2 PERFORMANCE DATA
-    # TASK 16 ONLY
-    # ========================================================
-    # Current Round 2 records use:
-    #   correct_answers
-    #   incorrect_answers
-    #   skipped_answers
+    # --------------------------------------------------------
+    # Current TestController fields:
     #
-    # Keep fallback support for older records that use:
-    #   correct / incorrect / skipped
+    # correct_answers
+    # incorrect_answers
+    # skipped_answers
+    #
+    # Old field names remain as compatibility fallback.
+    # --------------------------------------------------------
 
     correct = round2_result.get(
         "correct_answers",
@@ -218,19 +211,35 @@ async def generate_test_feedback(
         ),
     )
 
+    # ========================================================
+    # REAL TASK 16 TIME DATA
+    # ========================================================
+
     average_time = round2_result.get(
-        "average_time",
-        0,
+        "average_time_seconds",
+        round2_result.get(
+            "average_time",
+            round2_result.get(
+                "average_time_per_question",
+                0,
+            ),
+        ),
     )
 
     fastest_time = round2_result.get(
         "fastest_time",
-        0,
+        round2_result.get(
+            "fastest_average_time",
+            0,
+        ),
     )
 
     slowest_time = round2_result.get(
         "slowest_time",
-        0,
+        round2_result.get(
+            "slowest_average_time",
+            0,
+        ),
     )
 
     time_efficiency = round2_result.get(
@@ -239,13 +248,86 @@ async def generate_test_feedback(
     )
 
     # ========================================================
-    # LLM PROMPT
+    # SAFE NUMBERS
+    # ========================================================
+
+    try:
+        total_questions = int(total_questions or 0)
+    except (TypeError, ValueError):
+        total_questions = 0
+
+    try:
+        correct = int(correct or 0)
+    except (TypeError, ValueError):
+        correct = 0
+
+    try:
+        incorrect = int(incorrect or 0)
+    except (TypeError, ValueError):
+        incorrect = 0
+
+    try:
+        skipped = int(skipped or 0)
+    except (TypeError, ValueError):
+        skipped = 0
+
+    try:
+        test_score = float(test_score or 0)
+    except (TypeError, ValueError):
+        test_score = 0
+
+    try:
+        average_time = float(average_time or 0)
+    except (TypeError, ValueError):
+        average_time = 0
+
+    try:
+        fastest_time = float(fastest_time or 0)
+    except (TypeError, ValueError):
+        fastest_time = 0
+
+    try:
+        slowest_time = float(slowest_time or 0)
+    except (TypeError, ValueError):
+        slowest_time = 0
+
+    try:
+        time_efficiency = float(time_efficiency or 0)
+    except (TypeError, ValueError):
+        time_efficiency = 0
+
+    # ========================================================
+    # DEBUG
+    # ========================================================
+
+    print(
+        "\n========== TASK 16 REAL ROUND 2 DATA =========="
+    )
+
+    print("Total:", total_questions)
+    print("Correct:", correct)
+    print("Incorrect:", incorrect)
+    print("Skipped:", skipped)
+    print("Score:", test_score)
+    print("Average Time:", average_time)
+    print("Fastest Time:", fastest_time)
+    print("Slowest Time:", slowest_time)
+    print("Time Efficiency:", time_efficiency)
+    print("Categories:", category_scores)
+    print("Question Results:", len(question_results))
+
+    print(
+        "===============================================\n"
+    )
+
+    # ========================================================
+    # QWEN PROMPT
     # ========================================================
 
     prompt = f"""
 You are an AI assessment feedback engine.
 
-Analyze the REAL Round 2 assessment data below.
+Analyze ONLY the candidate's REAL Round 2 assessment data.
 
 Interview type:
 {interview_type}
@@ -253,34 +335,34 @@ Interview type:
 Total questions:
 {total_questions}
 
-Correct:
+Correct answers:
 {correct}
 
-Incorrect:
+Incorrect answers:
 {incorrect}
 
-Skipped:
+Skipped answers:
 {skipped}
 
-Score:
+Overall score:
 {test_score}
 
 Average time per answered question:
-{average_time}
+{average_time} seconds
 
 Fastest answered-question time:
-{fastest_time}
+{fastest_time} seconds
 
 Slowest answered-question time:
-{slowest_time}
+{slowest_time} seconds
 
 Time efficiency:
-{time_efficiency}
+{time_efficiency}%
 
-Category scores:
+Category performance:
 {json.dumps(category_scores, ensure_ascii=False)}
 
-Question results:
+Question-by-question results:
 {json.dumps(question_results, ensure_ascii=False)}
 
 
@@ -288,90 +370,111 @@ Question results:
 YOUR TASK
 ============================================================
 
-Generate detailed, personalized Round 2 feedback based ONLY
-on the supplied assessment data.
+Generate personalized feedback based ONLY on the supplied
+Round 2 performance.
+
+The feedback must reflect this candidate's actual performance.
+
+Use:
+- correct answers
+- incorrect answers
+- skipped answers
+- score
+- category performance
+- question results
+- timing
+- time efficiency
 
 
 ============================================================
-IMPORTANT RULES
+STRICT RULES
 ============================================================
 
-- Analyze ONLY the supplied Round 2 data.
-- Do not invent scores.
-- Do not change any supplied numbers.
-- Do not invent categories.
-- Do not invent question results.
-- Skipped questions must remain skipped.
-- Use the actual category performance.
-- Use the actual correct, incorrect and skipped counts.
-- Use the actual timing information when relevant.
-- Identify strengths from areas where the candidate performed
-  relatively well.
-- Identify weaknesses from areas where the candidate performed
-  relatively poorly.
-- Consider skipped questions when identifying improvement areas.
-- Consider category-level performance.
-- Consider accuracy.
-- Consider timing only when it provides useful insight.
-- Recommendations must directly address the identified
-  weaknesses.
-- Recommendations must be practical and specific.
-- Do not calculate an ATS score.
-- Do not mention ATS.
-- Do not give generic empty feedback.
-- Do not use short generic labels such as:
-  "Technical Concepts"
-  "Aptitude Concepts"
-  "Reasoning Concepts"
-  unless they are expanded into meaningful detailed sentences.
-- Every strength must explain WHY it is a strength.
-- Every improvement point must explain WHAT needs improvement
-  and WHY.
-- Every recommendation must explain WHAT the candidate should
-  do.
-- Avoid repeating the same idea with different wording.
-- Return exactly 5 strengths.
-- Return exactly 5 areas_to_improve.
-- Return exactly 5 recommendations.
-- Each item must be a complete, meaningful sentence.
-- Keep the feedback personalized to the supplied data.
-- Return ONLY valid JSON.
-- Do not use markdown.
-- Do not add explanations outside JSON.
+1. Do not invent scores.
+
+2. Do not change any supplied numbers.
+
+3. Do not invent categories.
+
+4. Do not invent question results.
+
+5. Do not use Round 1 data.
+
+6. Do not use Round 3 data.
+
+7. Do not use resume data.
+
+8. Do not give the same generic feedback for every candidate.
+
+9. Strengths must come from areas where the candidate actually
+   performed relatively well.
+
+10. Improvement areas must come from actual weaknesses.
+
+11. Skipped questions must influence the feedback when relevant.
+
+12. Category feedback must use the supplied category scores.
+
+13. Timing feedback must use the supplied timing values when useful.
+
+14. Recommendations must directly address the candidate's
+    actual weaknesses.
+
+15. Every strength must explain WHY it is a strength.
+
+16. Every improvement area must explain WHAT needs improvement
+    and WHY.
+
+17. Every recommendation must explain WHAT the candidate should do.
+
+18. Return exactly 5 strengths.
+
+19. Return exactly 5 areas_to_improve.
+
+20. Return exactly 5 recommendations.
+
+21. Each item must be a complete meaningful sentence.
+
+22. Do not mention ATS.
+
+23. Do not calculate ATS.
+
+24. Do not return markdown.
+
+25. Return ONLY valid JSON.
 
 
 ============================================================
-REQUIRED OUTPUT
+REQUIRED JSON
 ============================================================
-
-Return exactly this JSON structure:
 
 {{
-  "strengths": [
-    "Detailed strength 1 based on the actual assessment data.",
-    "Detailed strength 2 based on the actual assessment data.",
-    "Detailed strength 3 based on the actual assessment data.",
-    "Detailed strength 4 based on the actual assessment data.",
-    "Detailed strength 5 based on the actual assessment data."
-  ],
+    "strengths": [
+        "Personalized strength based on the actual Round 2 data.",
+        "Personalized strength based on the actual Round 2 data.",
+        "Personalized strength based on the actual Round 2 data.",
+        "Personalized strength based on the actual Round 2 data.",
+        "Personalized strength based on the actual Round 2 data."
+    ],
 
-  "areas_to_improve": [
-    "Detailed improvement area 1 based on the actual assessment data.",
-    "Detailed improvement area 2 based on the actual assessment data.",
-    "Detailed improvement area 3 based on the actual assessment data.",
-    "Detailed improvement area 4 based on the actual assessment data.",
-    "Detailed improvement area 5 based on the actual assessment data."
-  ],
+    "areas_to_improve": [
+        "Personalized improvement area based on actual performance.",
+        "Personalized improvement area based on actual performance.",
+        "Personalized improvement area based on actual performance.",
+        "Personalized improvement area based on actual performance.",
+        "Personalized improvement area based on actual performance."
+    ],
 
-  "recommendations": [
-    "Detailed practical recommendation 1 directly addressing the assessment.",
-    "Detailed practical recommendation 2 directly addressing the assessment.",
-    "Detailed practical recommendation 3 directly addressing the assessment.",
-    "Detailed practical recommendation 4 directly addressing the assessment.",
-    "Detailed practical recommendation 5 directly addressing the assessment."
-  ],
+    "recommendations": [
+        "Specific recommendation based on actual performance.",
+        "Specific recommendation based on actual performance.",
+        "Specific recommendation based on actual performance.",
+        "Specific recommendation based on actual performance.",
+        "Specific recommendation based on actual performance."
+    ],
 
-  "assessment_summary": "A detailed personalized summary of the candidate's Round 2 performance based only on the supplied data."
+    "assessment_summary":
+        "Personalized summary of this candidate's actual Round 2 performance."
 }}
 """.strip()
 
@@ -384,8 +487,12 @@ Return exactly this JSON structure:
         "prompt": prompt,
         "stream": False,
         "format": "json",
+
+        # Qwen3 structured-output configuration
         "think": False,
+
         "keep_alive": "10m",
+
         "options": {
             "temperature": 0.2,
             "num_predict": 1800,
@@ -420,11 +527,14 @@ Return exactly this JSON structure:
             ollama_data = response.json()
 
         # ====================================================
-        # GET NORMAL RESPONSE
+        # NORMAL QWEN RESPONSE
         # ====================================================
 
         raw_output = (
-            ollama_data.get("response")
+            ollama_data.get(
+                "response",
+                "",
+            )
             or ""
         )
 
@@ -455,8 +565,14 @@ Return exactly this JSON structure:
                     thinking_output or ""
                 ).strip()
 
+        if not raw_output:
+
+            raise RuntimeError(
+                "Qwen returned no usable feedback."
+            )
+
         # ====================================================
-        # EXTRACT JSON
+        # PARSE JSON
         # ====================================================
 
         result = _extract_json(
@@ -464,35 +580,38 @@ Return exactly this JSON structure:
         )
 
         # ====================================================
-        # CLEAN STRENGTHS
+        # CLEAN OUTPUT
         # ====================================================
 
         strengths = _clean_list(
-            result.get("strengths"),
+            result.get(
+                "strengths",
+                [],
+            ),
             5,
         )
-
-        # ====================================================
-        # CLEAN AREAS TO IMPROVE
-        # ====================================================
 
         areas_to_improve = _clean_list(
-            result.get("areas_to_improve"),
+            result.get(
+                "areas_to_improve",
+                result.get(
+                    "weaknesses",
+                    [],
+                ),
+            ),
             5,
         )
-
-        # ====================================================
-        # CLEAN RECOMMENDATIONS
-        # ====================================================
 
         recommendations = _clean_list(
-            result.get("recommendations"),
+            result.get(
+                "recommendations",
+                result.get(
+                    "suggestions",
+                    [],
+                ),
+            ),
             5,
         )
-
-        # ====================================================
-        # CLEAN SUMMARY
-        # ====================================================
 
         summary = result.get(
             "assessment_summary",
@@ -509,48 +628,48 @@ Return exactly this JSON structure:
         summary = summary.strip()
 
         # ====================================================
-        # VALIDATE AI OUTPUT
+        # VALIDATE
         # ====================================================
 
         if len(strengths) < 5:
+
             raise RuntimeError(
-                f"Qwen returned only {len(strengths)} strengths. "
-                "Exactly 5 are required."
+                f"Qwen returned only {len(strengths)} strengths."
             )
 
         if len(areas_to_improve) < 5:
+
             raise RuntimeError(
-                f"Qwen returned only "
-                f"{len(areas_to_improve)} areas_to_improve. "
-                "Exactly 5 are required."
+                "Qwen returned fewer than 5 improvement areas."
             )
 
         if len(recommendations) < 5:
+
             raise RuntimeError(
-                f"Qwen returned only "
-                f"{len(recommendations)} recommendations. "
-                "Exactly 5 are required."
+                "Qwen returned fewer than 5 recommendations."
             )
 
         if not summary:
+
             raise RuntimeError(
-                "Qwen returned no assessment_summary."
+                "Qwen returned no assessment summary."
             )
 
         # ====================================================
-        # SUCCESS RESPONSE
+        # SUCCESS
         # ====================================================
+
+        print(
+            "TASK 16 QWEN STATUS: SUCCESS"
+        )
 
         return {
             "strengths": strengths,
 
-            # Existing frontend/backend field
             "weaknesses": areas_to_improve,
 
-            # Existing frontend/backend field
             "suggestions": recommendations,
 
-            # Clear Task 16 recommendation field
             "recommendations": recommendations,
 
             "assessment_summary": summary,
@@ -561,17 +680,15 @@ Return exactly this JSON structure:
         }
 
     # ========================================================
-    # LLM ERROR
+    # ERROR HANDLING
     # ========================================================
 
     except Exception as exc:
 
-        # IMPORTANT:
-        # Do not modify the existing Round 2 scoring,
-        # timing, interview flow, or other Task 16 data.
-        #
-        # If Ollama fails, return the same safe error structure
-        # instead of crashing the existing feedback page.
+        print(
+            "TASK 16 QWEN ERROR:",
+            str(exc),
+        )
 
         return {
             "strengths": [],

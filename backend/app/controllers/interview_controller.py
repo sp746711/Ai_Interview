@@ -1,5 +1,6 @@
 import asyncio
 import time
+import json
 
 from bson import ObjectId
 from fastapi import HTTPException, UploadFile
@@ -926,84 +927,147 @@ class InterviewController:
 
         # =================================================
         # TASK 16 — ROUND 2 FEEDBACK DATA
-        #
-        # No demo/static assessment values are used here.
-        # Everything is derived from the real round2_result
-        # saved by TestController.
+        # =================================================
+        # Task 16 only: use the REAL saved Round 2 result.
+        # Do not change Round 2 scoring, timing or questions.
         # =================================================
 
         round2_result = interview.get(
             "round2_result",
-            {}
+            {},
         )
 
         if not isinstance(round2_result, dict):
             round2_result = {}
 
-        # =========================================================
-        # TASK 16 — START LLM FEEDBACK IF NEEDED
-        # =========================================================
-        # This only starts Task 16. Existing Round 2 scoring and
-        # timing data are read as-is and are never modified here.
-        # =========================================================
         task16_ai_feedback = round2_result.get(
             "task16_ai_feedback",
-            {}
+            {},
         )
 
         if not isinstance(task16_ai_feedback, dict):
             task16_ai_feedback = {}
 
-        task16_status = str(
+        llm_status = str(
             task16_ai_feedback.get(
                 "llm_status",
                 "",
-            )
-            or ""
+            ) or ""
         ).strip().lower()
 
-        if (
+        started_at = task16_ai_feedback.get(
+            "llm_started_at",
+            0,
+        )
+
+        try:
+            started_at = float(started_at or 0)
+        except (TypeError, ValueError):
+            started_at = 0
+
+        # If a background worker died/restarted, allow Task 16 to
+        # recover after 180 seconds. A fresh processing job is never
+        # duplicated by a browser reload.
+        stale_processing = (
+            llm_status == "processing"
+            and started_at > 0
+            and (time.time() - started_at) > 180
+        )
+
+        should_start = (
             round2_result
-            and task16_status not in {
-                "processing",
-                "success",
+            and (
+                llm_status not in {"success", "processing"}
+                or stale_processing
+            )
+        )
+
+        if should_start:
+            now = time.time()
+
+            claim_filter = {
+                "_id": oid,
             }
-        ):
-            started_feedback = dict(
-                task16_ai_feedback
-            )
 
-            started_feedback["llm_status"] = (
-                "processing"
-            )
-            started_feedback["llm_error"] = None
-            started_feedback["llm_started_at"] = (
-                time.time()
-            )
+            if stale_processing:
+                claim_filter[
+                    "round2_result.task16_ai_feedback.llm_status"
+                ] = "processing"
+                claim_filter[
+                    "round2_result.task16_ai_feedback.llm_started_at"
+                ] = started_at
+            else:
+                claim_filter[
+                    "round2_result.task16_ai_feedback.llm_status"
+                ] = {
+                    "$nin": ["success", "processing"]
+                }
 
-            # Replace the complete Task 16 object with one $set.
-            await db["interviews"].update_one(
-                {"_id": oid},
+            claim_result = await db["interviews"].update_one(
+                claim_filter,
                 {
                     "$set": {
-                        "round2_result.task16_ai_feedback":
-                            started_feedback,
+                        "round2_result.task16_ai_feedback.llm_status":
+                            "processing",
+                        "round2_result.task16_ai_feedback.llm_error":
+                            None,
+                        "round2_result.task16_ai_feedback.llm_started_at":
+                            now,
                     }
                 },
             )
 
-            asyncio.create_task(
-                InterviewController._generate_round2_llm_feedback(
-                    interview_id,
-                    db,
+            if claim_result.modified_count == 1:
+                task16_ai_feedback = dict(task16_ai_feedback)
+                task16_ai_feedback["llm_status"] = "processing"
+                task16_ai_feedback["llm_error"] = None
+                task16_ai_feedback["llm_started_at"] = now
+
+                asyncio.create_task(
+                    InterviewController._generate_round2_llm_feedback(
+                        str(interview["_id"]),
+                        db,
+                    )
                 )
+
+        # Task 16 cards come ONLY from the stored LLM result.
+        # While processing, leave them empty rather than showing the
+        # old rule-based/static values.
+        if llm_status == "success":
+            strengths = task16_ai_feedback.get(
+                "strengths",
+                [],
+            )
+            weaknesses = task16_ai_feedback.get(
+                "weaknesses",
+                task16_ai_feedback.get("areas_to_improve", []),
+            )
+            suggestions = task16_ai_feedback.get(
+                "recommendations",
+                task16_ai_feedback.get("suggestions", []),
+            )
+            assessment_summary = task16_ai_feedback.get(
+                "assessment_summary",
+                "",
+            )
+        else:
+            strengths = []
+            weaknesses = []
+            suggestions = []
+            assessment_summary = (
+                "AI feedback is being generated from your actual Round 2 performance."
+                if llm_status == "processing"
+                else ""
             )
 
-            # Keep the response's local copy in sync so the
-            # current feedback page immediately sees processing.
-            round2_result[
-                "task16_ai_feedback"
-            ] = started_feedback
+        if not isinstance(strengths, list):
+            strengths = []
+        if not isinstance(weaknesses, list):
+            weaknesses = []
+        if not isinstance(suggestions, list):
+            suggestions = []
+        if not isinstance(assessment_summary, str):
+            assessment_summary = str(assessment_summary or "")
 
         category_scores = round2_result.get(
             "category_scores",
@@ -1216,7 +1280,7 @@ class InterviewController:
                 test_s,
 
             "round2_result":
-                round2_result,
+                dict(round2_result, task16_ai_feedback=task16_ai_feedback),
 
             "strengths":
                 strengths,
@@ -1226,6 +1290,15 @@ class InterviewController:
 
             "suggestions":
                 suggestions,
+
+            "recommendations":
+                suggestions,
+
+            "assessment_summary":
+                assessment_summary,
+
+            "llm_status":
+                llm_status,
 
             # =================================================
             }
