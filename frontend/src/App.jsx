@@ -15,8 +15,13 @@ import AuthLayout from "./components/dashboard/layout/AuthLayout";
 import DashboardLayout from "./components/dashboard/DashboardLayout";
 import InterviewLayout from "./components/dashboard/layout/InterviewLayout";
 
-// Pages
-import Landing from "./pages/Landing";
+// Pages — Task 17 Landing
+import LandingLayout from "./components/landing/LandingLayout";
+import LandingHome from "./pages/landing/Home";
+import LandingFeatures from "./pages/landing/Features";
+import LandingHowItWorks from "./pages/landing/HowItWorks";
+import LandingWhyMockMind from "./pages/landing/WhyMockMind";
+
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 
@@ -214,14 +219,14 @@ const App = () => {
       <Routes>
 
         {/* ==================================================
-            PUBLIC ROUTES
+            TASK 17 — PUBLIC LANDING ROUTES
         ================================================== */}
 
-        <Route element={<MainLayout />}>
-          <Route
-            path="/"
-            element={<Landing />}
-          />
+        <Route element={<LandingLayout />}>
+          <Route path="/" element={<LandingHome />} />
+          <Route path="/features" element={<LandingFeatures />} />
+          <Route path="/how-it-works" element={<LandingHowItWorks />} />
+          <Route path="/why-mockmind" element={<LandingWhyMockMind />} />
         </Route>
 
         {/* ==================================================

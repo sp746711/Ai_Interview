@@ -19,7 +19,16 @@ export default {
         neon: {
           blue: '#00f3ff',
           purple: '#bc13fe',
-        }
+        },
+        landing: {
+          charcoal: '#0d0d0d',
+          surface: '#161616',
+          card: '#1a1a1a',
+          peach: '#F3A080',
+          'peach-muted': '#C4896E',
+          bronze: '#9A8471',
+          muted: '#8a8a8a',
+        },
       },
 
       // 🔥 Add this for better UI

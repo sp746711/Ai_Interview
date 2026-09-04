@@ -1,0 +1,46 @@
+.landing-page {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: #ffffff;
+}
+
+.landing-page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: #0a0a0a;
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(243, 160, 128, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(154, 132, 113, 0.04) 0%, transparent 50%);
+}
+
+.landing-card {
+  background: rgba(22, 22, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.landing-card:hover {
+  border-color: rgba(243, 160, 128, 0.15);
+}
+
+.landing-nav-link {
+  color: rgba(255, 255, 255, 0.65);
+  transition: color 0.2s ease;
+}
+
+.landing-nav-link:hover,
+.landing-nav-link.active {
+  color: #f3a080;
+}
+
+.landing-accent-text {
+  color: #f3a080;
+}
+
+.landing-journey-arrow {
+  color: rgba(243, 160, 128, 0.5);
+}
