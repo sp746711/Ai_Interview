@@ -135,4 +135,4 @@ const LandingWhyMockMind = () => {
   );
 };
 
-export default LandingWhyMockMind; ;
+export default LandingWhyMockMind;
