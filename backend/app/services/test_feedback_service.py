@@ -1,7 +1,20 @@
 import json
 import re
-import httpx
 from typing import Any
+
+import httpx
+
+
+# ============================================================
+# TASK 16 — OLLAMA CONFIGURATION
+# ============================================================
+
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_MODEL = "qwen3:4b"
+
+# Increased enough for slower local Qwen generation,
+# while keeping the request bounded.
+OLLAMA_TIMEOUT = 240.0
 
 
 # ============================================================
@@ -19,11 +32,18 @@ def _extract_json(raw_output: str) -> dict:
     """
 
     if not isinstance(raw_output, str):
-        raise ValueError("Qwen output is not a string.")
+        raise ValueError(
+            "Qwen output is not a string."
+        )
 
     text = raw_output.strip()
 
-    # Remove markdown code fences if Qwen returns them.
+    if not text:
+        raise ValueError(
+            "Qwen returned an empty response."
+        )
+
+    # Remove opening markdown code fence.
     text = re.sub(
         r"^```(?:json)?\s*",
         "",
@@ -31,6 +51,7 @@ def _extract_json(raw_output: str) -> dict:
         flags=re.IGNORECASE,
     )
 
+    # Remove closing markdown code fence.
     text = re.sub(
         r"\s*```$",
         "",
@@ -38,7 +59,7 @@ def _extract_json(raw_output: str) -> dict:
     )
 
     # --------------------------------------------------------
-    # First attempt: direct JSON parsing
+    # Direct JSON
     # --------------------------------------------------------
 
     try:
@@ -51,14 +72,17 @@ def _extract_json(raw_output: str) -> dict:
         pass
 
     # --------------------------------------------------------
-    # Second attempt: find JSON object inside extra text
+    # JSON embedded inside additional text
     # --------------------------------------------------------
 
     start = text.find("{")
     end = text.rfind("}")
 
     if start != -1 and end != -1 and end > start:
-        candidate = text[start:end + 1]
+
+        candidate = text[
+            start:end + 1
+        ]
 
         try:
             data = json.loads(candidate)
@@ -67,6 +91,7 @@ def _extract_json(raw_output: str) -> dict:
                 return data
 
         except json.JSONDecodeError as exc:
+
             raise ValueError(
                 f"Could not parse Qwen JSON response: {exc}"
             ) from exc
@@ -81,44 +106,631 @@ def _clean_list(
     limit: int = 5,
 ) -> list[str]:
     """
-    Clean AI-generated list values.
+    Normalize an AI-generated list.
+
+    Task 16 requires UP TO 5 items.
+    It does NOT require exactly 5.
     """
+
+    if isinstance(value, str):
+        value = [value]
 
     if not isinstance(value, list):
         return []
 
-    cleaned = []
+    cleaned: list[str] = []
+    seen: set[str] = set()
 
     for item in value:
 
-        if isinstance(item, str):
+        if item is None:
+            continue
 
-            item = item.strip()
+        item = str(item).strip()
 
-            if item:
-                cleaned.append(item)
+        if not item:
+            continue
 
-        elif item is not None:
+        # Remove duplicate items.
+        normalized = re.sub(
+            r"\s+",
+            " ",
+            item,
+        ).casefold()
 
-            item = str(item).strip()
+        if normalized in seen:
+            continue
 
-            if item:
-                cleaned.append(item)
+        seen.add(normalized)
+        cleaned.append(item)
 
-    return cleaned[:limit]
+        if len(cleaned) >= limit:
+            break
+
+    return cleaned
+
+
+def _safe_int(
+    value: Any,
+    default: int = 0,
+) -> int:
+    """
+    Safely convert a value to integer.
+    """
+
+    try:
+        return int(
+            float(value)
+        )
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return default
+
+
+def _safe_float(
+    value: Any,
+    default: float = 0.0,
+) -> float:
+    """
+    Safely convert a value to float.
+    """
+
+    try:
+        return float(value)
+
+    except (
+        TypeError,
+        ValueError,
+    ):
+        return default
+
+
+def _normalize_category_scores(
+    category_scores: Any,
+) -> dict:
+    """
+    Keep only useful category performance information.
+
+    This reduces the amount of data sent to Qwen while
+    preserving the candidate's real Round 2 performance.
+    """
+
+    if not isinstance(
+        category_scores,
+        dict,
+    ):
+        return {}
+
+    normalized: dict = {}
+
+    for raw_name, raw_data in category_scores.items():
+
+        if not isinstance(
+            raw_data,
+            dict,
+        ):
+            continue
+
+        name = str(
+            raw_name
+        ).strip()
+
+        if not name:
+            continue
+
+        total = _safe_int(
+            raw_data.get(
+                "total",
+                0,
+            )
+        )
+
+        correct = _safe_int(
+            raw_data.get(
+                "correct",
+                0,
+            )
+        )
+
+        incorrect = _safe_int(
+            raw_data.get(
+                "incorrect",
+                0,
+            )
+        )
+
+        skipped = _safe_int(
+            raw_data.get(
+                "skipped",
+                0,
+            )
+        )
+
+        percentage_value = raw_data.get(
+            "percentage",
+            None,
+        )
+
+        if percentage_value is None:
+
+            if total > 0:
+
+                percentage = round(
+                    (
+                        correct
+                        / total
+                    ) * 100,
+                    1,
+                )
+
+            else:
+
+                percentage = 0.0
+
+        else:
+
+            percentage = _safe_float(
+                percentage_value,
+                0.0,
+            )
+
+        normalized[name] = {
+            "total": total,
+            "correct": correct,
+            "incorrect": incorrect,
+            "skipped": skipped,
+            "percentage": percentage,
+        }
+
+    return normalized
+
+
+def _category_rankings(
+    category_scores: dict,
+) -> tuple[list[dict], list[dict]]:
+    """
+    Return categories ranked strongest-to-weakest
+    and weakest-to-strongest.
+    """
+
+    rows: list[dict] = []
+
+    for name, data in category_scores.items():
+
+        if not isinstance(
+            data,
+            dict,
+        ):
+            continue
+
+        total = _safe_int(
+            data.get(
+                "total",
+                0,
+            )
+        )
+
+        if total <= 0:
+            continue
+
+        percentage = _safe_float(
+            data.get(
+                "percentage",
+                0,
+            )
+        )
+
+        rows.append(
+            {
+                "name": name,
+                "total": total,
+                "correct": _safe_int(
+                    data.get(
+                        "correct",
+                        0,
+                    )
+                ),
+                "incorrect": _safe_int(
+                    data.get(
+                        "incorrect",
+                        0,
+                    )
+                ),
+                "skipped": _safe_int(
+                    data.get(
+                        "skipped",
+                        0,
+                    )
+                ),
+                "percentage": percentage,
+            }
+        )
+
+    strongest = sorted(
+        rows,
+        key=lambda row: row[
+            "percentage"
+        ],
+        reverse=True,
+    )
+
+    weakest = sorted(
+        rows,
+        key=lambda row: row[
+            "percentage"
+        ],
+    )
+
+    return (
+        strongest,
+        weakest,
+    )
 
 
 # ============================================================
-# TASK 16 — OLLAMA CONFIGURATION
+# TASK 16 — REAL ROUND 2 FALLBACK
 # ============================================================
 
-OLLAMA_URL = "http://localhost:11434"
-OLLAMA_MODEL = "qwen3:4b"
-OLLAMA_TIMEOUT = 180.0
+def _fallback_feedback(
+    *,
+    total_questions: int,
+    correct: int,
+    incorrect: int,
+    skipped: int,
+    test_score: float,
+    average_time: float,
+    fastest_time: float,
+    slowest_time: float,
+    time_efficiency: float,
+    category_scores: dict,
+) -> dict:
+    """
+    Generate personalized Task 16 feedback using ONLY
+    the candidate's actual Round 2 performance.
+
+    This is used when Qwen:
+    - times out
+    - is unavailable
+    - returns invalid JSON
+    - returns unusable data
+    """
+
+    strengths: list[str] = []
+    weaknesses: list[str] = []
+    recommendations: list[str] = []
+
+    strongest, weakest = _category_rankings(
+        category_scores
+    )
+
+    # ========================================================
+    # STRENGTHS
+    # ========================================================
+
+    # Strong category performance.
+    for row in strongest:
+
+        if len(strengths) >= 3:
+            break
+
+        if row["percentage"] >= 60:
+
+            strengths.append(
+                f"Your {row['name']} performance was "
+                f"a relative strength, with "
+                f"{row['correct']} correct out of "
+                f"{row['total']} questions "
+                f"({row['percentage']:.1f}% accuracy)."
+            )
+
+    # If no category reaches 60%, identify the relative
+    # strongest category from the actual result.
+    if not strengths and strongest:
+
+        best = strongest[0]
+
+        strengths.append(
+            f"Among the assessed categories, "
+            f"{best['name']} was your strongest area "
+            f"at {best['percentage']:.1f}% accuracy, "
+            f"with {best['correct']} correct out of "
+            f"{best['total']} questions."
+        )
+
+    # Overall accuracy strength.
+    if (
+        total_questions > 0
+        and len(strengths) < 5
+    ):
+
+        accuracy = (
+            correct
+            / total_questions
+        ) * 100
+
+        if accuracy >= 70:
+
+            strengths.append(
+                f"You answered {correct} of "
+                f"{total_questions} questions correctly, "
+                f"giving an overall accuracy of "
+                f"{accuracy:.1f}%."
+            )
+
+    # No skipped questions.
+    if (
+        total_questions > 0
+        and skipped == 0
+        and len(strengths) < 5
+    ):
+
+        strengths.append(
+            f"You attempted all {total_questions} "
+            f"Round 2 questions without skipping any."
+        )
+
+    # Time efficiency.
+    if (
+        average_time > 0
+        and time_efficiency >= 70
+        and len(strengths) < 5
+    ):
+
+        strengths.append(
+            f"Your recorded time efficiency was "
+            f"{time_efficiency:.1f}%, indicating "
+            f"relatively effective response pacing."
+        )
+
+    # ========================================================
+    # AREAS TO IMPROVE
+    # ========================================================
+
+    for row in weakest:
+
+        if len(weaknesses) >= 3:
+            break
+
+        if row["percentage"] < 60:
+
+            weaknesses.append(
+                f"{row['name']} needs improvement because "
+                f"you answered {row['correct']} of "
+                f"{row['total']} correctly "
+                f"({row['percentage']:.1f}% accuracy)."
+            )
+
+    # Skipped questions.
+    if skipped > 0:
+
+        weaknesses.append(
+            f"You skipped {skipped} of "
+            f"{total_questions} questions, reducing "
+            f"the number of questions completed in "
+            f"the assessment."
+        )
+
+    # Incorrect answers.
+    if (
+        incorrect > 0
+        and len(weaknesses) < 5
+    ):
+
+        weaknesses.append(
+            f"You had {incorrect} incorrect answers, "
+            f"showing that some assessed concepts "
+            f"need stronger accuracy."
+        )
+
+    # Slow responses.
+    if (
+        average_time > 0
+        and slowest_time > 0
+        and slowest_time > (
+            average_time * 2
+        )
+        and len(weaknesses) < 5
+    ):
+
+        weaknesses.append(
+            f"Your slowest recorded response was "
+            f"{slowest_time:.1f} seconds compared "
+            f"with an average of "
+            f"{average_time:.1f} seconds, so some "
+            f"questions required substantially more "
+            f"time than your typical response."
+        )
+
+    # ========================================================
+    # RECOMMENDATIONS
+    # ========================================================
+
+    # Weakest categories.
+    for row in weakest:
+
+        if len(recommendations) >= 3:
+            break
+
+        if row["percentage"] < 60:
+
+            recommendations.append(
+                f"Prioritize {row['name']} practice and "
+                f"review the concepts behind your "
+                f"incorrect answers in that category."
+            )
+
+    # Skipped questions.
+    if (
+        skipped > 0
+        and len(recommendations) < 5
+    ):
+
+        recommendations.append(
+            f"Practice timed assessment sets to reduce "
+            f"the {skipped} skipped questions while "
+            f"maintaining answer accuracy."
+        )
+
+    # Incorrect answers.
+    if (
+        incorrect > 0
+        and len(recommendations) < 5
+    ):
+
+        recommendations.append(
+            f"Review the {incorrect} incorrect responses "
+            f"and identify the concepts or question "
+            f"patterns that caused those mistakes."
+        )
+
+    # Time.
+    if (
+        average_time > 0
+        and slowest_time > 0
+        and slowest_time > (
+            average_time * 2
+        )
+        and len(recommendations) < 5
+    ):
+
+        recommendations.append(
+            "Use timed practice to improve decision "
+            "speed on questions that currently take "
+            "substantially longer than your average."
+        )
+
+    # Generic-but-still-performance-based fallback
+    # only if there is no other recommendation.
+    if (
+        not recommendations
+        and total_questions > 0
+    ):
+
+        recommendations.append(
+            f"Continue practicing Round 2-style "
+            f"questions while tracking your "
+            f"{correct} correct responses and "
+            f"overall score of {test_score:.1f}."
+        )
+
+    # ========================================================
+    # GUARANTEE USEFUL DATA
+    # ========================================================
+
+    if (
+        not strengths
+        and total_questions > 0
+    ):
+
+        strengths.append(
+            f"You completed a Round 2 assessment "
+            f"containing {total_questions} questions "
+            f"with a recorded score of "
+            f"{test_score:.1f}."
+        )
+
+    if (
+        not weaknesses
+        and total_questions > 0
+    ):
+
+        weaknesses.append(
+            f"Your Round 2 result contained "
+            f"{correct} correct, "
+            f"{incorrect} incorrect, and "
+            f"{skipped} skipped answers out of "
+            f"{total_questions} questions."
+        )
+
+    # ========================================================
+    # LIMIT TO FIVE
+    # ========================================================
+
+    strengths = _clean_list(
+        strengths,
+        5,
+    )
+
+    weaknesses = _clean_list(
+        weaknesses,
+        5,
+    )
+
+    recommendations = _clean_list(
+        recommendations,
+        5,
+    )
+
+    # ========================================================
+    # SUMMARY
+    # ========================================================
+
+    if total_questions > 0:
+
+        accuracy = (
+            correct
+            / total_questions
+        ) * 100
+
+        summary = (
+            f"Your Round 2 performance was based on "
+            f"{total_questions} questions: "
+            f"{correct} correct, "
+            f"{incorrect} incorrect, and "
+            f"{skipped} skipped. Your recorded "
+            f"score was {test_score:.1f}, with "
+            f"overall answer accuracy of "
+            f"{accuracy:.1f}%."
+        )
+
+        if strongest:
+
+            best = strongest[0]
+
+            summary += (
+                f" Your strongest assessed category "
+                f"was {best['name']} at "
+                f"{best['percentage']:.1f}% accuracy."
+            )
+
+        if weakest:
+
+            worst = weakest[0]
+
+            if (
+                not strongest
+                or worst["name"]
+                != strongest[0]["name"]
+            ):
+
+                summary += (
+                    f" Your weakest assessed category "
+                    f"was {worst['name']} at "
+                    f"{worst['percentage']:.1f}% accuracy."
+                )
+
+    else:
+
+        summary = (
+            "There was insufficient Round 2 performance "
+            "data to generate a detailed personalized "
+            "assessment summary."
+        )
+
+    return {
+        "strengths": strengths,
+        "weaknesses": weaknesses,
+        "suggestions": recommendations,
+        "recommendations": recommendations,
+        "assessment_summary": summary,
+    }
 
 
 # ============================================================
-# TASK 16 — GENERATE TEST FEEDBACK
+# TASK 16 — MAIN FUNCTION
 # ============================================================
 
 async def generate_test_feedback(
@@ -128,380 +740,420 @@ async def generate_test_feedback(
     """
     TASK 16 ONLY.
 
-    Generates personalized Round 2 AI feedback from the ACTUAL
-    Round 2 result saved by TestController.
+    Generate personalized feedback from the candidate's
+    actual saved Round 2 performance.
 
-    No Round 1 / Round 3 / UI / interview-flow changes.
+    IMPORTANT:
+    - Does not modify Round 2 scoring.
+    - Does not use Round 1.
+    - Does not use Round 3.
+    - Does not use resume information.
+    - Does not use ATS information.
+    - Uses Qwen3:4b when available.
+    - Uses real Round 2 fallback when Qwen fails.
     """
 
     # ========================================================
     # SAFETY CHECK
     # ========================================================
 
-    if not isinstance(round2_result, dict):
+    if not isinstance(
+        round2_result,
+        dict,
+    ):
+
         round2_result = {}
 
     # ========================================================
-    # REAL ROUND 2 DATA
+    # ROUND 2 PERFORMANCE
     # ========================================================
 
-    category_scores = round2_result.get(
-        "category_scores",
-        {},
+    category_scores = _normalize_category_scores(
+        round2_result.get(
+            "category_scores",
+            {},
+        )
     )
 
-    if not isinstance(category_scores, dict):
-        category_scores = {}
-
+    # We intentionally DO NOT send all question_results
+    # to Qwen. The aggregate performance data is enough
+    # for Task 16 and keeps the local model request small.
     question_results = round2_result.get(
         "question_results",
         [],
     )
 
-    if not isinstance(question_results, list):
+    if not isinstance(
+        question_results,
+        list,
+    ):
+
         question_results = []
 
-    total_questions = round2_result.get(
-        "total_questions",
-        50,
-    )
-
-    # --------------------------------------------------------
-    # Current TestController fields:
-    #
-    # correct_answers
-    # incorrect_answers
-    # skipped_answers
-    #
-    # Old field names remain as compatibility fallback.
-    # --------------------------------------------------------
-
-    correct = round2_result.get(
-        "correct_answers",
+    total_questions = _safe_int(
         round2_result.get(
-            "correct",
+            "total_questions",
             0,
-        ),
+        )
     )
 
-    incorrect = round2_result.get(
-        "incorrect_answers",
+    correct = _safe_int(
         round2_result.get(
-            "incorrect",
-            0,
-        ),
-    )
-
-    skipped = round2_result.get(
-        "skipped_answers",
-        round2_result.get(
-            "skipped",
-            0,
-        ),
-    )
-
-    test_score = round2_result.get(
-        "score",
-        round2_result.get(
-            "test_score",
+            "correct_answers",
             round2_result.get(
-                "percentage",
+                "correct",
                 0,
             ),
-        ),
+        )
     )
 
-    # ========================================================
-    # REAL TASK 16 TIME DATA
-    # ========================================================
-
-    average_time = round2_result.get(
-        "average_time_seconds",
+    incorrect = _safe_int(
         round2_result.get(
-            "average_time",
+            "incorrect_answers",
             round2_result.get(
-                "average_time_per_question",
+                "incorrect",
                 0,
             ),
-        ),
+        )
     )
 
-    fastest_time = round2_result.get(
-        "fastest_time",
+    skipped = _safe_int(
         round2_result.get(
-            "fastest_average_time",
-            0,
-        ),
+            "skipped_answers",
+            round2_result.get(
+                "skipped",
+                0,
+            ),
+        )
     )
 
-    slowest_time = round2_result.get(
-        "slowest_time",
+    test_score = _safe_float(
         round2_result.get(
-            "slowest_average_time",
+            "score",
+            round2_result.get(
+                "test_score",
+                round2_result.get(
+                    "percentage",
+                    0,
+                ),
+            ),
+        )
+    )
+
+    # ========================================================
+    # TIME DATA
+    # ========================================================
+
+    average_time = _safe_float(
+        round2_result.get(
+            "average_time_seconds",
+            round2_result.get(
+                "average_time",
+                round2_result.get(
+                    "average_time_per_question",
+                    0,
+                ),
+            ),
+        )
+    )
+
+    fastest_time = _safe_float(
+        round2_result.get(
+            "fastest_time",
+            round2_result.get(
+                "fastest_average_time",
+                0,
+            ),
+        )
+    )
+
+    slowest_time = _safe_float(
+        round2_result.get(
+            "slowest_time",
+            round2_result.get(
+                "slowest_average_time",
+                0,
+            ),
+        )
+    )
+
+    time_efficiency = _safe_float(
+        round2_result.get(
+            "time_efficiency",
             0,
-        ),
-    )
-
-    time_efficiency = round2_result.get(
-        "time_efficiency",
-        0,
+        )
     )
 
     # ========================================================
-    # SAFE NUMBERS
-    # ========================================================
-
-    try:
-        total_questions = int(total_questions or 0)
-    except (TypeError, ValueError):
-        total_questions = 0
-
-    try:
-        correct = int(correct or 0)
-    except (TypeError, ValueError):
-        correct = 0
-
-    try:
-        incorrect = int(incorrect or 0)
-    except (TypeError, ValueError):
-        incorrect = 0
-
-    try:
-        skipped = int(skipped or 0)
-    except (TypeError, ValueError):
-        skipped = 0
-
-    try:
-        test_score = float(test_score or 0)
-    except (TypeError, ValueError):
-        test_score = 0
-
-    try:
-        average_time = float(average_time or 0)
-    except (TypeError, ValueError):
-        average_time = 0
-
-    try:
-        fastest_time = float(fastest_time or 0)
-    except (TypeError, ValueError):
-        fastest_time = 0
-
-    try:
-        slowest_time = float(slowest_time or 0)
-    except (TypeError, ValueError):
-        slowest_time = 0
-
-    try:
-        time_efficiency = float(time_efficiency or 0)
-    except (TypeError, ValueError):
-        time_efficiency = 0
-
-    # ========================================================
-    # DEBUG
+    # DEBUG LOG
     # ========================================================
 
     print(
         "\n========== TASK 16 REAL ROUND 2 DATA =========="
     )
 
-    print("Total:", total_questions)
-    print("Correct:", correct)
-    print("Incorrect:", incorrect)
-    print("Skipped:", skipped)
-    print("Score:", test_score)
-    print("Average Time:", average_time)
-    print("Fastest Time:", fastest_time)
-    print("Slowest Time:", slowest_time)
-    print("Time Efficiency:", time_efficiency)
-    print("Categories:", category_scores)
-    print("Question Results:", len(question_results))
+    print(
+        "Total:",
+        total_questions,
+    )
+
+    print(
+        "Correct:",
+        correct,
+    )
+
+    print(
+        "Incorrect:",
+        incorrect,
+    )
+
+    print(
+        "Skipped:",
+        skipped,
+    )
+
+    print(
+        "Score:",
+        test_score,
+    )
+
+    print(
+        "Average Time:",
+        average_time,
+    )
+
+    print(
+        "Fastest Time:",
+        fastest_time,
+    )
+
+    print(
+        "Slowest Time:",
+        slowest_time,
+    )
+
+    print(
+        "Time Efficiency:",
+        time_efficiency,
+    )
+
+    print(
+        "Categories:",
+        category_scores,
+    )
+
+    print(
+        "Question Results Available:",
+        len(question_results),
+    )
 
     print(
         "===============================================\n"
     )
 
     # ========================================================
+    # CREATE FALLBACK BEFORE CALLING QWEN
+    # ========================================================
+
+    fallback = _fallback_feedback(
+        total_questions=total_questions,
+        correct=correct,
+        incorrect=incorrect,
+        skipped=skipped,
+        test_score=test_score,
+        average_time=average_time,
+        fastest_time=fastest_time,
+        slowest_time=slowest_time,
+        time_efficiency=time_efficiency,
+        category_scores=category_scores,
+    )
+
+    # ========================================================
+    # VERIFY THAT WE HAVE ROUND 2 DATA
+    # ========================================================
+
+    if (
+        total_questions <= 0
+        and not category_scores
+        and not question_results
+    ):
+
+        print(
+            "TASK 16: NO USABLE ROUND 2 DATA"
+        )
+
+        return {
+            **fallback,
+            "llm_status": "error",
+            "llm_error": (
+                "No usable Round 2 performance data "
+                "was available."
+            ),
+        }
+
+    # ========================================================
+    # SMALL QWEN INPUT
+    # ========================================================
+    #
+    # IMPORTANT:
+    #
+    # Previous version sent all 50 question results.
+    # That made the local Qwen request unnecessarily large.
+    #
+    # Now Qwen receives the actual aggregate performance:
+    #
+    # score
+    # correct
+    # incorrect
+    # skipped
+    # category scores
+    # timing
+    #
+    # This still gives Qwen the candidate's real performance
+    # while significantly reducing processing time.
+    # ========================================================
+
+    qwen_performance = {
+        "total_questions": total_questions,
+        "correct_answers": correct,
+        "incorrect_answers": incorrect,
+        "skipped_answers": skipped,
+        "score": test_score,
+        "average_time_seconds": average_time,
+        "fastest_time_seconds": fastest_time,
+        "slowest_time_seconds": slowest_time,
+        "time_efficiency_percent": time_efficiency,
+        "category_scores": category_scores,
+    }
+
+    # ========================================================
     # QWEN PROMPT
     # ========================================================
 
     prompt = f"""
-You are an AI assessment feedback engine.
+You are the Task 16 AI feedback engine for a mock interview platform.
 
-Analyze ONLY the candidate's REAL Round 2 assessment data.
+Analyze ONLY this candidate's REAL Round 2 performance.
 
 Interview type:
-{interview_type}
+{str(interview_type).strip() or "technical"}
 
-Total questions:
-{total_questions}
+Round 2 performance:
+{json.dumps(
+    qwen_performance,
+    ensure_ascii=False,
+)}
 
-Correct answers:
-{correct}
+IMPORTANT:
+The numbers above are the source of truth.
 
-Incorrect answers:
-{incorrect}
+Generate personalized feedback for THIS candidate.
 
-Skipped answers:
-{skipped}
+Do not give generic feedback.
+Every statement must be supported by the supplied Round 2 data.
 
-Overall score:
-{test_score}
+Rules:
 
-Average time per answered question:
-{average_time} seconds
+1. Use only Round 2 performance data.
 
-Fastest answered-question time:
-{fastest_time} seconds
+2. Do not invent scores, percentages, categories, timing,
+   question results, skills, abilities, emotions, confidence,
+   personality traits, or other measurements.
 
-Slowest answered-question time:
-{slowest_time} seconds
+3. Do not use Round 1.
 
-Time efficiency:
-{time_efficiency}%
+4. Do not use Round 3.
 
-Category performance:
-{json.dumps(category_scores, ensure_ascii=False)}
+5. Do not use resume information.
 
-Question-by-question results:
-{json.dumps(question_results, ensure_ascii=False)}
+6. Do not use ATS information.
 
+7. Do not calculate ATS.
 
-============================================================
-YOUR TASK
-============================================================
-
-Generate personalized feedback based ONLY on the supplied
-Round 2 performance.
-
-The feedback must reflect this candidate's actual performance.
-
-Use:
-- correct answers
-- incorrect answers
-- skipped answers
-- score
-- category performance
-- question results
-- timing
-- time efficiency
-
-
-============================================================
-STRICT RULES
-============================================================
-
-1. Do not invent scores.
-
-2. Do not change any supplied numbers.
-
-3. Do not invent categories.
-
-4. Do not invent question results.
-
-5. Do not use Round 1 data.
-
-6. Do not use Round 3 data.
-
-7. Do not use resume data.
-
-8. Do not give the same generic feedback for every candidate.
-
-9. Strengths must come from areas where the candidate actually
+8. Strengths must describe areas where this candidate
    performed relatively well.
 
-10. Improvement areas must come from actual weaknesses.
+9. Areas to improve must come from actual weaknesses
+   visible in the supplied performance.
 
-11. Skipped questions must influence the feedback when relevant.
+10. Skipped questions should be mentioned when they
+    materially affect the result.
 
-12. Category feedback must use the supplied category scores.
+11. Category feedback must use the supplied category scores.
 
-13. Timing feedback must use the supplied timing values when useful.
+12. Timing feedback must use only supplied timing values.
 
-14. Recommendations must directly address the candidate's
+13. Recommendations must directly address the candidate's
     actual weaknesses.
 
-15. Every strength must explain WHY it is a strength.
+14. Do not invent extra weaknesses or strengths just to
+    make the response longer.
 
-16. Every improvement area must explain WHAT needs improvement
-    and WHY.
+15. Return UP TO 5 strengths.
 
-17. Every recommendation must explain WHAT the candidate should do.
+16. Return UP TO 5 areas_to_improve.
 
-18. Return exactly 5 strengths.
+17. Return UP TO 5 recommendations.
 
-19. Return exactly 5 areas_to_improve.
+18. Five is the maximum, NOT a requirement.
 
-20. Return exactly 5 recommendations.
+19. Every item must be a complete meaningful sentence.
 
-21. Each item must be a complete meaningful sentence.
+20. assessment_summary must summarize this candidate's
+    actual Round 2 performance.
 
-22. Do not mention ATS.
+Return ONLY valid JSON.
 
-23. Do not calculate ATS.
-
-24. Do not return markdown.
-
-25. Return ONLY valid JSON.
-
-
-============================================================
-REQUIRED JSON
-============================================================
+Required structure:
 
 {{
-    "strengths": [
-        "Personalized strength based on the actual Round 2 data.",
-        "Personalized strength based on the actual Round 2 data.",
-        "Personalized strength based on the actual Round 2 data.",
-        "Personalized strength based on the actual Round 2 data.",
-        "Personalized strength based on the actual Round 2 data."
-    ],
-
-    "areas_to_improve": [
-        "Personalized improvement area based on actual performance.",
-        "Personalized improvement area based on actual performance.",
-        "Personalized improvement area based on actual performance.",
-        "Personalized improvement area based on actual performance.",
-        "Personalized improvement area based on actual performance."
-    ],
-
-    "recommendations": [
-        "Specific recommendation based on actual performance.",
-        "Specific recommendation based on actual performance.",
-        "Specific recommendation based on actual performance.",
-        "Specific recommendation based on actual performance.",
-        "Specific recommendation based on actual performance."
-    ],
-
-    "assessment_summary":
-        "Personalized summary of this candidate's actual Round 2 performance."
+  "strengths": [
+    "Personalized strength based on the supplied performance."
+  ],
+  "areas_to_improve": [
+    "Personalized improvement area based on the supplied performance."
+  ],
+  "recommendations": [
+    "Specific recommendation based on the supplied performance."
+  ],
+  "assessment_summary": "Personalized summary based only on Round 2 performance."
 }}
 """.strip()
 
     # ========================================================
-    # OLLAMA PAYLOAD
+    # OLLAMA REQUEST
     # ========================================================
 
     payload = {
         "model": OLLAMA_MODEL,
+
         "prompt": prompt,
+
         "stream": False,
+
+        # Ask Ollama for JSON.
         "format": "json",
 
-        # Qwen3 structured-output configuration
+        # Qwen3 does not need visible reasoning for this task.
         "think": False,
 
+        # Keep the model loaded for later Task 16 requests.
         "keep_alive": "10m",
 
         "options": {
+            # Low temperature keeps feedback factual.
             "temperature": 0.2,
-            "num_predict": 1800,
-            "num_ctx": 8192,
+
+            # Task 16 does not need a huge response.
+            "num_predict": 1000,
+
+            # Prompt is now much smaller.
+            "num_ctx": 4096,
         },
     }
 
     # ========================================================
-    # CALL OLLAMA
+    # CALL QWEN
     # ========================================================
 
     try:
@@ -513,8 +1165,24 @@ REQUIRED JSON
             pool=10.0,
         )
 
+        print(
+            "TASK 16: calling Ollama "
+            f"{OLLAMA_URL}/api/generate"
+        )
+
+        print(
+            "TASK 16: model:",
+            OLLAMA_MODEL,
+        )
+
+        print(
+            "TASK 16: compact prompt size:",
+            len(prompt),
+            "characters",
+        )
+
         async with httpx.AsyncClient(
-            timeout=timeout
+            timeout=timeout,
         ) as client:
 
             response = await client.post(
@@ -522,24 +1190,50 @@ REQUIRED JSON
                 json=payload,
             )
 
-            response.raise_for_status()
+        print(
+            "TASK 16: Ollama HTTP status:",
+            response.status_code,
+        )
+
+        response.raise_for_status()
+
+        # ====================================================
+        # PARSE OLLAMA RESPONSE
+        # ====================================================
+
+        try:
 
             ollama_data = response.json()
 
+        except ValueError as exc:
+
+            raise RuntimeError(
+                "Ollama returned a non-JSON HTTP response."
+            ) from exc
+
+        if not isinstance(
+            ollama_data,
+            dict,
+        ):
+
+            raise RuntimeError(
+                "Ollama response was not a JSON object."
+            )
+
         # ====================================================
-        # NORMAL QWEN RESPONSE
+        # GET NORMAL RESPONSE
         # ====================================================
 
-        raw_output = (
+        raw_output = str(
             ollama_data.get(
                 "response",
                 "",
             )
             or ""
-        )
+        ).strip()
 
         # ====================================================
-        # QWEN3 THINKING FALLBACK
+        # THINKING FALLBACK
         # ====================================================
 
         if not raw_output:
@@ -557,6 +1251,7 @@ REQUIRED JSON
                 raw_output = json.dumps(
                     thinking_output,
                     ensure_ascii=False,
+                    default=str,
                 )
 
             else:
@@ -571,8 +1266,14 @@ REQUIRED JSON
                 "Qwen returned no usable feedback."
             )
 
+        print(
+            "TASK 16: Qwen response received:",
+            len(raw_output),
+            "characters",
+        )
+
         # ====================================================
-        # PARSE JSON
+        # EXTRACT JSON
         # ====================================================
 
         result = _extract_json(
@@ -580,8 +1281,8 @@ REQUIRED JSON
         )
 
         # ====================================================
-        # CLEAN OUTPUT
-        # ====================================================
+        # NORMALIZE QWEN OUTPUT
+        # ========================================================
 
         strengths = _clean_list(
             result.get(
@@ -623,36 +1324,85 @@ REQUIRED JSON
             str,
         ):
 
-            summary = str(summary)
+            summary = str(
+                summary
+            )
 
         summary = summary.strip()
 
         # ====================================================
-        # VALIDATE
+        # PARTIAL RESPONSE HANDLING
         # ====================================================
+        #
+        # IMPORTANT:
+        #
+        # We do NOT reject Qwen just because it returned
+        # fewer than five items.
+        #
+        # Empty individual sections use the deterministic
+        # fallback based on the same Round 2 data.
+        # ========================================================
 
-        if len(strengths) < 5:
+        if not strengths:
 
-            raise RuntimeError(
-                f"Qwen returned only {len(strengths)} strengths."
-            )
+            strengths = fallback[
+                "strengths"
+            ]
 
-        if len(areas_to_improve) < 5:
+        if not areas_to_improve:
 
-            raise RuntimeError(
-                "Qwen returned fewer than 5 improvement areas."
-            )
+            areas_to_improve = fallback[
+                "weaknesses"
+            ]
 
-        if len(recommendations) < 5:
+        if not recommendations:
 
-            raise RuntimeError(
-                "Qwen returned fewer than 5 recommendations."
-            )
+            recommendations = fallback[
+                "recommendations"
+            ]
+
+        if not summary:
+
+            summary = fallback[
+                "assessment_summary"
+            ]
+
+        # Final safety limit.
+        strengths = _clean_list(
+            strengths,
+            5,
+        )
+
+        areas_to_improve = _clean_list(
+            areas_to_improve,
+            5,
+        )
+
+        recommendations = _clean_list(
+            recommendations,
+            5,
+        )
+
+        # ====================================================
+        # FINAL VALIDATION
+        # ====================================================
 
         if not summary:
 
             raise RuntimeError(
-                "Qwen returned no assessment summary."
+                "No usable Task 16 assessment summary "
+                "was available."
+            )
+
+        # At least one useful section should exist.
+        if (
+            not strengths
+            and not areas_to_improve
+            and not recommendations
+        ):
+
+            raise RuntimeError(
+                "Qwen returned no usable Task 16 feedback."
             )
 
         # ====================================================
@@ -661,6 +1411,13 @@ REQUIRED JSON
 
         print(
             "TASK 16 QWEN STATUS: SUCCESS"
+        )
+
+        print(
+            "TASK 16 QWEN ITEMS:",
+            f"strengths={len(strengths)},",
+            f"weaknesses={len(areas_to_improve)},",
+            f"recommendations={len(recommendations)}",
         )
 
         return {
@@ -680,28 +1437,47 @@ REQUIRED JSON
         }
 
     # ========================================================
-    # ERROR HANDLING
+    # QWEN ERROR → REAL ROUND 2 FALLBACK
     # ========================================================
 
     except Exception as exc:
 
+        error_message = (
+            f"{type(exc).__name__}: {exc}"
+        )
+
         print(
             "TASK 16 QWEN ERROR:",
-            str(exc),
+            error_message,
+        )
+
+        print(
+            "TASK 16: USING REAL ROUND 2 "
+            "FALLBACK FEEDBACK"
         )
 
         return {
-            "strengths": [],
+            "strengths": fallback[
+                "strengths"
+            ],
 
-            "weaknesses": [],
+            "weaknesses": fallback[
+                "weaknesses"
+            ],
 
-            "suggestions": [],
+            "suggestions": fallback[
+                "suggestions"
+            ],
 
-            "recommendations": [],
+            "recommendations": fallback[
+                "recommendations"
+            ],
 
-            "assessment_summary": "",
+            "assessment_summary": fallback[
+                "assessment_summary"
+            ],
 
             "llm_status": "error",
 
-            "llm_error": str(exc),
+            "llm_error": error_message,
         }

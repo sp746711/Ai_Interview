@@ -1510,27 +1510,50 @@ const Feedback = () => {
 
     const donutTotal = Math.max(Number(totalQuestions) || 0, 1);
 
+    // =========================================================
+    // TASK 16 — READ THE STORED LLM FEEDBACK
+    //
+    // The backend stores the Task 16 LLM output inside:
+    //   round2_result.task16_ai_feedback
+    //
+    // Keep all existing UI/layout code unchanged. This block only
+    // fixes the frontend field lookup so the existing cards display
+    // the LLM result that is already present in the backend response.
+    // =========================================================
+    const task16Feedback =
+      round2?.task16_ai_feedback &&
+      typeof round2.task16_ai_feedback === 'object'
+        ? round2.task16_ai_feedback
+        : {};
+
     const strengthItems = normalizeFeedbackItems(
       firstValue(
+        task16Feedback.strengths,
         round2.strengths,
         round2.strength_items,
         round2.strengths_and_weaknesses?.strengths,
+        result?.strengths,
         result?.round2_strengths
       )
     );
 
     const improvementItems = normalizeFeedbackItems(
       firstValue(
+        task16Feedback.weaknesses,
+        task16Feedback.areas_to_improve,
         round2.improvements,
         round2.areas_to_improve,
         round2.weaknesses,
         round2.strengths_and_weaknesses?.improvements,
+        result?.weaknesses,
         result?.round2_improvements
       )
     );
 
     const recommendations = normalizeRecommendations(
       firstValue(
+        task16Feedback.recommendations,
+        task16Feedback.suggestions,
         round2.recommendations,
         round2.ai_recommendations,
         result?.recommendations,
@@ -2013,7 +2036,7 @@ const Feedback = () => {
                   <div key={`${title}-${index}`} className="flex gap-3">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                     <div>
-                      <p className="text-sm font-semibold text-slate-100">
+                      <p className="text-sm text-slate-200">
                         {title}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-slate-400">
@@ -2042,7 +2065,7 @@ const Feedback = () => {
                   <div key={`${title}-${index}`} className="flex gap-3">
                     <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
                     <div>
-                      <p className="text-sm font-semibold text-slate-100">
+                      <p className="text-sm text-slate-200">
                         {title}
                       </p>
                       <p className="mt-1 text-xs leading-relaxed text-slate-400">

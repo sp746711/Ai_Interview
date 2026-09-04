@@ -1103,107 +1103,69 @@ class InterviewController:
                 ("technical", "Technical"),
             ]
 
-        # Strengths from real category percentages
-        strengths = []
+        # =========================================================
+        # TASK 16 — USE ONLY STORED LLM FEEDBACK
+        # =========================================================
+        # IMPORTANT:
+        # The Task 16 LLM result above is the single source of truth
+        # for strengths, weaknesses, recommendations, and summary.
+        # Do NOT overwrite those values with old rule-based/static
+        # feedback. Round 2 scoring and category_scores remain
+        # untouched and are returned through round2_result.
+        # =========================================================
 
-        for key, label in feedback_categories:
-            category_data = category_scores.get(
-                key,
-                {}
+        if llm_status == "success":
+            strengths = task16_ai_feedback.get(
+                "strengths",
+                [],
             )
-
-            if not isinstance(category_data, dict):
-                continue
-
-            percentage = category_data.get("percentage")
-
-            if percentage is None:
-                continue
-
-            try:
-                percentage = int(percentage)
-            except (TypeError, ValueError):
-                continue
-
-            if percentage >= 70:
-                strengths.append(f"Strong {label}")
-
-        if not strengths and round2_result:
-            strengths.append(
-                "Consistent assessment attempt"
+            weaknesses = task16_ai_feedback.get(
+                "weaknesses",
+                task16_ai_feedback.get(
+                    "areas_to_improve",
+                    [],
+                ),
             )
-
-        # Areas to improve from real category percentages
-        weaknesses = []
-
-        for key, label in feedback_categories:
-            category_data = category_scores.get(
-                key,
-                {}
+            suggestions = task16_ai_feedback.get(
+                "recommendations",
+                task16_ai_feedback.get(
+                    "suggestions",
+                    [],
+                ),
             )
-
-            if not isinstance(category_data, dict):
-                continue
-
-            percentage = category_data.get("percentage")
-
-            if percentage is None:
-                continue
-
-            try:
-                percentage = int(percentage)
-            except (TypeError, ValueError):
-                continue
-
-            if percentage < 70:
-                weaknesses.append(f"{label} Concepts")
-
-        if (
-            not weaknesses
-            and round2_result
-            and test_s < 80
-        ):
-            weaknesses.append(
-                "Advanced Problem Solving"
+            assessment_summary = task16_ai_feedback.get(
+                "assessment_summary",
+                "",
             )
-
-        # Rule-based Task 16 recommendations for now.
-        # LLM recommendations can be added later.
-        suggestions = []
-
-        for key, label in feedback_categories:
-            category_data = category_scores.get(
-                key,
-                {}
+        elif llm_status == "processing":
+            strengths = []
+            weaknesses = []
+            suggestions = []
+            assessment_summary = (
+                "AI feedback is being generated from your actual Round 2 performance."
             )
+        else:
+            strengths = []
+            weaknesses = []
+            suggestions = []
+            assessment_summary = ""
 
-            if not isinstance(category_data, dict):
-                continue
+        # Normalize the response fields without generating any
+        # predefined candidate feedback. The LLM service is responsible
+        # for deriving these items from the user's actual performance.
+        if not isinstance(strengths, list):
+            strengths = []
+        if not isinstance(weaknesses, list):
+            weaknesses = []
+        if not isinstance(suggestions, list):
+            suggestions = []
+        if not isinstance(assessment_summary, str):
+            assessment_summary = str(assessment_summary or "")
 
-            percentage = category_data.get("percentage")
-
-            if percentage is None:
-                continue
-
-            try:
-                percentage = int(percentage)
-            except (TypeError, ValueError):
-                continue
-
-            if percentage < 70:
-                suggestions.append(
-                    f"Practice more {label.lower()} questions."
-                )
-
-        if test_s < 80:
-            suggestions.append(
-                "Improve speed and accuracy through timed mock tests."
-            )
-
-        if not suggestions and round2_result:
-            suggestions.append(
-                "Continue practicing to maintain your assessment performance."
-            )
+        # Keep the frontend-compatible maximum of five items.
+        strengths = strengths[:5]
+        weaknesses = weaknesses[:5]
+        suggestions = suggestions[:5]
 
         return {
             "id": str(interview["_id"]),
