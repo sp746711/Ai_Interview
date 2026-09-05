@@ -1,15 +1,29 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { UserPlus, Loader2 } from 'lucide-react';
+import {
+  Bot,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Loader2,
+  AlertCircle,
+  Target,
+  BarChart3,
+} from 'lucide-react';
+import './Register.css';
 
 const Register = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -28,81 +42,200 @@ const Register = () => {
   };
 
   return (
-    <div className="glass-card max-w-md w-full mx-auto mt-10 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-neon-purple/20 blur-[50px] -z-10 rounded-full" />
-      
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-purple to-neon-blue drop-shadow-[0_0_8px_rgba(188,19,254,0.4)] mb-2">
-          Create Account
-        </h2>
-        <p className="text-gray-400">Join and start your first mock interview</p>
+    <div className="login-page-root">
+      {/* --------------------------------------------------
+          LEFT PANEL — Cinematic Developer Workspace (No Plant)
+          Identical shell, branding, hero, benefits, and quote
+          -------------------------------------------------- */}
+      <div className="login-left-panel">
+        <div className="login-left-glow" />
+
+        {/* Top Brand */}
+        <div className="login-left-top">
+          <Link to="/" className="login-brand-link">
+            <div className="login-brand-icon">
+              <Bot size={22} />
+            </div>
+            <span className="login-brand-text">
+              MockMind <span className="login-brand-accent">AI</span>
+            </span>
+          </Link>
+          <p className="login-brand-tagline">Practice Today. Perform Tomorrow.</p>
+        </div>
+
+        {/* Center Hero Content & Benefits */}
+        <div className="login-left-center">
+          <h1 className="login-hero-headline">
+            Prepare Smarter.<br />
+            <span className="login-hero-accent">Go Further.</span>
+          </h1>
+          <p className="login-hero-description">
+            AI-powered interview preparation designed to help you build confidence and achieve your career goals.
+          </p>
+
+          <div className="login-benefits-list">
+            <div className="login-benefit-item">
+              <div className="login-benefit-icon-box">
+                <Target size={16} />
+              </div>
+              <div className="login-benefit-text-wrap">
+                <h3 className="login-benefit-title">Personalized Practice</h3>
+                <p className="login-benefit-desc">Tailored to your goals</p>
+              </div>
+            </div>
+
+            <div className="login-benefit-item">
+              <div className="login-benefit-icon-box">
+                <Bot size={16} />
+              </div>
+              <div className="login-benefit-text-wrap">
+                <h3 className="login-benefit-title">Real Interview Experience</h3>
+                <p className="login-benefit-desc">Practice with realistic scenarios</p>
+              </div>
+            </div>
+
+            <div className="login-benefit-item">
+              <div className="login-benefit-icon-box">
+                <BarChart3 size={16} />
+              </div>
+              <div className="login-benefit-text-wrap">
+                <h3 className="login-benefit-title">Actionable Feedback</h3>
+                <p className="login-benefit-desc">Get insights and improve faster</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Motivational Quote */}
+        <div className="login-left-bottom">
+          <blockquote className="login-quote-text">
+            “A better you for a brighter tomorrow.”
+          </blockquote>
+          <p className="login-quote-author">— MockMind AI</p>
+        </div>
       </div>
 
-      {error && (
-        <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="label-text">Full Name</label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            className="input-field"
-            placeholder="John Doe"
-          />
-        </div>
-
-        <div>
-          <label className="label-text">Email Address</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="input-field"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label className="label-text">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="input-field"
-            placeholder="••••••••"
-            minLength={6}
-          />
-        </div>
-
-        <button 
-          type="submit" 
-          disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2 mt-2"
-        >
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              Sign Up <UserPlus className="w-5 h-5" />
-            </>
-          )}
-        </button>
-      </form>
-
-      <p className="mt-6 text-center text-gray-400">
-        Already have an account?{' '}
-        <Link to="/login" className="text-neon-purple hover:text-white transition-colors">
-          Sign in
+      {/* --------------------------------------------------
+          RIGHT PANEL — Register Form Card
+          Matching the exact design system of Login
+          -------------------------------------------------- */}
+      <div className="login-right-panel">
+        {/* Mobile-only brand header */}
+        <Link to="/" className="login-mobile-brand">
+          <div className="login-mobile-brand-row">
+            <div className="login-brand-icon" style={{ width: 34, height: 34 }}>
+              <Bot size={18} />
+            </div>
+            <span className="login-brand-text" style={{ fontSize: '1.2rem' }}>
+              MockMind <span className="login-brand-accent">AI</span>
+            </span>
+          </div>
+          <p className="login-brand-tagline">Practice Today. Perform Tomorrow.</p>
         </Link>
-      </p>
+
+        <div className="login-card">
+          <div className="login-card-header">
+            <div className="login-card-badge">
+              <Bot size={14} />
+              <span>MockMind AI</span>
+            </div>
+            <h2 className="login-card-title">
+              Create <span className="login-brand-accent">Account</span>
+            </h2>
+            <p className="login-card-subtitle">
+              Join and start your interview preparation journey.
+            </p>
+          </div>
+
+          {error && (
+            <div className="login-error-box">
+              <AlertCircle size={16} className="login-error-icon" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-field-group">
+              <label className="login-label">Full Name</label>
+              <div className="login-input-wrap">
+                <User size={17} className="login-input-icon" />
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="login-input"
+                  placeholder="John Doe"
+                  autoComplete="name"
+                />
+              </div>
+            </div>
+
+            <div className="login-field-group">
+              <label className="login-label">Email Address</label>
+              <div className="login-input-wrap">
+                <Mail size={17} className="login-input-icon" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="login-input"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <div className="login-field-group">
+              <label className="login-label">Password</label>
+              <div className="login-input-wrap">
+                <Lock size={17} className="login-input-icon" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  className="login-input"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="login-password-toggle"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="login-submit-btn"
+            >
+              {loading ? (
+                <Loader2 size={19} className="login-spinner" />
+              ) : (
+                <>
+                  <span>Sign Up</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <p className="login-card-footer">
+            Already have an account?{' '}
+            <Link to="/login" className="login-register-link">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

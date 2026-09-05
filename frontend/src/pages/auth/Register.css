@@ -1,0 +1,5 @@
+/* ==========================================================================
+   Register Page Styles
+   Reuses the exact same cinematic, realistic authentication design system as Login
+   ========================================================================== */
+@import './Login.css';
