@@ -1,162 +1,167 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
 import {
   FileText,
   Target,
   Bot,
   BarChart3,
   ArrowRight,
-  GraduationCap,
-  Briefcase,
-  Code2,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  Award,
 } from 'lucide-react';
+import './Home.css';
 
 const journeySteps = [
   {
     icon: FileText,
+    iconStyle: 'home-journey-icon-white',
     title: 'Resume Analysis',
-    description: 'Understand your skills, experience, and strengths from your resume.',
+    description: 'Upload your resume and identify key skills.',
   },
   {
     icon: Target,
+    iconStyle: 'home-journey-icon-coral',
     title: 'Skill Assessment',
-    description: 'Evaluate technical knowledge with role-specific questions.',
+    description: 'Test your technical knowledge.',
   },
   {
     icon: Bot,
+    iconStyle: 'home-journey-icon-purple',
     title: 'AI Interview',
-    description: 'Practice realistic interview conversations powered by AI.',
+    description: 'Practice with an AI interviewer.',
   },
   {
     icon: BarChart3,
+    iconStyle: 'home-journey-icon-bronze',
     title: 'Feedback & Insights',
-    description: 'Receive scores, strengths, and personalized recommendations.',
+    description: 'Get detailed analysis and recommendations.',
   },
 ];
 
-const audiences = [
+const benefits = [
   {
-    icon: GraduationCap,
-    title: 'Students & Fresh Graduates',
-    description:
-      'Build interview confidence and prepare for your first career opportunities.',
+    icon: ShieldCheck,
+    title: 'Build Confidence',
+    description: 'Practice in a real interview environment.',
   },
   {
-    icon: Briefcase,
-    title: 'Job Seekers',
-    description:
-      'Practice before upcoming interviews and improve your overall performance.',
+    icon: Sparkles,
+    title: 'Identify Your Strengths',
+    description: 'Understand your skills with AI-driven insights.',
   },
   {
-    icon: Code2,
-    title: 'Developers & Technical Candidates',
-    description:
-      'Strengthen technical skills and prepare for real-world engineering interviews.',
+    icon: TrendingUp,
+    title: 'Focus on Growth',
+    description: 'Get personalized recommendations.',
+  },
+  {
+    icon: Award,
+    title: 'Be Interview Ready',
+    description: 'Take the next step in your career.',
   },
 ];
 
 const LandingHome = () => {
+  // Ensure the shared footer is removed specifically from the Home landing page
+  useEffect(() => {
+    const footer = document.querySelector('.landing-page > footer');
+    if (footer) {
+      const originalDisplay = footer.style.display;
+      footer.style.display = 'none';
+      return () => {
+        footer.style.display = originalDisplay;
+      };
+    }
+  }, []);
+
   return (
-    <>
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 pt-16 sm:pt-24 pb-20 sm:pb-28">
-        <div className="max-w-3xl">
-          <p className="text-sm font-medium tracking-wide text-landing-peach/90 mb-6">
-            Practice Today. Perform Tomorrow.
-          </p>
+    <div className="home-landing">
+      {/* ---------------- ONE CONTINUOUS CINEMATIC HERO SECTION ---------------- */}
+      <section className="home-cinematic-section">
+        <div className="home-cinematic-glow" />
 
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.1] text-white">
-            Master Your Next
-            <br />
-            <span className="text-landing-peach">Tech Interview</span>
-          </h1>
+        {/* Hero Content (Left side, workspace visible on right) */}
+        <div className="home-hero-container">
+          <div className="home-hero-content">
+            <div className="home-hero-eyebrow">
+              <span className="home-hero-eyebrow-dot" />
+              <span>AI-Powered Interview Platform</span>
+            </div>
 
-          <p className="mt-6 sm:mt-8 text-base sm:text-lg text-landing-muted leading-relaxed max-w-2xl">
-            Prepare smarter with AI-powered interview practice, skill assessment,
-            and personalized performance feedback. Build confidence and take the
-            next step in your career.
-          </p>
+            <h1 className="home-hero-headline">
+              Master Your Next
+              <br />
+              <span className="home-hero-accent">Tech Interview</span>
+            </h1>
+
+            <p className="home-hero-description">
+              Prepare smarter with AI-powered interview practice, skill assessment,
+              and personalized performance feedback. Build confidence and take the
+              next step in your career.
+            </p>
+
+            <div className="home-hero-tagline">
+              — A smarter way to prepare
+            </div>
+          </div>
+        </div>
+
+        {/* Interview Preparation Journey (Inside the same cinematic background) */}
+        <div className="home-journey-container">
+          <div className="home-journey-header">
+            <h2 className="home-journey-eyebrow">
+              YOUR COMPLETE INTERVIEW PREPARATION JOURNEY
+            </h2>
+          </div>
+
+          <div className="home-journey-cards-wrapper">
+            {journeySteps.map((step, index) => {
+              const Icon = step.icon;
+              return (
+                <React.Fragment key={step.title}>
+                  <div className="home-journey-card-col">
+                    <div className="home-journey-card">
+                      <div className={`home-journey-icon-circle ${step.iconStyle}`}>
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <h3 className="home-journey-card-title">{step.title}</h3>
+                      <p className="home-journey-card-desc">{step.description}</p>
+                    </div>
+                  </div>
+
+                  {index < journeySteps.length - 1 && (
+                    <div className="home-journey-separator">
+                      <ArrowRight className="home-journey-arrow" />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 pb-20 sm:pb-28">
-        <div className="text-center mb-10 sm:mb-14">
-          <h2 className="text-xl sm:text-2xl font-semibold text-white/90">
-            Interview Preparation Journey
-          </h2>
-          <p className="mt-2 text-sm sm:text-base text-landing-muted">
-            From resume to feedback — a complete path to interview readiness
-          </p>
-        </div>
-
-        <div className="flex flex-col lg:flex-row items-stretch justify-center gap-4 lg:gap-2">
-          {journeySteps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <React.Fragment key={step.title}>
-                <div className="landing-card p-6 flex flex-col items-center text-center flex-1 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-landing-peach/10 flex items-center justify-center mb-4">
-                    <Icon className="w-6 h-6 text-landing-peach/90" />
-                  </div>
-                  <h3 className="text-base font-semibold text-white mb-2">
-                    {step.title}
-                  </h3>
-                  <p className="text-sm text-landing-muted leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-                {index < journeySteps.length - 1 && (
-                  <div className="flex items-center justify-center lg:px-1 shrink-0">
-                    <ArrowRight className="w-5 h-5 text-landing-peach/40 rotate-90 lg:rotate-0" />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 pb-20 sm:pb-28">
-        <div className="text-center mb-10 sm:mb-14">
-          <h2 className="text-xl sm:text-2xl font-semibold text-white/90">
-            Who Is MockMind AI For?
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {audiences.map((item) => {
+      {/* ---------------- CREAM BENEFIT STRIP ---------------- */}
+      <section className="home-benefit-strip">
+        <div className="home-benefit-container">
+          {benefits.map((item) => {
             const Icon = item.icon;
             return (
-              <div key={item.title} className="landing-card p-6 sm:p-8">
-                <div className="w-11 h-11 rounded-lg bg-white/[0.04] flex items-center justify-center mb-5">
-                  <Icon className="w-5 h-5 text-landing-bronze" />
+              <div key={item.title} className="home-benefit-item">
+                <div className="home-benefit-icon-box">
+                  <Icon className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-sm text-landing-muted leading-relaxed">
-                  {item.description}
-                </p>
+                <div className="home-benefit-content">
+                  <h4 className="home-benefit-title">{item.title}</h4>
+                  <p className="home-benefit-desc">{item.description}</p>
+                </div>
               </div>
             );
           })}
         </div>
-
-        <div className="mt-12 sm:mt-16 flex flex-wrap justify-center gap-4 text-sm">
-          <Link
-            to="/features"
-            className="text-landing-peach hover:text-landing-peach-muted transition-colors"
-          >
-            Explore Features →
-          </Link>
-          <Link
-            to="/how-it-works"
-            className="text-white/50 hover:text-white/80 transition-colors"
-          >
-            See How It Works →
-          </Link>
-        </div>
       </section>
-    </>
+    </div>
   );
 };
 
