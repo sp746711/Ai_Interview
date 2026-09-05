@@ -1,0 +1,634 @@
+/* ==========================================================================
+   Why MockMind AI Landing Page Styles (Scoped to .why-mockmind-page)
+   Visual language matches finalized Home, Features, and How It Works:
+   - Cinematic developer workspace hero with warm lighting and laptop atmosphere
+   - 4-column feature cards row with brown/orange, coral, purple, green accents
+   - Two-column "Who Is MockMind AI For?" layout with audience cards and photographic quote panel
+   - Wide "Take Control" CTA strip with warm dark gradient and brand badge
+   ========================================================================== */
+
+/* Hide Shared Footer specifically on Why MockMind AI Landing Page */
+.landing-page:has(.why-mockmind-page) > footer {
+  display: none !important;
+}
+
+.why-mockmind-page {
+  position: relative;
+  width: 100%;
+  color: #ffffff;
+  overflow-x: hidden;
+  background-color: #0b0a09;
+  background-image: 
+    radial-gradient(ellipse 65% 35% at 85% 18%, rgba(243, 160, 128, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 15% 42%, rgba(196, 181, 253, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 45% at 85% 68%, rgba(154, 132, 113, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% 95%, rgba(243, 160, 128, 0.03) 0%, transparent 60%);
+}
+
+/* --------------------------------------------------
+   1. Hero Section
+   Realistic developer workspace background:
+   Laptop on right, green plant, wooden desk, books, mug, warm light
+   Controlled dark overlay for left-side readability
+   -------------------------------------------------- */
+.wmm-hero-section {
+  position: relative;
+  width: 100%;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #0b0a09;
+  background-image: 
+    linear-gradient(
+      to right,
+      rgba(11, 10, 9, 0.96) 0%,
+      rgba(11, 10, 9, 0.88) 32%,
+      rgba(11, 10, 9, 0.45) 54%,
+      rgba(11, 10, 9, 0.06) 74%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(11, 10, 9, 0.15) 0%,
+      transparent 40%,
+      rgba(11, 10, 9, 0.35) 75%,
+      rgba(11, 10, 9, 0.85) 100%
+    ),
+    url('https://images.unsplash.com/photo-1593062096033-9a26b09da705?auto=format&fit=crop&w=2200&q=80');
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  padding: 4rem 1.25rem 3.5rem;
+}
+
+@media (min-width: 640px) {
+  .wmm-hero-section {
+    padding: 4.75rem 2rem 4rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wmm-hero-section {
+    padding: 5.5rem 3.5rem 4.5rem;
+  }
+}
+
+/* Ambient glow behind hero text */
+.wmm-hero-glow {
+  position: absolute;
+  top: 15%;
+  left: 6%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(243, 160, 128, 0.08) 0%, rgba(154, 132, 113, 0.02) 50%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wmm-hero-container {
+  position: relative;
+  z-index: 2;
+  max-width: 80rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.wmm-hero-content {
+  max-width: 46rem;
+}
+
+/* Eyebrow */
+.wmm-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f3a080;
+  margin-bottom: 1rem;
+}
+
+.wmm-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #f3a080;
+  box-shadow: 0 0 8px rgba(243, 160, 128, 0.7);
+}
+
+/* Hero Heading */
+.wmm-hero-title {
+  font-size: clamp(2rem, 3.6vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.025em;
+  color: #f7f5f0;
+  margin-bottom: 1.1rem;
+}
+
+.wmm-hero-accent {
+  color: #f3a080;
+  display: inline-block;
+}
+
+/* Description */
+.wmm-hero-desc {
+  font-size: clamp(0.95rem, 1.15vw, 1.08rem);
+  line-height: 1.68;
+  color: #a8a5a0;
+  max-width: 40rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Tagline */
+.wmm-hero-tagline {
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f3a080;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.wmm-tagline-bar {
+  width: 24px;
+  height: 2px;
+  background-color: #f3a080;
+  display: inline-block;
+}
+
+/* --------------------------------------------------
+   2. "Why Use MockMind AI?" Section
+   Desktop: 4 feature cards in one horizontal row
+   -------------------------------------------------- */
+.wmm-features-section {
+  position: relative;
+  z-index: 5;
+  max-width: 80rem;
+  margin: -1.75rem auto 4.5rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .wmm-features-section {
+    padding: 0 2rem;
+    margin-top: -2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wmm-features-section {
+    padding: 0 2.5rem;
+    margin-top: -2.75rem;
+  }
+}
+
+.wmm-features-header {
+  margin-bottom: 2rem;
+}
+
+.wmm-section-title {
+  font-size: clamp(1.5rem, 2.5vw, 2rem);
+  font-weight: 800;
+  color: #f7f5f0;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.4rem;
+}
+
+.wmm-section-subtitle {
+  font-size: 0.95rem;
+  color: #9c978f;
+  line-height: 1.5;
+}
+
+/* 4-Card Row Grid */
+.wmm-features-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.15rem;
+}
+
+@media (min-width: 640px) {
+  .wmm-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .wmm-features-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Feature Card */
+.wmm-feature-card {
+  height: 100%;
+  background: rgba(18, 18, 18, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.75rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wmm-feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* Card Top: Number badge + Icon circle */
+.wmm-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.wmm-card-num {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.wmm-card-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.wmm-feature-card:hover .wmm-card-icon-circle {
+  transform: scale(1.06);
+}
+
+/* Color Accents */
+/* Card 1: Warm brown/orange */
+.wmm-card-orange:hover {
+  border-color: rgba(217, 119, 6, 0.35);
+}
+.wmm-icon-orange {
+  background: rgba(217, 119, 6, 0.14);
+  color: #f59e0b;
+  border: 1px solid rgba(217, 119, 6, 0.25);
+}
+.wmm-num-orange {
+  color: #f59e0b;
+}
+
+/* Card 2: Muted red/rose */
+.wmm-card-red:hover {
+  border-color: rgba(243, 160, 128, 0.35);
+}
+.wmm-icon-red {
+  background: rgba(243, 160, 128, 0.14);
+  color: #f3a080;
+  border: 1px solid rgba(243, 160, 128, 0.25);
+}
+.wmm-num-red {
+  color: #f3a080;
+}
+
+/* Card 3: Muted purple */
+.wmm-card-purple:hover {
+  border-color: rgba(196, 181, 253, 0.35);
+}
+.wmm-icon-purple {
+  background: rgba(196, 181, 253, 0.14);
+  color: #c4b5fd;
+  border: 1px solid rgba(196, 181, 253, 0.25);
+}
+.wmm-num-purple {
+  color: #c4b5fd;
+}
+
+/* Card 4: Muted green */
+.wmm-card-green:hover {
+  border-color: rgba(134, 239, 172, 0.35);
+}
+.wmm-icon-green {
+  background: rgba(134, 239, 172, 0.14);
+  color: #86efac;
+  border: 1px solid rgba(134, 239, 172, 0.25);
+}
+.wmm-num-green {
+  color: #86efac;
+}
+
+.wmm-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f7f5f0;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.65rem;
+  line-height: 1.35;
+}
+
+.wmm-card-desc {
+  font-size: 0.84rem;
+  color: #9c978f;
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------
+   3. "Who Is MockMind AI For?" Section
+   Desktop: Two columns (Left: 3 audience cards; Right: Photographic quote panel)
+   -------------------------------------------------- */
+.wmm-audience-section {
+  position: relative;
+  z-index: 5;
+  max-width: 80rem;
+  margin: 0 auto 4.5rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .wmm-audience-section {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wmm-audience-section {
+    padding: 0 2.5rem;
+  }
+}
+
+.wmm-audience-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+@media (min-width: 1024px) {
+  .wmm-audience-grid {
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 2rem;
+  }
+}
+
+/* Left: Audience Container */
+.wmm-audience-left {
+  background: rgba(16, 16, 16, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.1rem;
+  padding: 2.25rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 640px) {
+  .wmm-audience-left {
+    padding: 2.5rem 2.25rem;
+  }
+}
+
+.wmm-audience-header {
+  margin-bottom: 1.75rem;
+}
+
+.wmm-audience-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Audience Individual Card */
+.wmm-audience-card {
+  background: rgba(12, 12, 12, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.85rem;
+  padding: 1.2rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  transition: all 0.2s ease;
+}
+
+.wmm-audience-card:hover {
+  background: rgba(16, 16, 16, 0.95);
+  border-color: rgba(243, 160, 128, 0.2);
+  transform: translateX(4px);
+}
+
+.wmm-audience-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.65rem;
+  background: rgba(243, 160, 128, 0.1);
+  border: 1px solid rgba(243, 160, 128, 0.2);
+  color: #f3a080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wmm-audience-card-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #f7f5f0;
+  margin-bottom: 0.25rem;
+}
+
+.wmm-audience-card-desc {
+  font-size: 0.82rem;
+  color: #9c978f;
+  line-height: 1.48;
+}
+
+/* Right: Visual Quote/Image Panel */
+.wmm-quote-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 2.5rem 2rem;
+  background-color: #12100e;
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(11, 10, 9, 0.3) 0%,
+      rgba(11, 10, 9, 0.7) 50%,
+      rgba(11, 10, 9, 0.95) 100%
+    ),
+    radial-gradient(
+      circle at 75% 30%,
+      rgba(243, 160, 128, 0.18) 0%,
+      rgba(154, 132, 113, 0.05) 50%,
+      transparent 70%
+    ),
+    url('https://images.unsplash.com/photo-1593062096033-9a26b09da705?auto=format&fit=crop&w=1200&q=80');
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.4);
+}
+
+@media (min-width: 1024px) {
+  .wmm-quote-panel {
+    padding: 3rem 2.5rem;
+  }
+}
+
+.wmm-quote-content {
+  position: relative;
+  z-index: 2;
+  max-width: 26rem;
+}
+
+.wmm-quote-panel-text {
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-weight: 800;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  color: #f7f5f0;
+  margin-bottom: 1rem;
+}
+
+.wmm-quote-panel-accent {
+  color: #f3a080;
+  display: block;
+}
+
+.wmm-quote-panel-author {
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #a8a5a0;
+}
+
+/* --------------------------------------------------
+   4. Wide "Take Control" CTA Strip
+   -------------------------------------------------- */
+.wmm-cta-strip-section {
+  position: relative;
+  z-index: 5;
+  max-width: 80rem;
+  margin: 0 auto 4rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .wmm-cta-strip-section {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .wmm-cta-strip-section {
+    padding: 0 2.5rem;
+  }
+}
+
+.wmm-cta-strip-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    rgba(22, 20, 18, 0.92) 0%,
+    rgba(16, 16, 16, 0.88) 60%,
+    rgba(26, 22, 20, 0.92) 100%
+  );
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(243, 160, 128, 0.18);
+  border-radius: 1.1rem;
+  padding: 2.25rem 2rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 1024px) {
+  .wmm-cta-strip-card {
+    padding: 2.75rem 3rem;
+  }
+}
+
+.wmm-cta-strip-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+@media (min-width: 768px) {
+  .wmm-cta-strip-grid {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.wmm-cta-strip-left {
+  max-width: 44rem;
+}
+
+.wmm-cta-strip-title {
+  font-size: clamp(1.35rem, 2.2vw, 1.85rem);
+  font-weight: 800;
+  color: #f7f5f0;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.45rem;
+}
+
+.wmm-cta-strip-desc {
+  font-size: clamp(0.88rem, 1.05vw, 0.98rem);
+  color: #a8a5a0;
+  line-height: 1.55;
+}
+
+.wmm-cta-strip-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.wmm-cta-brand-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.5rem;
+  background: linear-gradient(135deg, rgba(243, 160, 128, 0.9), #d97706);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0a0a0a;
+}
+
+.wmm-cta-brand-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+}

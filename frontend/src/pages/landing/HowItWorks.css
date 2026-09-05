@@ -1,0 +1,753 @@
+/* ==========================================================================
+   How It Works Landing Page Styles (Scoped strictly to .how-it-works-page)
+   Final Reference visual match:
+   - Cinematic workspace hero with high photographic visibility
+   - 4-stage horizontal timeline with circular step markers & connector line
+   - 4 compact detailed step cards with realistic mini-mockup UIs
+   - Elegant closing quote section ("A Better You / For A Brighter Tomorrow")
+   - Cohesive subtle cinematic depth through the whole page
+   ========================================================================== */
+
+/* Hide Shared Footer specifically on How It Works Landing Page */
+.landing-page:has(.how-it-works-page) > footer {
+  display: none !important;
+}
+
+.how-it-works-page {
+  position: relative;
+  width: 100%;
+  color: #ffffff;
+  overflow-x: hidden;
+  background-color: #0b0a09;
+  background-image: 
+    radial-gradient(ellipse 65% 35% at 85% 18%, rgba(243, 160, 128, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 40% at 15% 42%, rgba(196, 181, 253, 0.03) 0%, transparent 60%),
+    radial-gradient(ellipse 65% 45% at 85% 68%, rgba(154, 132, 113, 0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 80% 50% at 50% 95%, rgba(243, 160, 128, 0.03) 0%, transparent 60%);
+}
+
+/* --------------------------------------------------
+   Hero Section
+   Realistic developer workspace background:
+   Laptop on right, green plant, wooden desk, books, mug, warm light
+   Tuned transparent right overlay for vivid photographic visibility
+   -------------------------------------------------- */
+.hiw-hero-section {
+  position: relative;
+  width: 100%;
+  min-height: 390px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #0b0a09;
+  background-image: 
+    linear-gradient(
+      to right,
+      rgba(11, 10, 9, 0.96) 0%,
+      rgba(11, 10, 9, 0.88) 32%,
+      rgba(11, 10, 9, 0.45) 54%,
+      rgba(11, 10, 9, 0.06) 74%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      rgba(11, 10, 9, 0.15) 0%,
+      transparent 40%,
+      rgba(11, 10, 9, 0.35) 75%,
+      rgba(11, 10, 9, 0.85) 100%
+    ),
+    url('https://images.unsplash.com/photo-1593062096033-9a26b09da705?auto=format&fit=crop&w=2200&q=80');
+  background-size: cover;
+  background-position: right center;
+  background-repeat: no-repeat;
+  padding: 3.75rem 1.25rem 2.75rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-hero-section {
+    padding: 4.5rem 2rem 3.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-hero-section {
+    padding: 5rem 3.5rem 3.5rem;
+  }
+}
+
+/* Subtle warm ambient glow behind hero text */
+.hiw-hero-glow {
+  position: absolute;
+  top: 15%;
+  left: 6%;
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(243, 160, 128, 0.08) 0%, rgba(154, 132, 113, 0.02) 50%, transparent 70%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hiw-hero-container {
+  position: relative;
+  z-index: 2;
+  max-width: 80rem;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.hiw-hero-content {
+  max-width: 44rem;
+}
+
+/* Eyebrow */
+.hiw-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f3a080;
+  margin-bottom: 0.9rem;
+}
+
+.hiw-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #f3a080;
+  box-shadow: 0 0 8px rgba(243, 160, 128, 0.7);
+}
+
+/* Controlled Main Heading */
+.hiw-hero-title {
+  font-size: clamp(1.85rem, 3.2vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #f7f5f0;
+  margin-bottom: 0.85rem;
+}
+
+.hiw-hero-accent {
+  color: #f3a080;
+  display: inline-block;
+}
+
+/* Description */
+.hiw-hero-desc {
+  font-size: clamp(0.92rem, 1.1vw, 1.05rem);
+  line-height: 1.65;
+  color: #a8a5a0;
+  max-width: 38rem;
+}
+
+/* --------------------------------------------------
+   Horizontal Step Timeline (4 Stages with connecting line)
+   -------------------------------------------------- */
+.hiw-timeline-section {
+  position: relative;
+  z-index: 5;
+  max-width: 80rem;
+  margin: -1.75rem auto 3.5rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-timeline-section {
+    padding: 0 2rem;
+    margin-top: -2.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-timeline-section {
+    padding: 0 2.5rem;
+    margin-top: -2.5rem;
+  }
+}
+
+.hiw-timeline-card {
+  position: relative;
+  background: rgba(16, 16, 16, 0.76);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.1rem;
+  padding: 2.25rem 1.75rem 2rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 1024px) {
+  .hiw-timeline-card {
+    padding: 2.75rem 2.5rem 2.5rem;
+  }
+}
+
+/* Horizontal track container */
+.hiw-timeline-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-timeline-track {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-timeline-track {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Thin horizontal line behind circle markers on desktop */
+.hiw-timeline-line {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .hiw-timeline-line {
+    display: block;
+    position: absolute;
+    top: 25px;
+    left: 12.5%;
+    right: 12.5%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgba(217, 119, 6, 0.35) 0%,
+      rgba(243, 160, 128, 0.4) 33%,
+      rgba(196, 181, 253, 0.4) 66%,
+      rgba(134, 239, 172, 0.35) 100%
+    );
+    z-index: 1;
+  }
+}
+
+.hiw-timeline-step {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Circular Number Markers with restrained accent colors */
+.hiw-timeline-marker {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-bottom: 1.15rem;
+  background: #161616;
+  transition: transform 0.25s ease;
+}
+
+.hiw-timeline-step:hover .hiw-timeline-marker {
+  transform: scale(1.08);
+}
+
+/* Step 01: Warm beige / gold */
+.hiw-marker-gold {
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  color: #f59e0b;
+  box-shadow: 0 0 16px rgba(217, 119, 6, 0.15);
+}
+
+/* Step 02: Coral / red */
+.hiw-marker-coral {
+  border: 1px solid rgba(243, 160, 128, 0.4);
+  color: #f3a080;
+  box-shadow: 0 0 16px rgba(243, 160, 128, 0.15);
+}
+
+/* Step 03: Muted purple */
+.hiw-marker-purple {
+  border: 1px solid rgba(196, 181, 253, 0.4);
+  color: #c4b5fd;
+  box-shadow: 0 0 16px rgba(196, 181, 253, 0.15);
+}
+
+/* Step 04: Muted green */
+.hiw-marker-green {
+  border: 1px solid rgba(134, 239, 172, 0.4);
+  color: #86efac;
+  box-shadow: 0 0 16px rgba(134, 239, 172, 0.15);
+}
+
+.hiw-timeline-step-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f7f5f0;
+  margin-bottom: 0.4rem;
+}
+
+.hiw-timeline-step-desc {
+  font-size: 0.84rem;
+  color: #9c978f;
+  line-height: 1.48;
+  max-width: 14rem;
+}
+
+/* --------------------------------------------------
+   Four Detailed Step Cards Section
+   Desktop: 4 compact cards in one horizontal row
+   Mini realistic mockup UI inside each card
+   -------------------------------------------------- */
+.hiw-cards-section {
+  position: relative;
+  z-index: 5;
+  max-width: 80rem;
+  margin: 0 auto 4.5rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-cards-section {
+    padding: 0 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-cards-section {
+    padding: 0 2.5rem;
+  }
+}
+
+.hiw-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.15rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+  }
+}
+
+/* Detailed Card */
+.hiw-card {
+  height: 100%;
+  background: rgba(18, 18, 18, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.5rem 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hiw-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+}
+
+/* Card 1 Accent */
+.hiw-card-gold:hover {
+  border-color: rgba(217, 119, 6, 0.35);
+}
+/* Card 2 Accent */
+.hiw-card-coral:hover {
+  border-color: rgba(243, 160, 128, 0.35);
+}
+/* Card 3 Accent */
+.hiw-card-purple:hover {
+  border-color: rgba(196, 181, 253, 0.35);
+}
+/* Card 4 Accent */
+.hiw-card-green:hover {
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+.hiw-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.hiw-card-icon-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hiw-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #f7f5f0;
+  letter-spacing: -0.01em;
+}
+
+.hiw-card-desc {
+  font-size: 0.82rem;
+  color: #9c978f;
+  line-height: 1.52;
+  margin-bottom: 1.15rem;
+}
+
+/* --------------------------------------------------
+   Mini Interface Mockup Containers inside each card
+   -------------------------------------------------- */
+.hiw-mockup-box {
+  background: rgba(12, 12, 12, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 0.75rem;
+  padding: 0.9rem;
+  margin-bottom: 1.25rem;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Mockup 1: Resume Upload Area */
+.hiw-upload-dropzone {
+  border: 1px dashed rgba(217, 119, 6, 0.4);
+  border-radius: 0.55rem;
+  padding: 0.85rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: rgba(217, 119, 6, 0.03);
+}
+
+.hiw-upload-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(217, 119, 6, 0.12);
+  color: #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.45rem;
+}
+
+.hiw-upload-main-text {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #f7f5f0;
+  margin-bottom: 0.2rem;
+}
+
+.hiw-upload-sub-text {
+  font-size: 0.66rem;
+  color: #88847e;
+}
+
+/* Mockup 2: Skill Assessment Question */
+.hiw-assessment-mock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.hiw-assessment-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #f3a080;
+  font-weight: 600;
+}
+
+.hiw-progress-bar-bg {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 0.25rem 0 0.4rem;
+}
+
+.hiw-progress-bar-fill {
+  width: 25%;
+  height: 100%;
+  background: #f3a080;
+}
+
+.hiw-assessment-question {
+  font-size: 0.74rem;
+  color: #f7f5f0;
+  font-weight: 500;
+  line-height: 1.35;
+  margin-bottom: 0.25rem;
+}
+
+.hiw-assessment-option {
+  font-size: 0.68rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #a8a5a0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.hiw-assessment-option-active {
+  background: rgba(243, 160, 128, 0.1);
+  border-color: rgba(243, 160, 128, 0.35);
+  color: #f7f5f0;
+}
+
+/* Mockup 3: AI Interview Chat */
+.hiw-interview-mock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hiw-interview-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.hiw-pulsing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.hiw-chat-bubble-ai {
+  background: rgba(196, 181, 253, 0.08);
+  border: 1px solid rgba(196, 181, 253, 0.2);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.69rem;
+  color: #f7f5f0;
+  line-height: 1.35;
+}
+
+.hiw-chat-bubble-user {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.69rem;
+  color: #9c978f;
+  line-height: 1.35;
+  align-self: flex-end;
+}
+
+/* Mockup 4: Performance Summary Feedback */
+.hiw-feedback-mock {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hiw-feedback-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.hiw-feedback-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #86efac;
+}
+
+.hiw-feedback-score-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #86efac;
+  background: rgba(134, 239, 172, 0.12);
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(134, 239, 172, 0.25);
+}
+
+.hiw-metric-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.67rem;
+  color: #8c8882;
+}
+
+.hiw-metric-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin: 0 0.5rem;
+  overflow: hidden;
+}
+
+.hiw-metric-fill {
+  height: 100%;
+  border-radius: 2px;
+}
+
+/* Supporting checklist items */
+.hiw-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.hiw-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.76rem;
+  color: #8c8882;
+  line-height: 1.4;
+}
+
+.hiw-check-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+/* --------------------------------------------------
+   Bottom Closing Quote Section
+   "A Better You / For A Brighter Tomorrow"
+   "Success is not luck, it’s preparation." — MockMind AI
+   -------------------------------------------------- */
+.hiw-quote-section {
+  position: relative;
+  max-width: 80rem;
+  margin: 0 auto 3rem;
+  padding: 0 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .hiw-quote-section {
+    padding: 0 2rem;
+    margin-bottom: 3.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hiw-quote-section {
+    padding: 0 2.5rem;
+    margin-bottom: 4rem;
+  }
+}
+
+.hiw-quote-card {
+  position: relative;
+  overflow: hidden;
+  background: rgba(16, 16, 16, 0.75);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.1rem;
+  padding: 2.5rem 1.75rem;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
+}
+
+@media (min-width: 1024px) {
+  .hiw-quote-card {
+    padding: 3rem 2.75rem;
+  }
+}
+
+.hiw-quote-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .hiw-quote-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+}
+
+.hiw-quote-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.hiw-quote-heading {
+  font-size: clamp(1.75rem, 3.2vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #f7f5f0;
+}
+
+.hiw-quote-heading-accent {
+  color: #f3a080;
+  display: block;
+}
+
+.hiw-quote-right {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .hiw-quote-right {
+    padding-left: 2rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+.hiw-quote-text {
+  font-size: clamp(1.1rem, 1.8vw, 1.35rem);
+  font-weight: 500;
+  font-style: italic;
+  color: #f7f5f0;
+  line-height: 1.5;
+  margin-bottom: 0.65rem;
+}
+
+.hiw-quote-author {
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f3a080;
+}
