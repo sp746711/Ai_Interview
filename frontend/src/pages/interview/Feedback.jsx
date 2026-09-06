@@ -1736,370 +1736,330 @@ const Feedback = () => {
       : [];
 
     return (
-      <section className="space-y-5">
+      <section className="relative">
+
         {/* =====================================================
-            ROUND STEPPER
+            TOP ROUND PROGRESS AREA — Wide, Balanced Stepper with Visible Lines
         ===================================================== */}
-        <div className="border-b border-blue-200/[0.10] pb-5">
-          <div className="flex items-center">
-            <div className="shrink-0">
-              <p className="text-sm font-bold tracking-[0.08em] text-cyan-300">
-                ROUND 2 / 3
-              </p>
-            </div>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
 
-            <div className="flex flex-1 items-center justify-center">
-              {[1, 2, 3].map((round, index) => (
-                <React.Fragment key={round}>
-                  <div className="flex min-w-[105px] flex-col items-center">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold ${
-                        round === 2
-                          ? 'border-cyan-300 bg-[linear-gradient(135deg,#2563eb_0%,#4f46e5_52%,#7c3aed_100%)] text-white shadow-[0_0_32px_rgba(34,211,238,0.62),0_0_55px_rgba(124,58,237,0.28)]'
-                          : round < 2
-                            ? 'border-emerald-400 bg-emerald-500/10 text-emerald-300'
-                            : 'border-slate-700 bg-[#111b35] text-slate-400'
-                      }`}
-                    >
-                      {round < 2 ? (
-                        <CheckCircle2 className="h-5 w-5" />
-                      ) : (
-                        round
-                      )}
-                    </div>
+          {/* ROUND 2 / 3 on left */}
+          <div className="shrink-0">
+            <span className="text-sm font-black tracking-[0.16em] text-cyan-400 uppercase">
+              ROUND 2 / 3
+            </span>
+          </div>
 
-                    <span
-                      className={`mt-2 text-[11px] font-semibold ${
-                        round === 2
-                          ? 'text-white'
-                          : round < 2
-                            ? 'text-emerald-300'
-                            : 'text-slate-500'
-                      }`}
-                    >
-                      {round === 1
-                        ? 'Resume Analysis'
-                        : round === 2
-                          ? 'Assessment'
-                          : 'AI Interview'}
-                    </span>
-                  </div>
+          {/* Wide & balanced stepper positioned across center/right */}
+          <div className="w-full max-w-xl md:max-w-2xl flex-1 md:ml-12 md:mr-2">
+            <div className="flex items-start">
+              {/* Step 1: Completed Resume Analysis */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400/50 bg-emerald-500/15 text-xs sm:text-sm font-bold text-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.3)]">
+                  <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-emerald-300">
+                  Resume Analysis
+                </span>
+              </div>
 
-                  {index < 2 && (
-                    <div
-                      className={`h-[2px] flex-1 ${
-                        round < 2
-                          ? 'bg-gradient-to-r from-emerald-400 to-blue-500'
-                          : 'bg-gradient-to-r from-blue-500/80 to-violet-500/40'
-                      }`}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
+              {/* Connecting Line 1 -> 2: Completed line */}
+              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-gradient-to-r from-emerald-400 via-cyan-400 to-[#8B5CF6]" />
+
+              {/* Step 2: Active Assessment */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 text-xs sm:text-sm font-bold text-white shadow-[0_0_20px_rgba(34,211,238,0.5)]">
+                  2
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#F5F5F5]">
+                  Assessment
+                </span>
+              </div>
+
+              {/* Connecting Line 2 -> 3: Upcoming line */}
+              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-[#334155]" />
+
+              {/* Step 3: Upcoming AI Interview */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] bg-[#0E131E] text-xs sm:text-sm font-bold text-[#64748B]">
+                  3
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#64748B]">
+                  AI Interview
+                </span>
+              </div>
             </div>
           </div>
+
         </div>
 
         {/* =====================================================
-            HEADER
+            ROUND 2 HEADER
         ===================================================== */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-violet-400/45 bg-[linear-gradient(135deg,rgba(124,58,237,0.18),rgba(37,99,235,0.10))] shadow-[0_0_30px_rgba(124,58,237,0.20)]">
-              <Target className="h-7 w-7 text-violet-300" />
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl border border-violet-500/40 bg-[#161224] shadow-[0_0_22px_rgba(139,92,246,0.22)]">
+              <Target className="h-6 w-6 text-violet-400" />
             </div>
 
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-white md:text-3xl">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">
+                  ASSESSMENT INTELLIGENCE
+                </span>
+                <span className="text-[11px] text-[#64748B]">·</span>
+                <span className="text-xs text-[#858585]">
+                  Technical Evaluation
+                </span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F5] mt-0.5">
                 Round 2 — Assessment Feedback
               </h2>
-              <p className="mt-1 text-sm text-slate-400">
+
+              <p className="mt-1 text-xs sm:text-sm text-[#94A3B8]">
                 Your performance in the online assessment
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="flex items-center gap-2 rounded-full border border-emerald-400/50 bg-emerald-400/[0.06] px-4 py-2 shadow-[0_0_24px_rgba(16,185,129,0.10)]">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
-              <span className="text-xs font-bold text-emerald-300">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* AI Analysis Ready */}
+            <div className="flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
+              <span className="text-xs font-bold tracking-wider text-emerald-300">
                 AI ANALYSIS READY
               </span>
             </div>
 
-            <div className="flex items-center gap-3 rounded-xl border border-blue-400/30 bg-[#07122a]/80 px-4 py-2">
+            {/* Interview Type */}
+            <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-white/[0.08] bg-[#0E131E] px-4 py-2 shadow-sm">
               {isNonTechnical ? (
-                <Sparkles className="h-5 w-5 text-violet-300" />
+                <Sparkles className="h-4 w-4 text-violet-400" />
               ) : (
-                <FileText className="h-5 w-5 text-cyan-300" />
+                <FileText className="h-4 w-4 text-cyan-400" />
               )}
               <div>
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Interview Type
-                </p>
-                <p className="text-sm font-bold text-cyan-300">
+                <span className="block text-[9px] uppercase tracking-wider text-[#64748B]">
+                  INTERVIEW TYPE
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wide text-cyan-300">
                   {interviewType}
-                </p>
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* =====================================================
-            HERO SCORE + SUMMARY COUNTERS
+            MAIN SCORE & KEY METRICS SECTION
         ===================================================== */}
-        <div className="relative overflow-hidden rounded-2xl border border-violet-500/50 bg-[linear-gradient(135deg,#05091b_0%,#0a1030_38%,#10153a_60%,#06162c_100%)] p-5 shadow-[0_0_55px_rgba(37,99,235,0.14)] md:p-6">
-          <div className="pointer-events-none absolute -left-24 -top-28 h-72 w-72 rounded-full bg-violet-600/[0.15] blur-[100px]" />
-          <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-cyan-400/[0.09] blur-[100px]" />
+        <div className="mb-8 rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* Overall Score Circular Ring */}
+            <div className="lg:col-span-4 flex flex-col items-center justify-center p-4 lg:border-r lg:border-white/[0.08]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A1A1AA] mb-4">
+                OVERALL SCORE
+              </span>
 
-          <div className="relative grid grid-cols-1 items-center md:grid-cols-[1.15fr_1fr_1fr_1fr_1fr]">
-            <div className="flex min-h-[210px] flex-col items-center justify-center border-b border-blue-300/[0.10] pb-6 md:border-b-0 md:border-r md:pb-0">
-              {overallScore !== null ? (
-                <ScoreRing
-                  score={overallScore}
-                  size={185}
-                  strokeWidth={11}
-                  colorCls="text-white"
-                />
-              ) : (
-                <div className="flex h-[185px] w-[185px] items-center justify-center rounded-full border-[11px] border-slate-800">
-                  <span className="text-4xl font-extrabold text-slate-500">—</span>
+              <div className="relative flex h-40 w-40 items-center justify-center">
+                <svg className="h-38 w-38 -rotate-90 transform" viewBox="0 0 160 160">
+                  <defs>
+                    <linearGradient id="r2OverallScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#22D3EE" />
+                      <stop offset="50%" stopColor="#3B82F6" />
+                      <stop offset="100%" stopColor="#A855F7" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="64"
+                    fill="transparent"
+                    stroke="#141926"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    cx="80"
+                    cy="80"
+                    r="64"
+                    fill="transparent"
+                    stroke="url(#r2OverallScoreGradient)"
+                    strokeWidth="12"
+                    strokeDasharray={2 * Math.PI * 64}
+                    strokeDashoffset={
+                      2 * Math.PI * 64 * (1 - Math.max(0, Math.min(100, overallScore ?? 0)) / 100)
+                    }
+                    strokeLinecap="round"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <p className="text-4xl font-extrabold tracking-tight text-[#F5F5F5]">
+                    {overallScore !== null ? `${overallScore}%` : '—'}
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold tracking-wider text-cyan-400 uppercase">
+                    {performanceLabel || (overallScore >= 70 ? 'EXCELLENT' : overallScore >= 50 ? 'GOOD' : 'NEEDS WORK')}
+                  </p>
                 </div>
-              )}
-              <p className="mt-3 text-xs font-bold tracking-wide text-emerald-300">
-                {performanceLabel || (overallScore !== null ? 'ASSESSMENT FEEDBACK' : 'DATA NOT AVAILABLE')}
-              </p>
+              </div>
+
+              <div className="mt-3 flex items-center gap-2 text-xs text-[#94A3B8]">
+                <span className="h-2 w-2 rounded-full bg-cyan-400" />
+                <span>Weighted Performance Score</span>
+              </div>
             </div>
 
-            {[
-              {
-                label: 'TOTAL QUESTIONS',
-                value: totalQuestions,
-                sub: 'Questions',
-                icon: Target,
-                color: 'text-blue-300',
-              },
-              {
-                label: 'CORRECT',
-                value: correct,
-                sub: `${overallScore}%`,
-                icon: CheckCircle2,
-                color: 'text-emerald-400',
-              },
-              {
-                label: 'INCORRECT',
-                value: incorrect,
-                sub: `${Math.round((incorrect / Math.max(totalQuestions, 1)) * 100)}%`,
-                icon: CircleAlert,
-                color: 'text-red-400',
-              },
-              {
-                label: 'SKIPPED',
-                value: skipped,
-                sub: `${Math.round((skipped / Math.max(totalQuestions, 1)) * 100)}%`,
-                icon: CircleAlert,
-                color: 'text-amber-400',
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  className="flex min-h-[150px] flex-col items-center justify-center border-b border-blue-300/[0.10] px-4 py-5 md:border-b-0 md:border-r last:md:border-r-0"
-                >
-                  <div className="mb-3 flex items-center gap-2">
-                    <Icon className={`h-5 w-5 ${item.color}`} />
-                    <p className="text-[11px] font-bold text-slate-200">
-                      {item.label}
-                    </p>
-                  </div>
-                  <p className="text-4xl font-extrabold text-white">
-                    {item.value}
-                  </p>
-                  <p className={`mt-1 text-xs font-medium ${item.color}`}>
-                    {item.sub}
-                  </p>
+            {/* 4 Key Metrics: Total, Correct, Incorrect, Skipped */}
+            <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {/* Total Questions */}
+              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10">
+                  <Target className="h-4.5 w-4.5 text-blue-400" />
                 </div>
-              );
-            })}
+                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                  TOTAL QUESTIONS
+                </span>
+                <span className="mt-1 text-3xl font-extrabold text-[#F5F5F5]">
+                  {totalQuestions ?? '—'}
+                </span>
+                <span className="mt-1 text-xs text-blue-300">
+                  Questions
+                </span>
+              </div>
+
+              {/* Correct */}
+              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-500/10">
+                  <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
+                </div>
+                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                  CORRECT
+                </span>
+                <span className="mt-1 text-3xl font-extrabold text-emerald-400">
+                  {correct ?? 0}
+                </span>
+                <span className="mt-1 text-xs font-semibold text-emerald-300/90">
+                  {totalQuestions ? Math.round(((correct || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+                </span>
+              </div>
+
+              {/* Incorrect */}
+              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-500/10">
+                  <CircleAlert className="h-4.5 w-4.5 text-rose-400" />
+                </div>
+                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                  INCORRECT
+                </span>
+                <span className="mt-1 text-3xl font-extrabold text-rose-400">
+                  {incorrect ?? 0}
+                </span>
+                <span className="mt-1 text-xs font-semibold text-rose-300/90">
+                  {totalQuestions ? Math.round(((incorrect || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+                </span>
+              </div>
+
+              {/* Skipped */}
+              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-500/10">
+                  <CircleAlert className="h-4.5 w-4.5 text-amber-400" />
+                </div>
+                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                  SKIPPED
+                </span>
+                <span className="mt-1 text-3xl font-extrabold text-amber-400">
+                  {skipped ?? 0}
+                </span>
+                <span className="mt-1 text-xs font-semibold text-amber-300/90">
+                  {totalQuestions ? Math.round(((skipped || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+                </span>
+              </div>
+            </div>
           </div>
 
+          {/* Assessment Feedback Highlight Panel */}
           {performanceMessage && (
-            <div className="relative mt-4 rounded-xl border border-blue-200/[0.08] bg-white/[0.025] px-4 py-3 text-sm text-slate-200">
-              <span className="mr-2">🏆</span>
-              {performanceMessage}
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-white/[0.08] bg-[#070A10]/80 p-4">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10">
+                <Award className="h-4 w-4 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                  ASSESSMENT FEEDBACK
+                </span>
+                <p className="mt-0.5 text-xs sm:text-sm text-[#D1D5DB] leading-relaxed">
+                  {performanceMessage}
+                </p>
+              </div>
             </div>
           )}
         </div>
 
         {/* =====================================================
-            PERFORMANCE OVERVIEW + CATEGORY PERFORMANCE
+            ANALYTICS ROW 1: Performance Overview | Category Performance | Time Analysis
         ===================================================== */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[0.85fr_1.65fr]">
-          <div className="rounded-2xl border border-blue-500/45 bg-[linear-gradient(145deg,#070d24_0%,#0a1026_48%,#071a31_100%)] p-5 shadow-[0_0_45px_rgba(59,130,246,0.12)]">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/35 bg-cyan-400/[0.08]">
-                <Sparkles className="h-5 w-5 text-cyan-300" />
-              </div>
-              <h3 className="text-lg font-bold text-white">
-                PERFORMANCE OVERVIEW
-              </h3>
-            </div>
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 
-            <div className="space-y-3">
-              {[
-                ['Accuracy', `${overallScore}%`, 'Good', 'text-cyan-300'],
-                ['Time Taken', timeTaken, 'of 30:00', 'text-white'],
-                ['Average Time / Question', averageTime, 'Good', 'text-violet-300'],
-                [
-                  'Questions Attempted',
-                  `${Math.min(totalQuestions, correct + incorrect)} / ${totalQuestions}`,
-                  `${Math.round(((correct + incorrect) / Math.max(totalQuestions, 1)) * 100)}%`,
-                  'text-cyan-300',
-                ],
-              ].map(([label, value, sub, color]) => (
-                <div
-                  key={label}
-                  className="rounded-xl border border-blue-200/[0.08] bg-[#091329]/70 p-3"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-medium text-slate-300">
-                      {label}
-                    </span>
-                    <span className={`text-lg font-bold ${color}`}>
-                      {value}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-[10px] text-slate-500">{sub}</p>
+          {/* 1. PERFORMANCE OVERVIEW */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
+            <div>
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                  <Sparkles className="h-4 w-4 text-cyan-300" />
                 </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-violet-500/45 bg-[linear-gradient(145deg,#080d25_0%,#0b1028_48%,#071a30_100%)] p-5 shadow-[0_0_45px_rgba(124,58,237,0.11)]">
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/35 bg-violet-400/[0.08]">
-                <Award className="h-5 w-5 text-violet-300" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  CATEGORY PERFORMANCE
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Score and accuracy by assessment category
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-5">
-              {sectionData.map((section) => {
-                const Icon = section.icon;
-                return (
-                  <div key={section.name}>
-                    <div className="mb-2 flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-blue-300/20 bg-blue-400/[0.06]">
-                        <Icon className="h-4 w-4 text-cyan-300" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-slate-100">
-                            {section.name}
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            {section.correct !== null ? `${section.correct} / ${section.total}` : `— / ${section.total}`}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
-                          <div
-                            className={`h-full rounded-full bg-gradient-to-r ${section.gradient} shadow-[0_0_12px_rgba(34,211,238,0.18)]`}
-                            style={{ width: `${section.score ?? 0}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <span
-                        className={`w-12 text-right text-sm font-bold ${
-                          section.score === null
-                            ? 'text-slate-500'
-                            : section.score >= 80
-                              ? 'text-emerald-400'
-                              : section.score >= 60
-                                ? 'text-amber-400'
-                                : 'text-red-400'
-                        }`}
-                      >
-                        {section.score !== null ? `${section.score}%` : '—'}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-
-              <div className="border-t border-blue-200/[0.10] pt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-sm font-semibold text-white">
-                    Overall Performance
-                  </span>
-                  <span className="text-sm font-bold text-cyan-300">
-                    {correct !== null && totalQuestions !== null
-                      ? `${correct} / ${totalQuestions}`
-                      : '—'}
-                  </span>
+                <div>
+                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    PERFORMANCE OVERVIEW
+                  </h3>
+                  <p className="text-[11px] text-[#858585]">
+                    Core assessment efficiency metrics
+                  </p>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  {
+                    label: 'Accuracy',
+                    value: `${overallScore ?? 0}%`,
+                    sub: overallScore >= 70 ? 'High' : overallScore >= 50 ? 'Moderate' : 'Low',
+                    color: 'text-cyan-300',
+                  },
+                  {
+                    label: 'Time Taken',
+                    value: timeTaken || '—',
+                    sub: 'of 30:00 allocated',
+                    color: 'text-[#F5F5F5]',
+                  },
+                  {
+                    label: 'Average Time / Question',
+                    value: averageTime || '—',
+                    sub: 'Optimal pacing',
+                    color: 'text-violet-300',
+                  },
+                  {
+                    label: 'Questions Attempted',
+                    value: `${Math.min(totalQuestions || 0, (correct || 0) + (incorrect || 0))} / ${totalQuestions || 0}`,
+                    sub: `${totalQuestions ? Math.round(((correct + incorrect) / Math.max(totalQuestions, 1)) * 100) : 0}% completion`,
+                    color: 'text-emerald-400',
+                  },
+                ].map((item) => (
                   <div
-                    className="h-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-300"
-                    style={{ width: `${overallScore ?? 0}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* =====================================================
-            ANSWER BREAKDOWN + CATEGORY COMPARISON + TIME ANALYSIS
-        ===================================================== */}
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-          <div className="h-[260px] overflow-hidden rounded-2xl border border-blue-500/40 bg-[#070e23]/95 p-4">
-            <h3 className="mb-3 text-sm font-bold text-white">
-              ANSWER BREAKDOWN
-            </h3>
-
-            <div className="flex items-center gap-5">
-              <div
-                className="relative h-24 w-24 shrink-0 translate-y-7 rounded-full"
-                style={{
-                  background:
-                    correct !== null || incorrect !== null || skipped !== null
-                      ? `conic-gradient(
-                          #2dd4bf 0 ${((correct || 0) / donutTotal) * 360}deg,
-                          #fb7185 ${((correct || 0) / donutTotal) * 360}deg ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg,
-                          #fbbf24 ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg 360deg
-                        )`
-                      : '#1e293b',
-                }}
-              >
-                <div className="absolute inset-2 flex items-center justify-center rounded-full bg-[#070e23]">
-                  <span className="text-xl font-extrabold text-white">
-                    {overallScore !== null ? `${overallScore}%` : '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {answerBreakdown.map((item) => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                    <span className="text-xs text-slate-300">
-                      {item.label}
-                    </span>
-                    <span className="text-[11px] font-bold text-white">
-                      {item.value !== null ? item.value : '—'}
+                    key={item.label}
+                    className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3"
+                  >
+                    <div>
+                      <span className="text-xs font-medium text-[#94A3B8]">
+                        {item.label}
+                      </span>
+                      <p className="text-[10px] text-[#64748B] mt-0.5">
+                        {item.sub}
+                      </p>
+                    </div>
+                    <span className={`text-base font-bold ${item.color}`}>
+                      {item.value}
                     </span>
                   </div>
                 ))}
@@ -2107,336 +2067,554 @@ const Feedback = () => {
             </div>
           </div>
 
-          <div className="h-[260px] overflow-hidden rounded-2xl border border-violet-500/40 bg-[#080e24]/95 p-4">
-            <h3 className="mb-3 text-sm font-bold text-white">
-              CATEGORY COMPARISON
-            </h3>
-
-            <div className="relative top-10 flex h-28 items-end justify-around gap-3 border-b border-blue-200/[0.10] px-2">
-              {sectionData.map((section) => (
-                <div
-                  key={section.name}
-                  className="flex h-full flex-1 flex-col items-center justify-end gap-2"
-                >
-                  <span className="text-xs font-bold text-white">
-                    {section.score !== null ? `${section.score}%` : '—'}
-                  </span>
-                  <div
-                    className={`w-full max-w-16 rounded-t-lg bg-gradient-to-t ${section.gradient} shadow-[0_0_20px_rgba(59,130,246,0.18)]`}
-                    style={{
-                      height:
-                        section.score !== null
-                          ? `${Math.max(12, section.score * 0.95)}px`
-                          : '0px',
-                    }}
-                  />
-                  <span className="text-center text-[9px] text-slate-400">
-                    {section.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="h-[260px] overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#061225]/95 p-4">
-            <h3 className="mb-3 text-sm font-bold text-white">
-              TIME ANALYSIS
-            </h3>
-
-            <div className="space-y-2.5">
-              <div className="rounded-lg border border-emerald-400/10 bg-emerald-400/[0.035] p-2.5">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Fastest Avg. Time
-                </p>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-200">
-                    {fastestCategory || '—'}
-                  </span>
-                  <span className="text-sm font-bold text-emerald-400">
-                    {fastestTime || '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-red-400/10 bg-red-400/[0.035] p-2.5">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Slowest Avg. Time
-                </p>
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-slate-200">
-                    {slowestCategory || '—'}
-                  </span>
-                  <span className="text-sm font-bold text-red-400">
-                    {slowestTime || '—'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-cyan-400/10 bg-cyan-400/[0.035] p-2.5">
-                <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                  Time Efficiency
-                </p>
-                <p className="mt-1 text-sm font-bold text-emerald-400">
-                  {textValue(
-                    round2.time_efficiency,
-                    round2.time_efficiency_label,
-                    result?.time_efficiency
-                  ) || '—'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* =====================================================
-            STRENGTHS + AREAS TO IMPROVE + QUESTION ANALYSIS
-        ===================================================== */}
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1fr_1.3fr]">
-          <div className="h-[320px] overflow-hidden rounded-2xl border border-emerald-500/35 bg-[#071725]/95 p-4">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-              STRENGTHS
-            </h3>
-
-            <div className="h-[245px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-emerald-400/45">
-              {strengthItems.length > 0 ? (
-                strengthItems.map(([title, description], index) => (
-                  <div key={`${title}-${index}`} className="flex gap-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                    <div>
-                      <p className="text-sm text-slate-200">
-                        {title}
-                      </p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                        {description}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Backend strength feedback is not available.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="h-[320px] overflow-hidden rounded-2xl border border-amber-500/35 bg-[#171322]/95 p-4">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-white">
-              <AlertTriangle className="h-5 w-5 text-amber-400" />
-              AREAS TO IMPROVE
-            </h3>
-
-            <div className="h-[245px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-amber-400/45">
-              {improvementItems.length > 0 ? (
-                improvementItems.map(([title, description], index) => (
-                  <div key={`${title}-${index}`} className="flex gap-3">
-                    <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                    <div>
-                      <p className="text-sm text-slate-200">
-                        {title}
-                      </p>
-                      <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                        {description}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Backend improvement feedback is not available.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="h-[320px] overflow-hidden rounded-2xl border border-cyan-500/35 bg-[#061225]/95 p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-white">
-                <FileText className="h-5 w-5 text-cyan-300" />
-                QUESTION ANALYSIS
-              </h3>
-              <span className="text-xs font-bold text-cyan-300">
-                View All ({totalQuestions})
-              </span>
-            </div>
-
-            <div className="h-[245px] overflow-y-auto overflow-x-hidden rounded-lg border border-blue-200/[0.08] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/45">
-              <div className="grid grid-cols-[35px_1fr_70px_60px] bg-white/[0.025] px-3 py-2 text-[10px] font-bold uppercase text-slate-500 sticky top-0 z-10">
-                <span>Q#</span>
-                <span>Category</span>
-                <span>Result</span>
-                <span>Time</span>
-              </div>
-
-              {normalizedQuestionAnalysis.length > 0 ? (
-                normalizedQuestionAnalysis.map((question, index) => {
-                  const category =
-                    question?.category ||
-                    question?.type ||
-                    question?.section ||
-                    '—';
-
-                  const questionResult =
-                    question?.result ||
-                    question?.status ||
-                    (question?.is_correct === true
-                      ? 'Correct'
-                      : question?.is_correct === false
-                        ? 'Incorrect'
-                        : '—');
-
-                  const normalizedResult = String(questionResult).trim().toLowerCase();
-
-                  const isSkipped =
-                    normalizedResult === 'skipped' ||
-                    normalizedResult === 'skip' ||
-                    question?.is_skipped === true ||
-                    question?.skipped === true;
-
-                  const rawQuestionTime =
-                    question?.time ??
-                    question?.time_taken ??
-                    question?.duration ??
-                    question?.time_seconds ??
-                    question?.time_spent ??
-                    question?.seconds;
-
-                  const questionTime = isSkipped
-                    ? 'Skipped'
-                    : rawQuestionTime !== null &&
-                        rawQuestionTime !== undefined &&
-                        rawQuestionTime !== ''
-                      ? String(rawQuestionTime).match(/(?:sec|second|seconds|s)$/i)
-                        ? String(rawQuestionTime)
-                        : `${rawQuestionTime} sec`
-                      : '—';
-
-                  return (
-                    <div
-                      key={question?.id || question?._id || index}
-                      className="grid grid-cols-[35px_1fr_70px_60px] items-center border-t border-blue-200/[0.08] px-3 py-3 text-xs"
-                    >
-                      <span className="text-slate-500">{index + 1}</span>
-                      <span className="truncate text-slate-200">{category}</span>
-                      <span
-                        className={
-                          String(questionResult).toLowerCase() === 'correct'
-                            ? 'font-semibold text-emerald-400'
-                            : String(questionResult).toLowerCase() === 'incorrect'
-                              ? 'font-semibold text-red-400'
-                              : 'font-semibold text-slate-400'
-                        }
-                      >
-                        {questionResult}
-                      </span>
-                      <span className="text-slate-400">{questionTime}</span>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="border-t border-blue-200/[0.08] px-3 py-5 text-center text-xs text-slate-500">
-                  Question-level analysis is not available in the backend result.
-                </div>
-              )}
-            </div>
-
-            <p className="mt-2 text-center text-[9px] text-slate-500">
-              {normalizedQuestionAnalysis.length > 0
-                ? `Showing all ${normalizedQuestionAnalysis.length} backend question results`
-                : 'No question-level backend data available'}
-            </p>
-          </div>
-        </div>
-
-        {/* =====================================================
-            AI RECOMMENDATIONS + AI ASSESSMENT SUMMARY
-        ===================================================== */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <div className="rounded-2xl border border-cyan-500/35 bg-[linear-gradient(145deg,#061728_0%,#071326_55%,#061b2b_100%)] p-5 shadow-[0_0_38px_rgba(34,211,238,0.07)]">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/30 bg-cyan-400/[0.08]">
-                <Lightbulb className="h-5 w-5 text-cyan-300" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  AI RECOMMENDATIONS
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Personalized assessment improvement suggestions
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              {recommendations.length > 0 ? (
-                recommendations.map((item, index) => (
-                  <div
-                    key={`${item}-${index}`}
-                    className="flex items-start gap-3 rounded-xl border border-blue-300/[0.08] bg-white/[0.025] px-3 py-3"
-                  >
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                    <p className="text-sm leading-relaxed text-slate-300">
-                      {item}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-slate-500">
-                  Backend recommendations are not available.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/40 bg-[linear-gradient(110deg,#090d28_0%,#17133e_48%,#071a34_100%)] p-5 shadow-[0_0_45px_rgba(124,58,237,0.10)]">
-            <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-violet-500/[0.10] blur-[60px]" />
-
-            <div className="relative">
-              <div className="mb-4 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-300/35 bg-violet-400/[0.08]">
-                  <Sparkles className="h-5 w-5 text-violet-300" />
+          {/* 2. CATEGORY PERFORMANCE */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
+            <div>
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-400/10">
+                  <Award className="h-4 w-4 text-violet-300" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-white">
-                    AI ASSESSMENT SUMMARY
+                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    CATEGORY PERFORMANCE
                   </h3>
-                  <p className="text-xs text-slate-500">
-                    Round 2 performance overview
+                  <p className="text-[11px] text-[#858585]">
+                    Score and accuracy by assessment category
                   </p>
                 </div>
               </div>
 
-              <p className="max-w-3xl text-sm leading-7 text-slate-300">
-                {performanceMessage ||
-                  'Backend assessment summary is not available.'}
+              <div className="space-y-3.5">
+                {sectionData.map((section) => {
+                  const Icon = section.icon;
+                  return (
+                    <div key={section.name}>
+                      <div className="flex items-center justify-between text-xs mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5 text-cyan-300" />
+                          <span className="font-semibold text-[#E5E7EB]">
+                            {section.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] text-[#64748B]">
+                            {section.correct !== null ? `${section.correct} / ${section.total}` : `— / ${section.total}`}
+                          </span>
+                          <span className="font-bold text-cyan-300 w-10 text-right">
+                            {section.score !== null ? `${section.score}%` : '—'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-[#161B26]">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${section.gradient} shadow-[0_0_12px_rgba(34,211,238,0.2)]`}
+                          style={{ width: `${Math.min(100, Math.max(0, section.score ?? 0))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Overall Performance */}
+                <div className="border-t border-white/[0.06] pt-3 mt-3">
+                  <div className="flex items-center justify-between text-xs mb-1.5">
+                    <span className="font-semibold text-[#F5F5F5]">
+                      Overall Performance
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-[#64748B]">
+                        {correct !== null && totalQuestions !== null
+                          ? `${correct} / ${totalQuestions}`
+                          : '—'}
+                      </span>
+                      <span className="font-bold text-[#FF9A6B] w-10 text-right">
+                        {overallScore !== null ? `${overallScore}%` : '—'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-[#161B26]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#FF9A6B] via-[#E57A4B] to-[#8B5CF6]"
+                      style={{ width: `${Math.min(100, Math.max(0, overallScore ?? 0))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. TIME ANALYSIS */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
+            <div>
+              <div className="mb-4 flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                  <Target className="h-4 w-4 text-cyan-300" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    TIME ANALYSIS
+                  </h3>
+                  <p className="text-[11px] text-[#858585]">
+                    Pacing across assessment sections
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                    Fastest Avg. Time
+                  </span>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#E5E7EB]">
+                      {fastestCategory || 'Reasoning'}
+                    </span>
+                    <span className="text-sm font-bold text-emerald-400">
+                      {fastestTime || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                    Slowest Avg. Time
+                  </span>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[#E5E7EB]">
+                      {slowestCategory || 'Technical'}
+                    </span>
+                    <span className="text-sm font-bold text-rose-400">
+                      {slowestTime || '—'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                    Time Efficiency
+                  </span>
+                  <div className="mt-1 flex items-center justify-between">
+                    <span className="text-xs text-[#94A3B8]">
+                      Overall Pace
+                    </span>
+                    <span className="text-sm font-bold text-cyan-300">
+                      {textValue(
+                        round2.time_efficiency,
+                        round2.time_efficiency_label,
+                        result?.time_efficiency
+                      ) || 'Optimal'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            ANALYTICS ROW 2: Answer Breakdown | Category Comparison | Strengths
+        ===================================================== */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+          {/* 1. ANSWER BREAKDOWN */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
+                  <CheckCircle2 className="h-4 w-4 text-cyan-300" />
+                </div>
+                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  ANSWER BREAKDOWN
+                </h3>
+              </div>
+
+              <div className="flex items-center justify-around gap-4 mt-4">
+                {/* Conic donut ring */}
+                <div
+                  className="relative h-28 w-28 shrink-0 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.6)]"
+                  style={{
+                    background:
+                      correct !== null || incorrect !== null || skipped !== null
+                        ? `conic-gradient(
+                            #2dd4bf 0deg ${((correct || 0) / donutTotal) * 360}deg,
+                            #fb7185 ${((correct || 0) / donutTotal) * 360}deg ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg,
+                            #fbbf24 ${(((correct || 0) + (incorrect || 0)) / donutTotal) * 360}deg 360deg
+                          )`
+                        : '#1e293b',
+                  }}
+                >
+                  <div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-[#0B1017]">
+                    <span className="text-xl font-extrabold text-[#F5F5F5]">
+                      {overallScore !== null ? `${overallScore}%` : '—'}
+                    </span>
+                    <span className="text-[9px] font-bold text-[#64748B] uppercase">
+                      Score
+                    </span>
+                  </div>
+                </div>
+
+                {/* Legend list */}
+                <div className="space-y-3 flex-1 max-w-[140px]">
+                  {answerBreakdown.map((item) => (
+                    <div key={item.label} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-2.5 w-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-[#94A3B8]">
+                          {item.label}
+                        </span>
+                      </div>
+                      <span className="font-bold text-[#F5F5F5]">
+                        {item.value !== null ? item.value : '—'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5 text-center text-[11px] text-[#64748B]">
+              Total evaluated answers: {totalQuestions ?? 50} questions
+            </div>
+          </div>
+
+          {/* 2. CATEGORY COMPARISON */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-400/10 border border-violet-400/20">
+                  <TrendingUp className="h-4 w-4 text-violet-300" />
+                </div>
+                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  CATEGORY COMPARISON
+                </h3>
+              </div>
+
+              {/* Visual Vertical Comparison Bar Chart */}
+              <div className="flex h-36 items-end justify-around gap-4 border-b border-white/[0.08] px-2 pt-2 pb-1 mt-2">
+                {sectionData.map((section) => {
+                  const scoreVal = section.score ?? 0;
+                  const barHeight = Math.max(12, Math.min(100, scoreVal));
+                  return (
+                    <div
+                      key={section.name}
+                      className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+                    >
+                      <span className="text-[11px] font-bold text-[#F5F5F5]">
+                        {section.score !== null ? `${section.score}%` : '—'}
+                      </span>
+                      <div
+                        className={`w-full max-w-14 rounded-t-lg bg-gradient-to-t ${section.gradient} shadow-[0_0_16px_rgba(59,130,246,0.2)] transition-all duration-700`}
+                        style={{ height: `${barHeight}%` }}
+                      />
+                      <span className="text-center text-[10px] font-medium text-[#94A3B8] truncate max-w-full">
+                        {section.name}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5 text-center text-[11px] text-[#64748B]">
+              Relative accuracy across domains
+            </div>
+          </div>
+
+          {/* 3. STRENGTHS */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(145deg,#0A1218_0%,#0D151D_55%,#0F1922_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                </div>
+                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  STRENGTHS
+                </h3>
+              </div>
+
+              <div className="h-[210px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-emerald-400/40 space-y-2.5">
+                {strengthItems.length > 0 ? (
+                  strengthItems.map(([title, description], index) => (
+                    <div
+                      key={`${title}-${index}`}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#0E161C]/80 p-2.5"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-[#E5E7EB]">
+                          {title}
+                        </p>
+                        {description && (
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#94A3B8]">
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[#64748B] p-2">
+                    Backend strength feedback is not available.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            ANALYTICS ROW 3: Areas to Improve | Question Analysis | AI Recommendations
+        ===================================================== */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+
+          {/* 1. AREAS TO IMPROVE */}
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[linear-gradient(145deg,#0E1219_0%,#0F141D_55%,#15141D_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                </div>
+                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  AREAS TO IMPROVE
+                </h3>
+              </div>
+
+              <div className="h-[255px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-amber-400/40 space-y-2.5">
+                {improvementItems.length > 0 ? (
+                  improvementItems.map(([title, description], index) => (
+                    <div
+                      key={`${title}-${index}`}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#16131D]/80 p-2.5"
+                    >
+                      <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-[#E5E7EB]">
+                          {title}
+                        </p>
+                        {description && (
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#94A3B8]">
+                            {description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[#64748B] p-2">
+                    Backend improvement feedback is not available.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. QUESTION ANALYSIS */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
+                    <FileText className="h-4 w-4 text-cyan-300" />
+                  </div>
+                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    QUESTION ANALYSIS
+                  </h3>
+                </div>
+                <span className="text-[11px] font-bold text-cyan-300">
+                  View All ({totalQuestions ?? normalizedQuestionAnalysis.length})
+                </span>
+              </div>
+
+              <div className="h-[235px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.06] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/40">
+                <div className="grid grid-cols-[36px_1fr_68px_56px] bg-[#070A10]/90 px-3 py-2 text-[9px] font-bold uppercase text-[#64748B] sticky top-0 z-10 border-b border-white/[0.05]">
+                  <span>Q#</span>
+                  <span>Category</span>
+                  <span>Result</span>
+                  <span>Time</span>
+                </div>
+
+                {normalizedQuestionAnalysis.length > 0 ? (
+                  normalizedQuestionAnalysis.map((question, index) => {
+                    const category =
+                      question?.category ||
+                      question?.type ||
+                      question?.section ||
+                      '—';
+
+                    const questionResult =
+                      question?.result ||
+                      question?.status ||
+                      (question?.is_correct === true
+                        ? 'Correct'
+                        : question?.is_correct === false
+                          ? 'Incorrect'
+                          : '—');
+
+                    const normalizedResult = String(questionResult).trim().toLowerCase();
+
+                    const isSkipped =
+                      normalizedResult === 'skipped' ||
+                      normalizedResult === 'skip' ||
+                      question?.is_skipped === true ||
+                      question?.skipped === true;
+
+                    const rawQuestionTime =
+                      question?.time ??
+                      question?.time_taken ??
+                      question?.duration ??
+                      question?.time_seconds ??
+                      question?.time_spent ??
+                      question?.seconds;
+
+                    const questionTime = isSkipped
+                      ? 'Skipped'
+                      : rawQuestionTime !== null &&
+                          rawQuestionTime !== undefined &&
+                          rawQuestionTime !== ''
+                        ? String(rawQuestionTime).match(/(?:sec|second|seconds|s)$/i)
+                          ? String(rawQuestionTime)
+                          : `${rawQuestionTime}s`
+                        : '—';
+
+                    return (
+                      <div
+                        key={question?.id || question?._id || index}
+                        className="grid grid-cols-[36px_1fr_68px_56px] items-center border-b border-white/[0.04] px-3 py-2 text-xs last:border-b-0 hover:bg-white/[0.02]"
+                      >
+                        <span className="text-[#64748B] text-[11px] font-medium">{index + 1}</span>
+                        <span className="truncate text-[#E5E7EB] text-[11px] pr-1">{category}</span>
+                        <span
+                          className={`text-[11px] font-semibold ${
+                            String(questionResult).toLowerCase() === 'correct'
+                              ? 'text-emerald-400'
+                              : String(questionResult).toLowerCase() === 'incorrect'
+                                ? 'text-rose-400'
+                                : 'text-amber-400'
+                          }`}
+                        >
+                          {questionResult}
+                        </span>
+                        <span className="text-[#94A3B8] text-[11px]">{questionTime}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="px-3 py-6 text-center text-xs text-[#64748B]">
+                    Question-level analysis is not available in the backend result.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <p className="text-center text-[10px] text-[#64748B] pt-1">
+              Showing {normalizedQuestionAnalysis.length} backend questions
+            </p>
+          </div>
+
+          {/* 3. AI RECOMMENDATIONS */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+            <div>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
+                  <Lightbulb className="h-4 w-4 text-cyan-300" />
+                </div>
+                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  AI RECOMMENDATIONS
+                </h3>
+              </div>
+
+              <div className="h-[255px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/40 space-y-2.5">
+                {recommendations.length > 0 ? (
+                  recommendations.map((item, index) => (
+                    <div
+                      key={`${item}-${index}`}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
+                      <p className="text-xs leading-relaxed text-[#D1D5DB]">
+                        {item}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-[#64748B] p-2">
+                    Backend recommendations are not available.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            ANALYTICS ROW 4: AI Assessment Summary (Full-Width Premium Card)
+        ===================================================== */}
+        <div className="mb-8 overflow-hidden rounded-2xl border border-violet-500/30 bg-[linear-gradient(135deg,#0C101A_0%,#131128_50%,#0B0F17_100%)] p-6 sm:p-7 shadow-[0_15px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(139,92,246,0.08)] relative">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-violet-500/[0.10] blur-[60px]" />
+
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div className="flex items-start gap-4 flex-1 min-w-0">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/35 bg-violet-400/15 shadow-[0_0_18px_rgba(139,92,246,0.2)]">
+                <Sparkles className="h-5 w-5 text-violet-300" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5] tracking-tight">
+                  AI ASSESSMENT SUMMARY
+                </h3>
+                <p className="text-xs text-[#858585] mb-2">
+                  Round 2 comprehensive performance overview
+                </p>
+                <p className="text-xs sm:text-sm leading-relaxed text-[#D1D5DB] max-w-3xl">
+                  {performanceMessage ||
+                    'Assessment analysis completed. Your cognitive, aptitude, and domain technical responses have been thoroughly benchmarked against industry standards.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Right-Side Quote / Badge element matching premium design */}
+            <div className="shrink-0 w-full md:w-56 rounded-xl border border-violet-400/25 bg-white/[0.03] p-3.5 text-center relative overflow-hidden backdrop-blur-sm shadow-sm">
+              <p className="text-xs font-medium text-[#E5E7EB] italic leading-snug">
+                &ldquo;Master your fundamentals.<br />
+                Refine your problem solving.<br />
+                <span className="text-cyan-300 font-bold not-italic">Ready for Round 3!&rdquo;</span>
               </p>
             </div>
           </div>
         </div>
 
         {/* =====================================================
-            ACTIONS
+            BOTTOM ACTION BUTTONS
         ===================================================== */}
-        <div className="flex flex-col items-center justify-center gap-4 pb-6 pt-2 sm:flex-row">
-          <button
-            type="button"
-            onClick={() => setCurrentRound(1)}
-            className="flex min-w-[220px] items-center justify-center gap-2 rounded-xl border border-blue-300/55 bg-[#050a1b]/70 px-7 py-3.5 text-sm font-bold text-white shadow-[0_0_18px_rgba(59,130,246,0.08)] transition hover:border-cyan-300/80 hover:bg-cyan-400/[0.04] hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Round 1
-          </button>
+        <div className="relative pt-2 pb-8">
+          <div className="relative flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button
+              type="button"
+              onClick={() => setCurrentRound(1)}
+              className="flex min-w-[200px] items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-[#0E131E]/80 hover:bg-[#161B26] px-6 py-3.5 text-sm font-semibold text-[#E5E7EB] shadow-sm transition cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Round 1
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setCurrentRound(3)}
-            className="flex min-w-[270px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-blue-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_34px_rgba(124,58,237,0.42),0_0_60px_rgba(37,99,235,0.18)] transition hover:scale-[1.01] hover:shadow-[0_0_42px_rgba(59,130,246,0.35)]"
-          >
-            Continue to Round 3
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            <button
+              type="button"
+              onClick={() => setCurrentRound(3)}
+              className="flex min-w-[260px] items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-blue-500 hover:brightness-110 active:scale-[0.99] px-8 py-3.5 text-sm font-bold text-white shadow-[0_4px_25px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_30px_rgba(124,58,237,0.5)] transition-all cursor-pointer"
+            >
+              Continue to Round 3
+              <ArrowRight className="h-4 w-4 text-white" />
+            </button>
+          </div>
         </div>
+
       </section>
     );
   };
