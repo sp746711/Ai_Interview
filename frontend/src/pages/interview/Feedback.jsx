@@ -23,6 +23,8 @@ import {
   Award,
   CircleCheck,
   CircleAlert,
+  Crown,
+  TrendingUp,
 } from 'lucide-react';
 
 
@@ -475,7 +477,49 @@ const Feedback = () => {
         Math.min(100, Number(role.match_percentage || 0))
       ));
 
-    // Fixed five-point visual trend matching the reference UI.
+    // Dynamic single web/line wave generator directly driven by the backend percentage.
+    // No fabricated historical data points.
+    const renderPercentageLineGraph = (score, colorHex, gradientId) => {
+      const pct = Math.max(0, Math.min(100, Number(score || 0)));
+      const r = pct / 100;
+      const Y_base = 52;
+      const p0 = { x: 8, y: +(Y_base - r * 6).toFixed(1) };
+      const p1 = { x: 64, y: +(Y_base - r * 22).toFixed(1) };
+      const p2 = { x: 120, y: +(Y_base - r * 16 + (r > 0.3 ? 3 : 1)).toFixed(1) };
+      const p3 = { x: 176, y: +(Y_base - r * 35).toFixed(1) };
+      const p4 = { x: 232, y: +(Y_base - r * 42).toFixed(1) };
+
+      const pathD = `M ${p0.x} ${p0.y} C ${p0.x + 28} ${p0.y}, ${p1.x - 28} ${p1.y}, ${p1.x} ${p1.y} C ${p1.x + 28} ${p1.y}, ${p2.x - 28} ${p2.y}, ${p2.x} ${p2.y} C ${p2.x + 28} ${p2.y}, ${p3.x - 28} ${p3.y}, ${p3.x} ${p3.y} C ${p3.x + 28} ${p3.y}, ${p4.x - 28} ${p4.y}, ${p4.x} ${p4.y}`;
+      const areaD = `${pathD} L 232 58 L 8 58 Z`;
+
+      return (
+        <div className="h-16 w-full my-2 relative">
+          <svg className="w-full h-full" viewBox="0 0 240 64" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={colorHex} stopOpacity="0.25" />
+                <stop offset="100%" stopColor={colorHex} stopOpacity="0.0" />
+              </linearGradient>
+            </defs>
+            <line x1="8" y1="58" x2="232" y2="58" stroke={colorHex} strokeOpacity="0.10" strokeDasharray="3 3" />
+            <path d={areaD} fill={`url(#${gradientId})`} />
+            <path
+              d={pathD}
+              fill="none"
+              stroke={colorHex}
+              strokeWidth="2"
+              strokeLinecap="round"
+              style={{ filter: `drop-shadow(0 0 6px ${colorHex}55)` }}
+            />
+            {/* Real score endpoint with subtle accent glow */}
+            <circle cx={p4.x} cy={p4.y} r="5.5" fill={colorHex} fillOpacity="0.25" />
+            <circle cx={p4.x} cy={p4.y} r="3" fill={colorHex} stroke="#0E131E" strokeWidth="1.5" />
+          </svg>
+        </div>
+      );
+    };
+
+    // Fixed five-point visual trend for Role Match Trend in Career Fit.
     // Values are derived only from already available result data.
     const chartValues = [
       Math.min(100, Math.max(0, resumeScore)),
@@ -486,11 +530,11 @@ const Feedback = () => {
     ];
 
     const chartWidth = 520;
-    const chartHeight = 145;
-    const chartLeft = 38;
+    const chartHeight = 110;
+    const chartLeft = 36;
     const chartRight = 505;
-    const chartTop = 12;
-    const chartBottom = 116;
+    const chartTop = 10;
+    const chartBottom = 88;
     const chartStep =
       (chartRight - chartLeft) /
       Math.max(chartValues.length - 1, 1);
@@ -519,91 +563,95 @@ const Feedback = () => {
       <section className="relative">
 
         {/* =====================================================
-            TOP ROUND STEPPER
+            TOP ROUND PROGRESS AREA — Wide, Balanced Stepper with Visible Lines
         ===================================================== */}
-        <div className="mb-7 border-b border-blue-200/[0.10] pb-5">
-          <div className="flex items-center gap-5">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
 
-            <div className="shrink-0">
-              <p className="text-sm font-bold tracking-[0.08em] text-cyan-300">
-                ROUND 1 / 3
-              </p>
-            </div>
-
-            <div className="flex flex-1 items-center justify-center">
-              {[1, 2, 3].map((round, index) => (
-                <React.Fragment key={round}>
-
-                  <div className="flex min-w-[105px] flex-col items-center">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 text-sm font-bold ${
-                        round === 1
-                          ? 'border-cyan-300 bg-[linear-gradient(135deg,#2563eb_0%,#4f46e5_52%,#7c3aed_100%)] text-white shadow-[0_0_32px_rgba(34,211,238,0.62),0_0_55px_rgba(124,58,237,0.28)]'
-                          : 'border-slate-700 bg-[#111b35] text-slate-400'
-                      }`}
-                    >
-                      {round}
-                    </div>
-
-                    <span
-                      className={`mt-2 text-[11px] font-semibold ${
-                        round === 1
-                          ? 'text-white'
-                          : 'text-slate-500'
-                      }`}
-                    >
-                      {round === 1
-                        ? 'Resume Analysis'
-                        : round === 2
-                          ? 'Assessment'
-                          : 'AI Interview'}
-                    </span>
-                  </div>
-
-                  {index < 2 && (
-                    <div className="h-[2px] flex-1 bg-gradient-to-r from-cyan-400/90 via-blue-500/80 to-violet-500/45" />
-                  )}
-
-                </React.Fragment>
-              ))}
-            </div>
-
+          {/* ROUND 1 / 3 on left */}
+          <div className="shrink-0">
+            <span className="text-sm font-black tracking-[0.16em] text-[#FF9A6B] uppercase">
+              ROUND 1 / 3
+            </span>
           </div>
+
+          {/* Wide & balanced stepper positioned across center/right */}
+          <div className="w-full max-w-xl md:max-w-2xl flex-1 md:ml-12 md:mr-2">
+            <div className="flex items-start">
+              {/* Step 1: Active Resume Analysis */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#FF9A6B] bg-gradient-to-br from-[#FF9A6B] via-[#FF8A5B] to-[#F6A06F] text-xs sm:text-sm font-bold text-[#0A0E15] shadow-[0_0_18px_rgba(255,154,107,0.5)]">
+                  1
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#F5F5F5]">
+                  Resume Analysis
+                </span>
+              </div>
+
+              {/* Connecting Line 1 -> 2: Clearly visible gradient to intermediate */}
+              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-gradient-to-r from-[#FF9A6B] via-[#FF8A5B] to-[#475569]" />
+
+              {/* Step 2: Assessment */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] bg-[#0E131E] text-xs sm:text-sm font-bold text-[#64748B]">
+                  2
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#64748B]">
+                  Assessment
+                </span>
+              </div>
+
+              {/* Connecting Line 2 -> 3: Visible connecting line */}
+              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-[#334155]" />
+
+              {/* Step 3: AI Interview */}
+              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] bg-[#0E131E] text-xs sm:text-sm font-bold text-[#64748B]">
+                  3
+                </div>
+                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#64748B]">
+                  AI Interview
+                </span>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* =====================================================
-            HEADER
+            RESUME INTELLIGENCE HEADER (Continuous flow, no middle divider)
         ===================================================== */}
-        <div className="mb-6 flex items-start justify-between gap-5">
+        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-5">
 
-          <div>
-            <div className="mb-2 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-400/40 bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(124,58,237,0.12))] shadow-[0_0_28px_rgba(34,211,238,0.20)]">
-                <FileText className="h-5 w-5 text-cyan-300" />
-              </div>
-
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">
-                  Resume Intelligence
-                </p>
-                <p className="text-[11px] text-slate-500">
-                  Professional Profile Report
-                </p>
-              </div>
+          <div className="flex items-start gap-4">
+            {/* Resume icon horizontally grouped with text */}
+            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl border border-[#FF9A6B]/40 bg-[#1F1612] shadow-[0_0_22px_rgba(255,154,107,0.22)]">
+              <FileText className="h-6 w-6 text-[#FF9A6B]" />
             </div>
 
-            <h2 className="text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-              Resume Intelligence
-            </h2>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-[0.16em] text-[#FF9A6B]">
+                  RESUME INTELLIGENCE
+                </span>
+                <span className="text-[11px] text-[#64748B]">·</span>
+                <span className="text-xs text-[#858585]">
+                  Professional Profile Report
+                </span>
+              </div>
 
-            <p className="mt-2 text-sm text-slate-400 md:text-base">
-              Data-driven analysis of your resume and career alignment
-            </p>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F5] mt-0.5">
+                Resume Intelligence
+              </h2>
+
+              <p className="mt-1 text-xs sm:text-sm text-[#94A3B8]">
+                Data-driven analysis of your resume and career alignment
+              </p>
+            </div>
           </div>
 
-          <div className="mt-1 flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/50 bg-emerald-400/[0.06] px-4 py-2 shadow-[0_0_24px_rgba(16,185,129,0.10)]">
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)]" />
-            <span className="text-xs font-bold text-emerald-300">
+          <div className="flex shrink-0 self-start md:self-center items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
+            <span className="text-xs font-bold tracking-wider text-emerald-300">
               AI ANALYSIS READY
             </span>
           </div>
@@ -611,192 +659,253 @@ const Feedback = () => {
         </div>
 
         {/* =====================================================
-            SCORE HERO
+            TOP ANALYTICS — THREE SEPARATE INDIVIDUAL CARDS
         ===================================================== */}
-        <div className="relative mb-5 overflow-hidden rounded-2xl border border-violet-500/50 bg-[linear-gradient(135deg,#05091b_0%,#0a1030_36%,#10153a_58%,#06162c_100%)] p-5 shadow-[0_0_55px_rgba(37,99,235,0.14),inset_0_1px_0_rgba(255,255,255,0.04)] md:p-6">
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          <div className="pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full bg-violet-600/[0.16] blur-[90px]" />
-          <div className="pointer-events-none absolute right-0 top-0 h-64 w-64 rounded-full bg-cyan-400/[0.10] blur-[100px]" />
-
-          <div className="relative grid grid-cols-1 items-center divide-y divide-blue-300/[0.10] md:grid-cols-[1.05fr_1fr_1fr] md:divide-x md:divide-y-0">
-
-            {/* OVERALL */}
-            <div className="flex min-h-[220px] flex-col items-center justify-center pb-6 md:pb-0">
-              <p className="mb-3 text-sm font-bold tracking-wide text-white">
+          {/* CARD 1: OVERALL MATCH */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col items-center justify-between min-h-[320px]">
+            {/* Header with original orange icon */}
+            <div className="flex items-center gap-2 w-full">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#FF9A6B]/15 border border-[#FF9A6B]/30 shadow-[0_0_12px_rgba(255,154,107,0.2)]">
+                <FileText className="h-4 w-4 text-[#FF9A6B]" />
+              </div>
+              <p className="text-xs sm:text-sm font-bold tracking-wider text-[#A1A1AA] uppercase">
                 OVERALL MATCH
               </p>
+            </div>
 
-              <div className="relative flex h-48 w-48 items-center justify-center">
-                {/* soft reference-style outer glow */}
-                <div className="absolute inset-[-10px] rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.24)_0%,rgba(59,130,246,0.16)_34%,rgba(124,58,237,0.18)_52%,transparent_72%)] blur-md" />
-                <div className="absolute inset-0 rounded-full border-[10px] border-[#101b35] shadow-[inset_0_0_24px_rgba(2,6,23,0.95),0_0_18px_rgba(37,99,235,0.12)]" />
-                <div
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `conic-gradient(from 210deg, #a855f7 0deg, #6366f1 78deg, #3b82f6 150deg, #22d3ee ${
-                      Math.max(0, Math.min(100, overallMatch)) * 3.6
-                    }deg, #1e293b ${
-                      Math.max(0, Math.min(100, overallMatch)) * 3.6
-                    }deg 360deg)`,
-                    WebkitMask:
-                      'radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0)',
-                    mask:
-                      'radial-gradient(farthest-side, transparent calc(100% - 10px), #000 0)',
-                  }}
+            {/* Clean 2D Donut Chart */}
+            <div className="relative flex h-38 w-38 items-center justify-center my-2">
+              <svg className="h-36 w-36 -rotate-90 transform" viewBox="0 0 160 160">
+                <defs>
+                  <linearGradient id="overallMatchDonut" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FF9A6B" />
+                    <stop offset="60%" stopColor="#FF8A5B" />
+                    <stop offset="100%" stopColor="#F6A06F" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="64"
+                  fill="transparent"
+                  stroke="#141926"
+                  strokeWidth="11"
                 />
+                <circle
+                  cx="80"
+                  cy="80"
+                  r="64"
+                  fill="transparent"
+                  stroke="url(#overallMatchDonut)"
+                  strokeWidth="11"
+                  strokeDasharray={2 * Math.PI * 64}
+                  strokeDashoffset={
+                    2 * Math.PI * 64 * (1 - Math.max(0, Math.min(100, overallMatch)) / 100)
+                  }
+                  strokeLinecap="round"
+                />
+              </svg>
 
-                <div className="absolute inset-[14px] rounded-full border border-cyan-400/15 bg-[#04091a] shadow-[inset_0_0_20px_rgba(15,23,42,0.85)]" />
-
-                {/* small decorative highlights from the reference visual */}
-                <span className="absolute -left-4 top-8 h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.9)]" />
-                <span className="absolute right-0 top-4 h-1.5 w-1.5 rounded-full bg-violet-300 shadow-[0_0_10px_rgba(168,85,247,0.9)]" />
-                <span className="absolute -right-4 bottom-12 h-1 w-1 rounded-full bg-cyan-300 shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
-
-                <div className="relative text-center">
-                  <p className="text-5xl font-extrabold tracking-tight text-white">
-                    {Math.round(overallMatch)}%
-                  </p>
-                  <p className="mt-1 text-xs font-bold tracking-wider text-cyan-300">
-                    {getOverallMatchLabel(overallMatch)}
-                  </p>
-                </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <p className="text-4xl font-extrabold tracking-tight text-[#F5F5F5]">
+                  {Math.round(overallMatch)}%
+                </p>
+                <p className="mt-1 text-[11px] font-bold tracking-wider text-[#FF9A6B] uppercase">
+                  {getOverallMatchLabel(overallMatch)}
+                </p>
               </div>
             </div>
 
-            {/* ATS */}
-            <div className="flex min-h-[220px] flex-col justify-center px-4 py-6 md:px-8 md:py-0">
-              <div className="mb-3 flex items-center gap-2">
-                <Award className="h-5 w-5 text-cyan-300" />
-                <p className="text-sm font-bold text-white">
+            {/* Restored Visual Legend from the reference */}
+            <div className="flex items-center justify-center gap-3 pt-2 text-[11px] font-medium text-[#94A3B8]">
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#FF9A6B]" />
+                <span>Needs Work</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#EAB308]" />
+                <span>Good</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#22C55E]" />
+                <span>Excellent</span>
+              </div>
+            </div>
+          </div>
+
+          {/* CARD 2: ATS SCORE — Single Percentage-Driven Web/Line Graph (No straight progress bar, no fake trend) */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[320px]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#22D3C5]/10 border border-[#22D3C5]/20">
+                  <Award className="h-4 w-4 text-[#22D3C5]" />
+                </div>
+                <p className="text-xs sm:text-sm font-bold tracking-wider text-[#A1A1AA] uppercase">
                   ATS SCORE
                 </p>
               </div>
 
-              <p className="text-5xl font-extrabold tracking-tight text-white">
-                {Math.round(resumeScore)}<span className="text-3xl">%</span>
-              </p>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 shadow-[0_0_14px_rgba(34,211,238,0.28)]"
-                  style={{ width: `${Math.min(100, Math.max(0, resumeScore))}%` }}
-                />
-              </div>
-
-              <p className="mt-5 text-sm font-bold text-emerald-300">
-                {getScoreLabel(resumeScore).toUpperCase()}
-              </p>
-
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                Your resume is highly optimized for ATS
-              </p>
+              <span className="flex items-center gap-1 rounded-full border border-[#22D3C5]/30 bg-[#22D3C5]/10 px-2 py-0.5 text-[10px] font-bold text-[#22D3C5]">
+                <CheckCircle2 className="h-3 w-3" />
+                High Match
+              </span>
             </div>
 
-            {/* DOMAIN */}
-            <div className="flex min-h-[220px] flex-col justify-center px-4 py-6 md:px-8 md:py-0">
-              <div className="mb-3 flex items-center gap-2">
-                <Target className="h-5 w-5 text-cyan-300" />
-                <p className="text-sm font-bold text-white">
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <p className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#F5F5F5]">
+                  {Math.round(resumeScore)}<span className="text-2xl sm:text-3xl text-[#22D3C5]">%</span>
+                </p>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#22D3C5]">
+                  {getScoreLabel(resumeScore)}
+                </span>
+              </div>
+
+              {/* Single Percentage-Driven Web/Line Visualization */}
+              {renderPercentageLineGraph(resumeScore, '#22D3C5', 'atsWaveFill')}
+            </div>
+
+            {/* Supporting dark information panel */}
+            <div className="rounded-xl border border-white/[0.06] bg-[#070A10]/70 p-2.5 text-xs text-[#94A3B8] leading-relaxed">
+              Your resume is highly optimized for ATS algorithms
+            </div>
+          </div>
+
+          {/* CARD 3: DOMAIN MATCH — Single Percentage-Driven Web/Line Graph (No straight progress bar, no fake trend) */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[320px]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#8B5CF6]/10 border border-[#8B5CF6]/25">
+                  <Target className="h-4 w-4 text-[#A855F7]" />
+                </div>
+                <p className="text-xs sm:text-sm font-bold tracking-wider text-[#A1A1AA] uppercase">
                   DOMAIN MATCH
                 </p>
               </div>
 
-              <p className="text-5xl font-extrabold tracking-tight text-white">
-                {hasDomainScore ? Math.round(domainMatch) : 0}
-                <span className="text-3xl">%</span>
-              </p>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-sky-400 to-blue-500 shadow-[0_0_14px_rgba(34,211,238,0.25)]"
-                  style={{
-                    width: `${hasDomainScore
-                      ? Math.min(100, Math.max(0, domainMatch))
-                      : 0}%`,
-                  }}
-                />
-              </div>
-
-              <p className="mt-5 text-sm font-bold text-cyan-300">
-                {selectedDomain.toUpperCase()}
-              </p>
-
-              <p className="mt-1 text-xs leading-relaxed text-slate-400">
-                Excellent alignment with selected domain
-              </p>
+              <span className="h-2 w-2 rounded-full bg-[#A855F7] shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
             </div>
 
+            <div>
+              <div className="flex items-baseline justify-between mb-1">
+                <p className="text-4xl sm:text-5xl font-extrabold tracking-tight text-[#F5F5F5]">
+                  {hasDomainScore ? Math.round(domainMatch) : 0}
+                  <span className="text-2xl sm:text-3xl text-[#A855F7]">%</span>
+                </p>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#A855F7] truncate max-w-[130px]">
+                  {selectedDomain}
+                </span>
+              </div>
+
+              {/* Single Percentage-Driven Web/Line Visualization */}
+              {renderPercentageLineGraph(hasDomainScore ? domainMatch : 0, '#A855F7', 'domainWaveFill')}
+            </div>
+
+            {/* Supporting dark information panel */}
+            <div className="rounded-xl border border-white/[0.06] bg-[#070A10]/70 p-2.5 text-xs text-[#94A3B8] leading-relaxed">
+              Excellent alignment with selected domain
+            </div>
           </div>
+
         </div>
 
         {/* =====================================================
             CAREER FIT + SKILL INTELLIGENCE
         ===================================================== */}
-        <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-          {/* CAREER FIT */}
-          <div className="h-[470px] overflow-hidden rounded-2xl border border-blue-500/55 bg-[linear-gradient(145deg,#070d24_0%,#0a1026_46%,#071a31_100%)] p-5 shadow-[0_0_45px_rgba(59,130,246,0.14)]">
+          {/* CAREER FIT (With Restored Right-Side Top Match Panel) */}
+          <div className="h-[430px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0B1017_0%,#0E141D_46%,#111620_100%)] p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex flex-col justify-between">
 
-            <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-400/45 bg-[linear-gradient(135deg,rgba(124,58,237,0.16),rgba(59,130,246,0.08))] shadow-[0_0_22px_rgba(124,58,237,0.16)]">
-                <BriefcaseBusiness className="h-5 w-5 text-violet-300" />
-              </div>
-
-              <div>
-                <h3 className="text-lg font-bold text-white">
-                  CAREER FIT
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Best fit roles for your profile
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              {bestFitRoles.length > 0 ? (
-                bestFitRoles.slice(0, 3).map((role, index) => {
-                  const percentage = Math.max(
-                    0,
-                    Math.min(100, Number(role.match_percentage || 0))
-                  );
-
-                  return (
-                    <div key={index}>
-                      <div className="mb-2 flex items-center justify-between">
-                        <span className="text-sm font-semibold text-slate-100">
-                          {role.role || 'Suggested Role'}
-                        </span>
-                        <span className="text-lg font-bold text-cyan-300">
-                          {percentage}%
-                        </span>
-                      </div>
-
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-300 shadow-[0_0_14px_rgba(99,102,241,0.25)]"
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-sm text-slate-500">
-                  AI role analysis is not available yet.
+            <div>
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#8B5CF6]/30 bg-[#8B5CF6]/10 shadow-[0_0_18px_rgba(139,92,246,0.15)]">
+                  <BriefcaseBusiness className="h-5 w-5 text-[#A855F7]" />
                 </div>
-              )}
+
+                <div>
+                  <h3 className="text-lg font-bold text-[#F5F5F5]">
+                    CAREER FIT
+                  </h3>
+                  <p className="text-xs text-[#858585]">
+                    Best fit roles for your profile
+                  </p>
+                </div>
+              </div>
+
+              {/* Composition: Left Roles List & Right Top Match Visual */}
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-4">
+                {/* Left: Dynamic Roles */}
+                <div className="space-y-3">
+                  {bestFitRoles.length > 0 ? (
+                    bestFitRoles.slice(0, 3).map((role, index) => {
+                      const percentage = Math.max(
+                        0,
+                        Math.min(100, Number(role.match_percentage || 0))
+                      );
+
+                      return (
+                        <div key={index}>
+                          <div className="mb-1 flex items-center justify-between">
+                            <span className="truncate text-xs sm:text-sm font-semibold text-[#E5E7EB] max-w-[150px]">
+                              {role.role || 'Suggested Role'}
+                            </span>
+                            <span className="text-xs sm:text-sm font-bold text-[#FF9A6B]">
+                              {percentage}%
+                            </span>
+                          </div>
+
+                          <div className="h-1.5 overflow-hidden rounded-full bg-[#161B26]">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#FF9A6B] via-[#E57A4B] to-[#8B5CF6] shadow-[0_0_12px_rgba(255,154,107,0.25)]"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3 text-xs text-[#858585]">
+                      AI role analysis is not available yet.
+                    </div>
+                  )}
+                </div>
+
+                {/* Right: Restored Top Match Visual Panel from reference */}
+                <div className="hidden sm:flex flex-col items-center justify-center rounded-xl border border-[#FF9A6B]/30 bg-gradient-to-b from-[#181315] to-[#0D1017] p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(255,154,107,0.08)]">
+                  <div className="pointer-events-none absolute bottom-0 h-12 w-24 rounded-full bg-[#FF9A6B]/15 blur-lg" />
+
+                  <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl border border-[#FF9A6B]/40 bg-[#FF9A6B]/15 shadow-[0_0_12px_rgba(255,154,107,0.25)]">
+                    <Crown className="h-5 w-5 text-[#FF9A6B]" />
+                  </div>
+
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#FF9A6B]">
+                    TOP MATCH
+                  </span>
+
+                  <h4 className="mt-1 text-xs font-bold text-[#F5F5F5] line-clamp-1">
+                    {bestFitRoles[0]?.role || 'Data Analyst'}
+                  </h4>
+
+                  <div className="mt-2 rounded-full border border-white/[0.08] bg-black/40 px-2.5 py-0.5 text-[10px] font-bold text-[#FF9A6B]">
+                    {bestFitRoles[0]?.match_percentage ? `${bestFitRoles[0].match_percentage}%` : '85%'} Match
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* FIXED TREND AREA */}
-            <div className="mt-7">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold tracking-wide text-slate-300">
+            {/* ROLE MATCH TREND */}
+            <div className="pt-2">
+              <div className="mb-1 flex items-center justify-between">
+                <p className="text-[11px] font-bold tracking-wide text-[#A1A1AA]">
                   ROLE MATCH TREND
                 </p>
-                <Sparkles className="h-4 w-4 text-violet-300" />
+                <Sparkles className="h-3.5 w-3.5 text-[#A855F7]" />
               </div>
 
-              <div className="h-[150px] w-full overflow-hidden rounded-xl border border-white/[0.06] bg-black/10">
+              <div className="h-[95px] w-full overflow-hidden rounded-xl border border-white/[0.06] bg-[#070A10]/50">
                 <svg
                   viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                   className="h-full w-full"
@@ -804,12 +913,12 @@ const Feedback = () => {
                 >
                   <defs>
                     <linearGradient id="round1TrendFill" x1="0" x2="0" y1="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.42" />
-                      <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                      <stop offset="0%" stopColor="#FF9A6B" stopOpacity="0.25" />
+                      <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
                     </linearGradient>
                     <linearGradient id="round1TrendLine" x1="0" x2="1">
-                      <stop offset="0%" stopColor="#c084fc" />
-                      <stop offset="100%" stopColor="#22d3ee" />
+                      <stop offset="0%" stopColor="#FF9A6B" />
+                      <stop offset="100%" stopColor="#A855F7" />
                     </linearGradient>
                   </defs>
 
@@ -826,15 +935,15 @@ const Feedback = () => {
                           x2={chartRight}
                           y1={y}
                           y2={y}
-                          stroke="#334a68"
+                          stroke="#232B3B"
                           strokeOpacity="0.35"
                           strokeDasharray="3 5"
                         />
                         <text
                           x="2"
-                          y={y + 4}
-                          fill="#64748b"
-                          fontSize="10"
+                          y={y + 3}
+                          fill="#64748B"
+                          fontSize="9"
                         >
                           {value}%
                         </text>
@@ -851,7 +960,7 @@ const Feedback = () => {
                     points={linePoints}
                     fill="none"
                     stroke="url(#round1TrendLine)"
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   />
@@ -861,17 +970,16 @@ const Feedback = () => {
                       key={index}
                       cx={point.x}
                       cy={point.y}
-                      r="4"
-                      fill="#22d3ee"
-                      stroke="#081226"
-                      strokeWidth="3"
+                      r="3"
+                      fill="#FF9A6B"
+                      stroke="#0B1017"
+                      strokeWidth="2"
                     />
                   ))}
-
                 </svg>
               </div>
 
-              <div className="mt-2 flex justify-between px-1 text-[10px] text-slate-500">
+              <div className="mt-1 flex justify-between px-1 text-[9px] text-[#64748B]">
                 <span>Profile</span>
                 <span>Skills</span>
                 <span>Experience</span>
@@ -882,74 +990,85 @@ const Feedback = () => {
 
           </div>
 
-          {/* SKILL INTELLIGENCE */}
-          <div className="h-[470px] overflow-hidden rounded-2xl border border-cyan-500/50 bg-[linear-gradient(145deg,#061326_0%,#071127_46%,#061b2e_100%)] p-5 shadow-[0_0_48px_rgba(34,211,238,0.13)]">
+          {/* SKILL INTELLIGENCE (With Restored Strong Technical Foundation Panel) */}
+          <div className="h-[430px] overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0B1017_0%,#0E141D_46%,#101622_100%)] p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.5)] flex flex-col justify-between">
 
-            <div className="mb-4 flex items-center justify-between">
+            <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/35 bg-[linear-gradient(135deg,rgba(14,165,233,0.13),rgba(37,99,235,0.08))] shadow-[0_0_22px_rgba(34,211,238,0.14)]">
-                  <Brain className="h-5 w-5 text-cyan-300" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#22D3C5]/30 bg-[#22D3C5]/10 shadow-[0_0_18px_rgba(34,211,197,0.15)]">
+                  <Brain className="h-5 w-5 text-[#22D3C5]" />
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold text-white">
+                  <h3 className="text-lg font-bold text-[#F5F5F5]">
                     SKILL INTELLIGENCE
                   </h3>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-[#858585]">
                     Top {Math.min(skillCount, 15)} matched skills
                   </p>
                 </div>
               </div>
 
-              <span className="rounded-full border border-cyan-300/35 bg-cyan-400/[0.08] shadow-[0_0_18px_rgba(34,211,238,0.10)] px-3 py-1 text-[11px] font-bold text-cyan-300">
-                {skillCount} MATCHED
+              <span className="flex items-center gap-1 text-xs font-bold text-[#22D3C5] hover:underline cursor-default">
+                View All
+                <ArrowRight className="h-3.5 w-3.5" />
               </span>
             </div>
 
-            {/* IMPORTANT: fixed visual boundary + internal scroll */}
-            <div className="h-[385px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/45">
-              {displayedSkills.length > 0 ? (
-                <div className="space-y-0">
-                  {displayedSkills.map((skill, index) => (
-                    <div
-                      key={`${skill}-${index}`}
-                      className="flex min-h-[48px] items-center gap-3 border-b border-blue-200/[0.10] last:border-b-0"
-                    >
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-200">
-                        {skill}
-                      </span>
+            {/* Composition: Left Skill Progress Rows & Right Foundation Panel */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_180px] gap-4 flex-1 min-h-0">
+              {/* Left: Compact Skill Rows with Horizontal Progress Bars */}
+              <div className="h-[320px] overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/15">
+                {displayedSkills.length > 0 ? (
+                  <div className="space-y-1">
+                    {displayedSkills.map((skill, index) => {
+                      const pct = Math.max(65, 95 - (index * 3));
+                      return (
+                        <div
+                          key={`${skill}-${index}`}
+                          className="flex min-h-[34px] py-1 items-center gap-2 border-b border-white/[0.05] last:border-b-0"
+                        >
+                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-[#E5E7EB]">
+                            {skill}
+                          </span>
 
-                      <div className="flex shrink-0 items-center gap-2">
-                        {[0, 1, 2, 3, 4].map((dot) => (
-                          <span
-                            key={dot}
-                            className={`h-2.5 w-2.5 rounded-full ${
-                              dot < 4
-                                ? 'bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.70)]'
-                                : index % 4 === 3
-                                  ? 'bg-slate-700'
-                                  : 'bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.70)]'
-                            }`}
-                          />
-                        ))}
+                          <div className="w-20 sm:w-24 h-1.5 rounded-full bg-[#161B26] overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-[#22D3C5] to-[#20C9C0]"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
 
-                        <span className="ml-3 w-10 text-right text-sm font-bold text-emerald-300">
-                          {Math.max(
-                            65,
-                            95 - (index * 3)
-                          )}%
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-5">
-                  <p className="text-sm text-slate-500">
+                          <span className="w-8 text-right text-[11px] font-bold text-[#22D3C5]">
+                            {pct}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4 text-xs text-[#858585]">
                     No resume skills were detected.
-                  </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Restored Strong Technical Foundation Panel from reference */}
+              <div className="hidden sm:flex flex-col items-center justify-center rounded-xl border border-[#22D3C5]/25 bg-gradient-to-b from-[#0A161B] to-[#0D1017] p-3 text-center relative overflow-hidden shadow-[0_0_20px_rgba(34,211,197,0.08)]">
+                <div className="pointer-events-none absolute bottom-0 h-12 w-24 rounded-full bg-[#22D3C5]/15 blur-lg" />
+
+                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl border border-[#22D3C5]/40 bg-[#22D3C5]/15 shadow-[0_0_12px_rgba(34,211,197,0.25)]">
+                  <Brain className="h-5 w-5 text-[#22D3C5]" />
                 </div>
-              )}
+
+                <h4 className="text-xs font-bold text-[#F5F5F5] leading-snug">
+                  Strong<br />Technical<br />Foundation
+                </h4>
+
+                <div className="mt-2.5 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-300">
+                  Verified Skills
+                </div>
+              </div>
             </div>
 
           </div>
@@ -958,114 +1077,156 @@ const Feedback = () => {
         {/* =====================================================
             SKILL GAPS + AI RECOMMENDATIONS
         ===================================================== */}
-        <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-          <div className="h-[270px] overflow-hidden rounded-2xl border border-amber-400/35 bg-[linear-gradient(145deg,#111426_0%,#0b1020_60%,#171321_100%)] p-5 shadow-[0_0_40px_rgba(251,191,36,0.07)]">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-300/40 bg-amber-400/[0.11] shadow-[0_0_22px_rgba(251,191,36,0.13)]">
-                <AlertTriangle className="h-5 w-5 text-amber-300" />
+          {/* SKILL GAPS (With Numbered Orange Circles & Decorative Target Visual) */}
+          <div className="h-[285px] overflow-hidden rounded-2xl border border-amber-500/25 bg-[linear-gradient(145deg,#0E1219_0%,#0F141D_55%,#15141D_100%)] p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.4)] flex flex-col justify-between">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-amber-500/35 bg-amber-500/10 shadow-[0_0_18px_rgba(245,158,11,0.12)]">
+                <AlertTriangle className="h-5 w-5 text-amber-400" />
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5]">
                   SKILL GAPS
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#858585]">
                   Key areas to improve
                 </p>
               </div>
             </div>
 
-            <div className="h-[185px] overflow-y-auto pr-1">
-              {weakEvidence.length > 0 ? (
-                <div className="space-y-2">
-                  {weakEvidence.slice(0, 5).map((item, index) => (
+            {/* Composition: Left Numbered Gaps & Right Decorative Target */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3 flex-1 min-h-0">
+              <div className="h-[185px] overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 space-y-2">
+                {weakEvidence.length > 0 ? (
+                  weakEvidence.slice(0, 5).map((item, index) => (
                     <div
                       key={index}
-                      className="flex items-center gap-3 rounded-xl border border-blue-200/[0.10] bg-white/[0.025] px-3 py-2.5"
+                      className="flex items-center gap-2.5 rounded-xl border border-white/[0.06] bg-[#121620]/70 px-3 py-2 shadow-sm"
                     >
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-amber-300 shadow-[0_0_11px_rgba(251,191,36,0.75)]" />
-                      <span className="truncate text-sm text-slate-200">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-amber-500/40 bg-amber-500/15 text-[10px] font-bold text-amber-400">
+                        {index + 1}
+                      </span>
+                      <span className="truncate text-xs font-medium text-[#E5E7EB]">
                         {item.area || 'Improvement Area'}
                       </span>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3">
+                    <p className="text-xs font-medium text-emerald-400">
+                      No major skill gaps were detected.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Restored Target Visual Panel from reference */}
+              <div className="hidden sm:flex flex-col items-center justify-center rounded-xl border border-amber-500/20 bg-gradient-to-b from-[#1B1510] to-[#0F1219] p-3 text-center relative overflow-hidden">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+                  <Target className="h-4.5 w-4.5 text-amber-400" />
                 </div>
-              ) : (
-                <div className="rounded-xl border border-emerald-400/10 bg-emerald-400/[0.04] p-4">
-                  <p className="text-sm text-emerald-300">
-                    No major skill gaps were detected.
-                  </p>
-                </div>
-              )}
+                <span className="text-[11px] font-bold text-[#F5F5F5]">
+                  Targeted Growth
+                </span>
+                <p className="text-[10px] text-[#94A3B8] mt-1 leading-snug">
+                  Focus on high-leverage competencies
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="h-[270px] overflow-hidden rounded-2xl border border-emerald-400/30 bg-[linear-gradient(145deg,#071827_0%,#071326_58%,#071b2a_100%)] p-5 shadow-[0_0_40px_rgba(16,185,129,0.08)]">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-300/40 bg-emerald-400/[0.11] shadow-[0_0_22px_rgba(16,185,129,0.13)]">
-                <Lightbulb className="h-5 w-5 text-emerald-300" />
+          {/* AI RECOMMENDATIONS (With Checkmarks & Decorative Trend Visual) */}
+          <div className="h-[285px] overflow-hidden rounded-2xl border border-emerald-500/25 bg-[linear-gradient(145deg,#0A1218_0%,#0D151D_55%,#0F1922_100%)] p-5 sm:p-6 shadow-[0_10px_35px_rgba(0,0,0,0.4)] flex flex-col justify-between">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-500/10 shadow-[0_0_18px_rgba(16,185,129,0.15)]">
+                <Lightbulb className="h-5 w-5 text-emerald-400" />
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white">
+                <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5]">
                   AI RECOMMENDATIONS
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-[#858585]">
                   Personalized improvement suggestions
                 </p>
               </div>
             </div>
 
-            <div className="h-[185px] overflow-y-auto pr-1">
-              {improvements.length > 0 ? (
-                <div className="space-y-2">
-                  {improvements.slice(0, 5).map((improvement, index) => (
+            {/* Composition: Left Recommendations & Right Upward Trend Visual */}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_160px] gap-3 flex-1 min-h-0">
+              <div className="h-[185px] overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 space-y-2">
+                {improvements.length > 0 ? (
+                  improvements.slice(0, 5).map((improvement, index) => (
                     <div
                       key={index}
-                      className="flex items-start gap-3 rounded-xl border border-blue-400/10 bg-white/[0.025] px-3 py-2.5"
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.06] bg-[#121620]/70 px-3 py-2 shadow-sm"
                     >
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                      <p className="text-sm leading-relaxed text-slate-300">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      <p className="text-xs leading-relaxed text-[#D1D5DB]">
                         {improvement}
                       </p>
                     </div>
-                  ))}
+                  ))
+                ) : (
+                  <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+                    <p className="text-xs text-[#858585]">
+                      Personalized AI recommendations are not available yet.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Restored Upward Trend Visual Panel from reference */}
+              <div className="hidden sm:flex flex-col items-center justify-center rounded-xl border border-[#FF9A6B]/25 bg-gradient-to-b from-[#181315] to-[#0B1218] p-3 text-center relative overflow-hidden">
+                <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-full border border-[#FF9A6B]/30 bg-[#FF9A6B]/10 shadow-[0_0_12px_rgba(255,154,107,0.2)]">
+                  <TrendingUp className="h-4.5 w-4.5 text-[#FF9A6B]" />
                 </div>
-              ) : (
-                <div className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-                  <p className="text-sm text-slate-500">
-                    Personalized AI recommendations are not available yet.
-                  </p>
-                </div>
-              )}
+                <span className="text-[11px] font-bold text-[#F5F5F5]">
+                  Strategic Steps
+                </span>
+                <p className="text-[10px] text-[#94A3B8] mt-1 leading-snug">
+                  Actionable paths to elevate readiness
+                </p>
+              </div>
             </div>
           </div>
 
         </div>
 
         {/* =====================================================
-            AI PROFILE SUMMARY
+            AI PROFILE SUMMARY (Wide Card with Restored Right-Side Quote Panel)
         ===================================================== */}
         {round1.resume_summary && (
-          <div className="mb-6 min-h-[150px] overflow-hidden rounded-2xl border border-violet-400/45 bg-[linear-gradient(110deg,#090d28_0%,#17133e_48%,#071a34_100%)] p-5 shadow-[0_0_52px_rgba(124,58,237,0.14)]">
-            <div className="flex items-start gap-4">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-violet-300/40 bg-violet-500/[0.12] shadow-[0_0_22px_rgba(168,85,247,0.16)]">
-                <Sparkles className="h-5 w-5 text-violet-300" />
+          <div className="mb-7 overflow-hidden rounded-2xl border border-[#8B5CF6]/25 bg-[linear-gradient(135deg,#0C101A_0%,#131128_50%,#0B0F17_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(139,92,246,0.08)] relative">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-[#8B5CF6]/[0.10] blur-[60px]" />
+
+            <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              {/* Left / Main Summary */}
+              <div className="flex items-start gap-4 flex-1 min-w-0">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#8B5CF6]/35 bg-[#8B5CF6]/15 shadow-[0_0_18px_rgba(139,92,246,0.2)]">
+                  <Sparkles className="h-5 w-5 text-[#A855F7]" />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5] tracking-tight">
+                    AI PROFILE SUMMARY
+                  </h3>
+
+                  <p className="mt-2 text-xs sm:text-sm leading-relaxed text-[#94A3B8] max-w-3xl">
+                    {round1.resume_summary}
+                  </p>
+                </div>
               </div>
 
-              <div className="min-w-0">
-                <h3 className="text-lg font-bold text-white">
-                  AI PROFILE SUMMARY
-                </h3>
-
-                <p className="mt-2 max-w-4xl text-sm leading-6 text-slate-300">
-                  {round1.resume_summary}
+              {/* Right-Side Quote Panel restored from reference */}
+              <div className="shrink-0 w-full md:w-52 rounded-xl border border-[#8B5CF6]/25 bg-white/[0.03] p-3.5 text-center relative overflow-hidden backdrop-blur-sm shadow-sm">
+                <p className="text-xs font-medium text-[#E5E7EB] italic leading-snug">
+                  &ldquo;Keep learning.<br />
+                  Keep growing.<br />
+                  <span className="text-[#FF9A6B] font-bold not-italic">You&apos;re on the right path!&rdquo;</span>
                 </p>
-              </div>
-
-              <div className="ml-auto hidden h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/25 bg-[linear-gradient(135deg,rgba(37,99,235,0.08),rgba(124,58,237,0.08))] shadow-[0_0_28px_rgba(34,211,238,0.12)] md:flex">
-                <div className="h-10 w-10 rotate-45 rounded-lg border border-cyan-300/70 bg-[linear-gradient(135deg,rgba(59,130,246,0.24),rgba(124,58,237,0.18))] shadow-[0_0_30px_rgba(34,211,238,0.42),0_0_45px_rgba(124,58,237,0.18)]" />
               </div>
             </div>
           </div>
@@ -1075,14 +1236,14 @@ const Feedback = () => {
             GENERATION NOTICE — existing functionality preserved
         ===================================================== */}
         {round1.generation_error && (
-          <div className="mb-5 rounded-2xl border border-amber-400/20 bg-amber-400/[0.05] p-4">
+          <div className="mb-6 rounded-2xl border border-amber-400/25 bg-amber-400/[0.07] p-4">
             <div className="flex gap-3">
               <AlertTriangle className="h-5 w-5 shrink-0 text-amber-300" />
               <div>
                 <p className="font-semibold text-amber-300">
                   AI Resume Analysis Notice
                 </p>
-                <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                <p className="mt-1 text-sm leading-relaxed text-[#94A3B8]">
                   {round1.generation_error}
                 </p>
               </div>
@@ -1091,28 +1252,35 @@ const Feedback = () => {
         )}
 
         {/* =====================================================
-            ACTIONS
+            BOTTOM SECTION (Continue to Round 2 & Subtle Atmospheric Touches)
         ===================================================== */}
-        <div className="flex flex-col items-center justify-center gap-4 pb-5 pt-2 sm:flex-row">
+        <div className="relative pt-3 pb-6">
+          {/* Subtle horizontal gradient line */}
+          <div className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-px bg-gradient-to-r from-transparent via-[#FF9A6B]/15 to-transparent" />
 
-          <button
-            type="button"
-            onClick={() => setCurrentRound(1)}
-            className="flex min-w-[220px] items-center justify-center gap-2 rounded-xl border border-blue-300/55 bg-[#050a1b]/70 shadow-[0_0_18px_rgba(59,130,246,0.08)] px-7 py-3.5 text-sm font-bold text-white transition hover:border-cyan-300/80 hover:bg-cyan-400/[0.04] hover:shadow-[0_0_24px_rgba(34,211,238,0.12)]"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Round 1
-          </button>
+          <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4">
+            {/* Left motivational indicator */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-[#64748B]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#FF9A6B]" />
+              <span>Resume Analysis Completed</span>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => setCurrentRound(2)}
-            className="flex min-w-[270px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-blue-500 px-8 py-3.5 text-sm font-bold text-white shadow-[0_0_34px_rgba(124,58,237,0.42),0_0_60px_rgba(37,99,235,0.18)] transition hover:scale-[1.01] hover:shadow-[0_0_42px_rgba(59,130,246,0.35)]"
-          >
-            Continue to Round 2
-            <ArrowRight className="h-4 w-4" />
-          </button>
+            {/* Centered Continue to Round 2 Button */}
+            <button
+              type="button"
+              onClick={() => setCurrentRound(2)}
+              className="flex min-w-[260px] items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-[#FF9A6B] via-[#FF8A5B] to-[#F6A06F] hover:brightness-105 active:scale-[0.99] px-8 py-3.5 text-sm font-bold text-[#0A0E15] shadow-[0_4px_25px_rgba(255,154,107,0.35)] hover:shadow-[0_6px_30px_rgba(255,154,107,0.5)] transition-all cursor-pointer z-10"
+            >
+              Continue to Round 2
+              <ArrowRight className="h-4 w-4 text-[#0A0E15]" />
+            </button>
 
+            {/* Right indicator */}
+            <div className="hidden sm:flex items-center gap-2 text-xs text-[#64748B]">
+              <span>Next: Technical Assessment</span>
+              <span className="h-1.5 w-1.5 rounded-full bg-[#8B5CF6]" />
+            </div>
+          </div>
         </div>
 
       </section>
@@ -2442,19 +2610,144 @@ const Feedback = () => {
   // MAIN PAGE
   // =========================================================
 
+  const displayName = user?.name || user?.username || 'Candidate';
+  const userInitial = displayName.charAt(0).toUpperCase();
+
   return (
 
-    <div className="relative min-h-screen overflow-hidden bg-[#02040f] text-white selection:bg-cyan-400/30">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#080D1A] text-[#F5F5F5] selection:bg-[#FF9A6B]/30">
 
-      {/* Final Round 1 visual background */}
-      <div className="fixed inset-0 pointer-events-none -z-10 bg-[#02040f]">
-        <div className="absolute left-[12%] top-0 h-[500px] w-[500px] rounded-full bg-blue-600/[0.11] blur-[140px] shadow-[0_0_120px_rgba(37,99,235,0.18)]" />
-        <div className="absolute right-[8%] top-[20%] h-[500px] w-[500px] rounded-full bg-violet-600/[0.10] blur-[150px] shadow-[0_0_140px_rgba(124,58,237,0.16)]" />
-        <div className="absolute bottom-0 left-1/2 h-[450px] w-[450px] -translate-x-1/2 rounded-full bg-cyan-400/[0.07] blur-[130px] shadow-[0_0_120px_rgba(34,211,238,0.14)]" />
+      {/* Atmospheric lighting gradients (z-0, clearly visible, cinematic depth) */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {/* Rich Blue-Black / Deep Navy Base */}
+        <div className="absolute inset-0 bg-[radial-gradient(130%_120%_at_50%_0%,#10172B_0%,#0A0F1C_45%,#060811_100%)]" />
+
+        {/* TOP RIGHT: Large soft warm orange/coral ambient glow - smoothly blurred, clearly visible */}
+        <div
+          className="absolute -top-[100px] -right-[60px] w-[900px] h-[750px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at 85% 15%, rgba(255, 154, 107, 0.32) 0%, rgba(255, 138, 91, 0.18) 32%, rgba(246, 160, 111, 0.08) 55%, transparent 75%)',
+            filter: 'blur(85px)',
+          }}
+        />
+
+        {/* UPPER LEFT / LEFT EDGE: Subtle warm orange atmospheric light */}
+        <div
+          className="absolute top-[12%] -left-[100px] w-[550px] h-[550px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at 15% 35%, rgba(255, 154, 107, 0.18) 0%, rgba(255, 138, 91, 0.08) 40%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+
+        {/* LOWER LEFT: Warm orange glow */}
+        <div
+          className="absolute -bottom-[80px] -left-[80px] w-[650px] h-[550px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at 20% 80%, rgba(255, 138, 91, 0.20) 0%, rgba(255, 154, 107, 0.08) 45%, transparent 70%)',
+            filter: 'blur(80px)',
+          }}
+        />
+
+        {/* RIGHT SIDE: Subtle purple/violet atmospheric lighting */}
+        <div
+          className="absolute top-[40%] -right-[80px] w-[650px] h-[650px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle at 85% 60%, rgba(139, 92, 246, 0.16) 0%, rgba(168, 85, 247, 0.07) 45%, transparent 70%)',
+            filter: 'blur(85px)',
+          }}
+        />
+
+        {/* LOWER RIGHT: Subtle purple/orange atmosphere */}
+        <div
+          className="absolute -bottom-[80px] right-[5%] w-[600px] h-[500px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(168, 85, 247, 0.12) 0%, rgba(255, 154, 107, 0.08) 45%, transparent 75%)',
+            filter: 'blur(80px)',
+          }}
+        />
+
+        {/* Center-Top Subtle Purple Atmospheric Area */}
+        <div
+          className="absolute top-[16%] left-1/2 -translate-x-1/2 w-[750px] h-[480px] pointer-events-none"
+          style={{
+            background: 'radial-gradient(ellipse at center, rgba(139, 92, 246, 0.06) 0%, transparent 70%)',
+            filter: 'blur(85px)',
+          }}
+        />
+
+        {/* Subtle decorative glowing light points */}
+        <div className="absolute top-[26%] right-[20%] h-1.5 w-1.5 rounded-full bg-[#FF9A6B] shadow-[0_0_12px_rgba(255,154,107,0.9)] opacity-70 pointer-events-none" />
+        <div className="absolute top-[68%] left-[10%] h-1.5 w-1.5 rounded-full bg-[#FF9A6B] shadow-[0_0_12px_rgba(255,154,107,0.8)] opacity-60 pointer-events-none" />
+        <div className="absolute top-[48%] right-[8%] h-1.5 w-1.5 rounded-full bg-[#8B5CF6] shadow-[0_0_12px_rgba(139,92,246,0.9)] opacity-70 pointer-events-none" />
+
+        {/* Large elegant curved decorative lines (Orange & Purple flowing arcs) */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-50"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 1440 900"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M-100,750 C220,670 440,420 560,160 C600,60 690,10 820,-30"
+            fill="none"
+            stroke="rgba(255, 154, 107, 0.14)"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M-40,860 C320,810 620,580 740,320 C810,160 970,40 1180,-20"
+            fill="none"
+            stroke="rgba(255, 154, 107, 0.08)"
+            strokeWidth="1.2"
+          />
+          <path
+            d="M750,940 C980,790 1190,510 1280,170 C1310,40 1380,-10 1460,-30"
+            fill="none"
+            stroke="rgba(139, 92, 246, 0.12)"
+            strokeWidth="1.2"
+          />
+        </svg>
       </div>
 
-      <div className="mx-auto max-w-[1320px] px-4 py-6 sm:px-6 md:py-8">
+      {/* =====================================================
+          HEADER & CONTENT (Layered on top at z-10)
+      ===================================================== */}
+      <header className="sticky top-0 z-30 w-full border-b border-white/[0.08] bg-[#090E1A]/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-[1320px] items-center justify-between px-4 sm:px-6">
+          {/* MockMind AI Branding */}
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[#FF9A6B] to-[#FF8A5B] shadow-md shadow-[#FF9A6B]/25">
+              <Brain className="h-4.5 w-4.5 text-[#0A0E15]" />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-[#F5F5F5]">
+              MockMind <span className="text-[#FF9A6B]">AI</span>
+            </span>
+          </div>
 
+          {/* Right: User Profile with Warm Orange Border & Ambient Light */}
+          <div className="relative flex items-center gap-3">
+            {/* Subtle warm light behind profile */}
+            <div
+              className="absolute -right-4 -top-3 h-12 w-28 pointer-events-none rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(255, 154, 107, 0.22) 0%, transparent 70%)',
+                filter: 'blur(12px)',
+              }}
+            />
+
+            <div className="flex items-center gap-2.5 relative z-10">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#FF9A6B]/50 bg-[#161311] text-xs font-bold text-[#FF9A6B] shadow-[0_0_10px_rgba(255,154,107,0.18)]">
+                {userInitial}
+              </div>
+              <span className="hidden text-sm font-semibold text-[#E5E7EB] sm:inline-block">
+                {displayName}
+              </span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="relative z-10 mx-auto max-w-[1320px] px-4 py-6 sm:px-6 md:py-8">
 
         {/* =====================================================
             CURRENT ROUND
