@@ -9,6 +9,9 @@ const InterviewLayout = () => {
   const location = useLocation();
 
   const isRound1 = location.pathname === "/round1";
+  const isTest = location.pathname === "/test";
+  const isSetup = location.pathname === "/setup";
+  const isDarkInterview = isRound1 || isTest || isSetup;
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -77,12 +80,12 @@ const InterviewLayout = () => {
   return (
     <div
       className={`min-h-screen w-full flex flex-col relative overflow-x-hidden ${
-        isRound1
+        isDarkInterview
           ? "text-[#f5f1ec] selection:bg-[#f3a078]/30 selection:text-white"
           : "bg-[#050816] text-white"
       }`}
       style={
-        isRound1
+        isDarkInterview
           ? {
               backgroundColor: '#050606',
               backgroundImage: `
@@ -96,9 +99,9 @@ const InterviewLayout = () => {
       }
     >
       {/* =====================================================
-          ROUND 1 — UPPER-RIGHT CINEMATIC AMBIENT LIGHT
+          DARK INTERVIEW — UPPER-RIGHT CINEMATIC AMBIENT LIGHT
       ====================================================== */}
-      {isRound1 && (
+      {isDarkInterview && (
         <>
           {/* Primary Warm Upper-Right Cinematic Light */}
           <div 
@@ -126,7 +129,7 @@ const InterviewLayout = () => {
           />
 
           {/* =====================================================
-              ROUND 1 — SUBTLE DECORATIVE CURVED ORBITAL LINES
+              DARK INTERVIEW — SUBTLE DECORATIVE CURVED ORBITAL LINES
           ====================================================== */}
           <svg
             className="fixed inset-0 w-full h-full pointer-events-none z-0"
@@ -176,7 +179,7 @@ const InterviewLayout = () => {
           relative
           z-20
           ${
-            isRound1
+            isDarkInterview
               ? "bg-[#070808]/40 border-b border-white/[0.06] text-[#f5f1ec]"
               : "border-white/10 bg-[#070b1d] text-white"
           }
@@ -187,7 +190,7 @@ const InterviewLayout = () => {
             LEFT — BRANDING + WELCOME
         ================================================= */}
 
-        {isRound1 ? (
+        {isDarkInterview ? (
           <div className="flex items-center gap-6">
             {/* MockMind AI Branding */}
             <div className="flex items-center gap-2.5">
@@ -234,7 +237,7 @@ const InterviewLayout = () => {
           ref={userMenuRef}
         >
           {/* Subtle warm atmospheric light behind right-side header controls */}
-          {isRound1 && (
+          {isDarkInterview && (
             <div 
               className="absolute -top-12 -right-12 w-[420px] h-[140px] pointer-events-none"
               style={{
@@ -245,7 +248,7 @@ const InterviewLayout = () => {
           )}
 
           {/* Notification Icon */}
-          {isRound1 && (
+          {isDarkInterview && (
             <div className="relative">
               <button
                 type="button"
@@ -296,7 +299,7 @@ const InterviewLayout = () => {
                 rounded-full
                 p-[2px]
                 ${
-                  isRound1
+                  isDarkInterview
                     ? "bg-gradient-to-br from-[#f3a078] to-[#e88c68]"
                     : "bg-gradient-to-br from-blue-400 to-cyan-400"
                 }
@@ -312,7 +315,7 @@ const InterviewLayout = () => {
                   justify-center
                   border
                   ${
-                    isRound1
+                    isDarkInterview
                       ? "bg-[#080909] border-[#f3a078]/25"
                       : "bg-[#070b1d] border-blue-400/20"
                   }
@@ -323,7 +326,7 @@ const InterviewLayout = () => {
                     font-bold
                     text-base
                     ${
-                      isRound1
+                      isDarkInterview
                         ? "text-[#f3a078]"
                         : "text-blue-400"
                     }
@@ -343,7 +346,7 @@ const InterviewLayout = () => {
                 gap-1.5
                 font-medium
                 ${
-                  isRound1
+                  isDarkInterview
                     ? "text-[#f5f1ec]"
                     : "text-white"
                 }
@@ -360,7 +363,7 @@ const InterviewLayout = () => {
                   transition-transform
                   duration-200
                   ${
-                    isRound1
+                    isDarkInterview
                       ? "text-[#9e9e9e]"
                       : "text-slate-400"
                   }
@@ -394,9 +397,9 @@ const InterviewLayout = () => {
                 overflow-hidden
                 z-[100]
                 ${
-                  isRound1
+                  isDarkInterview
                     ? "bg-[#101112] border-white/10 text-[#f5f1ec]"
-                    : "bg-[#0b1024] border-white/10 text-white"
+                    : "bg-[#0d1226] border-white/10 text-white"
                 }
               `}
               role="menu"
@@ -496,7 +499,7 @@ const InterviewLayout = () => {
           relative
           z-10
           ${
-            isRound1
+            isDarkInterview
               ? "bg-transparent flex flex-col"
               : "bg-[#050816]"
           }
@@ -507,8 +510,8 @@ const InterviewLayout = () => {
             w-full
             mx-auto
             ${
-              isRound1
-                ? "max-w-[1400px] px-6 sm:px-10 py-8 flex-1 flex flex-col justify-between"
+              isDarkInterview
+                ? "max-w-[1400px] px-4 sm:px-8 py-6 flex-1 flex flex-col justify-between"
                 : "max-w-[1600px] px-8 py-8"
             }
           `}
