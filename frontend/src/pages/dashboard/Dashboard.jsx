@@ -705,7 +705,7 @@ const Dashboard = () => {
   // =========================================================
 
   return (
-    <div className="min-h-full space-y-6 pb-10 bg-[#050b1c]">
+    <div className="min-h-full space-y-6 pb-10 bg-transparent">
 
       {/* =====================================================
           ERROR
@@ -730,28 +730,28 @@ const Dashboard = () => {
           title="Total Interviews"
           value={stats.total}
           icon={FileText}
-          gradient="from-blue-600 to-blue-800"
+          variant="peach"
         />
 
         <StatBox
           title="Average Score"
           value={stats.avg_score}
           icon={Star}
-          gradient="from-purple-600 to-purple-800"
+          variant="purple"
         />
 
         <StatBox
           title="Interviews Completed"
           value={stats.completed}
           icon={Target}
-          gradient="from-cyan-500 to-cyan-700"
+          variant="teal"
         />
 
         <StatBox
           title="Best Score"
           value={stats.best_score}
           icon={Trophy}
-          gradient="from-emerald-500 to-emerald-700"
+          variant="gold"
         />
 
       </div>
@@ -761,25 +761,28 @@ const Dashboard = () => {
           DESKTOP ALIGNMENT: IMAGE | TEXT | SELECT | BUTTON
       ====================================================== */}
 
-      <section className="rounded-2xl border border-purple-500/20 bg-gradient-to-r from-[#11103b] via-[#15133d] to-[#11142e] p-5">
+      <section className="relative overflow-hidden rounded-2xl border border-[#f3a078]/35 bg-gradient-to-r from-[#131518] via-[#17191d] to-[#121417] p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_16px_36px_rgba(0,0,0,0.6)]">
 
-        <div className="flex flex-col lg:flex-row items-center gap-5">
+        {/* Soft warm ambient glow behind robot and CTA */}
+        <div className="absolute top-1/2 left-10 -translate-y-1/2 w-56 h-56 bg-[#f3a078]/12 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_220px_at_25%_50%,rgba(243,160,120,0.08),transparent_70%)] pointer-events-none" />
 
-          <div className="hidden md:flex w-32 h-24 items-center justify-center rounded-xl bg-purple-500/10">
-            <div className="text-5xl">
+        <div className="flex flex-col lg:flex-row items-center gap-6 relative z-10">
+
+          <div className="hidden md:flex w-24 h-24 items-center justify-center rounded-2xl bg-[#f3a078]/10 border border-[#f3a078]/25 shadow-[0_0_20px_rgba(243,160,120,0.15)] shrink-0">
+            <div className="text-5xl filter drop-shadow-[0_0_16px_rgba(243,160,120,0.4)]">
               🤖
             </div>
           </div>
 
           <div className="flex-1 text-center lg:text-left">
 
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-[#f5f1ec] tracking-tight">
               Ready for your next interview?
             </h2>
 
-            <p className="text-slate-400 mt-1">
-              Choose your interview type and
-              start your AI interview.
+            <p className="text-[#9a9a9a] mt-1 text-sm">
+              Choose your interview type and start your AI interview.
             </p>
 
           </div>
@@ -795,7 +798,7 @@ const Dashboard = () => {
                   e.target.value
                 )
               }
-              className="appearance-none min-w-[200px] rounded-xl border border-slate-700 bg-[#090d1c] px-5 py-3 pr-10 text-white outline-none focus:border-purple-500"
+              className="appearance-none min-w-[200px] rounded-xl border border-white/[0.12] bg-[#0e1013] px-5 py-3 pr-10 text-[#f5f1ec] text-sm font-medium outline-none focus:border-[#f3a078]/70 hover:border-white/20 transition cursor-pointer shadow-inner"
             >
 
               <option value="technical">
@@ -808,7 +811,7 @@ const Dashboard = () => {
 
             </select>
 
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a9a9a] pointer-events-none" />
 
           </div>
 
@@ -817,7 +820,7 @@ const Dashboard = () => {
           <button
             onClick={handleStart}
             disabled={starting}
-            className="inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-purple-600 px-7 py-3.5 font-bold text-white shadow-lg shadow-purple-500/20 transition hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="inline-flex min-w-[220px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f3a078] via-[#f29a72] to-[#e88c68] px-7 py-3.5 font-bold text-[#0d0f10] shadow-[0_4px_20px_rgba(243,160,120,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_28px_rgba(243,160,120,0.42)] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
           >
 
             {starting ? (
@@ -848,11 +851,11 @@ const Dashboard = () => {
 
         <div>
 
-          <h2 className="text-xl font-bold text-white">
+          <h2 className="text-xl font-bold text-[#f5f1ec] tracking-tight">
             Interview Analytics
           </h2>
 
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-[#9a9a9a] mt-1">
             Analyze your performance by interview type.
           </p>
 
@@ -872,7 +875,7 @@ const Dashboard = () => {
                 value
               );
             }}
-            className="appearance-none min-w-[220px] rounded-xl border border-purple-500/30 bg-[#0b1020] px-5 py-3 pr-10 text-white outline-none focus:border-purple-500"
+            className="appearance-none min-w-[220px] rounded-xl border border-white/[0.12] bg-[#111316] px-5 py-3 pr-10 text-[#f5f1ec] text-sm font-medium outline-none focus:border-[#f3a078]/70 hover:border-white/20 transition cursor-pointer"
           >
 
             <option value="technical">
@@ -885,7 +888,7 @@ const Dashboard = () => {
 
           </select>
 
-          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9a9a9a] pointer-events-none" />
 
         </div>
 
@@ -908,27 +911,27 @@ const Dashboard = () => {
               SCORE OVERVIEW
           ================================================== */}
 
-          <section className="relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
+          <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#131518] to-[#0f1013] p-5 min-h-[330px] shadow-2xl shadow-black/40">
 
-            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
+            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-[#f3a078]/5 blur-3xl pointer-events-none" />
 
             <div className="flex items-center justify-between mb-5 relative z-10">
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
 
-                <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[#f3a078]/10 border border-[#f3a078]/25 flex items-center justify-center">
 
-                  <TrendingUp className="w-5 h-5 text-cyan-400" />
+                  <TrendingUp className="w-5 h-5 text-[#f3a078]" />
 
                 </div>
 
                 <div>
 
-                  <h3 className="font-semibold text-white">
+                  <h3 className="font-semibold text-[#f5f1ec] text-sm">
                     Score Overview
                   </h3>
 
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-[#9a9a9a]">
                     Recent completed interviews
                   </p>
 
@@ -936,7 +939,7 @@ const Dashboard = () => {
 
               </div>
 
-              <span className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs text-slate-300">
+              <span className="rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-xs text-[#d1ccc7] font-medium">
 
                 {analyticsType ===
                 "technical"
@@ -951,7 +954,7 @@ const Dashboard = () => {
 
               <div className="h-56 flex items-center justify-center">
 
-                <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+                <Loader2 className="w-7 h-7 animate-spin text-[#f3a078]" />
 
               </div>
 
@@ -967,15 +970,15 @@ const Dashboard = () => {
 
                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
 
-                  <div className="border-t border-slate-800/70" />
+                  <div className="border-t border-white/[0.04]" />
 
-                  <div className="border-t border-slate-800/50" />
+                  <div className="border-t border-white/[0.02]" />
 
-                  <div className="border-t border-slate-800/50" />
+                  <div className="border-t border-white/[0.02]" />
 
-                  <div className="border-t border-slate-800/50" />
+                  <div className="border-t border-white/[0.02]" />
 
-                  <div className="border-t border-slate-800/70" />
+                  <div className="border-t border-white/[0.04]" />
 
                 </div>
 
@@ -1020,25 +1023,25 @@ const Dashboard = () => {
                             className="flex-1 h-full flex flex-col justify-end group min-w-0"
                           >
 
-                            <div className="text-center text-xs font-semibold text-slate-300 mb-2 opacity-80 group-hover:opacity-100">
+                            <div className="text-center text-xs font-semibold text-[#d1ccc7] mb-2 opacity-80 group-hover:opacity-100 group-hover:text-[#f5f1ec] transition-colors">
 
                               {value}
 
                             </div>
 
                             <div
-                              className="relative w-full rounded-t-lg bg-gradient-to-t from-purple-700 via-purple-500 to-cyan-400 shadow-lg shadow-purple-900/10 transition-all duration-300 group-hover:from-purple-600 group-hover:to-cyan-300"
+                              className="relative w-full rounded-t-lg bg-gradient-to-t from-[#e88c68] via-[#f29a72] to-[#f3a078] shadow-md shadow-[#e88c68]/20 transition-all duration-300 group-hover:from-[#f29a72] group-hover:to-[#fcd1bd]"
                               style={{
                                 height: `${height}%`,
                               }}
                               title={`${label}: ${value}`}
                             >
 
-                              <div className="absolute inset-x-0 top-0 h-1 rounded-full bg-white/20" />
+                              <div className="absolute inset-x-0 top-0 h-1 rounded-full bg-white/40" />
 
                             </div>
 
-                            <div className="mt-2 text-center text-[9px] text-slate-600 truncate">
+                            <div className="mt-2 text-center text-[9px] text-[#9a9a9a] truncate font-medium">
 
                               {`I${
                                 originalIndex +
@@ -1064,27 +1067,27 @@ const Dashboard = () => {
               INTERVIEWS BY ROLE
           ================================================== */}
 
-          <section className="relative overflow-hidden rounded-2xl border border-purple-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-purple-950/10">
+          <section className="relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#131518] to-[#0f1013] p-5 min-h-[330px] shadow-2xl shadow-black/40">
 
-            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-purple-500/5 blur-3xl pointer-events-none" />
+            <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-[#c4b5fd]/5 blur-3xl pointer-events-none" />
 
             <div className="flex items-center justify-between mb-5 relative z-10">
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
 
-                <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-[#c4b5fd]/10 border border-[#c4b5fd]/25 flex items-center justify-center">
 
-                  <Briefcase className="w-5 h-5 text-purple-400" />
+                  <Briefcase className="w-5 h-5 text-[#c4b5fd]" />
 
                 </div>
 
                 <div>
 
-                  <h3 className="font-semibold text-white">
+                  <h3 className="font-semibold text-[#f5f1ec] text-sm">
                     Interviews By Role
                   </h3>
 
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-[#9a9a9a]">
                     Completed interview distribution
                   </p>
 
@@ -1098,7 +1101,7 @@ const Dashboard = () => {
 
               <div className="h-56 flex items-center justify-center">
 
-                <Loader2 className="w-7 h-7 animate-spin text-purple-400" />
+                <Loader2 className="w-7 h-7 animate-spin text-[#c4b5fd]" />
 
               </div>
 
@@ -1112,24 +1115,24 @@ const Dashboard = () => {
 
               <div className="space-y-4">
 
-                <div className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/40 px-4 py-3">
+                <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3">
 
                   <div>
 
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-[#9a9a9a]">
                       Completed interviews
                     </p>
 
-                    <p className="text-2xl font-bold text-white mt-1">
+                    <p className="text-2xl font-bold text-[#f5f1ec] mt-1">
                       {completedInterviews ||
                         roleCountTotal}
                     </p>
 
                   </div>
 
-                  <div className="w-11 h-11 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <div className="w-11 h-11 rounded-full bg-[#c4b5fd]/10 border border-[#c4b5fd]/20 flex items-center justify-center">
 
-                    <Target className="w-5 h-5 text-purple-400" />
+                    <Target className="w-5 h-5 text-[#c4b5fd]" />
 
                   </div>
 
@@ -1179,6 +1182,15 @@ const Dashboard = () => {
                           item?.name ||
                           "Role Not Selected";
 
+                        const rolePalettes = [
+                          { dot: "bg-[#f3a078]", bar: "from-[#e88c68] to-[#f3a078]" },
+                          { dot: "bg-[#c4b5fd]", bar: "from-[#8b5cf6] to-[#c4b5fd]" },
+                          { dot: "bg-[#5eead4]", bar: "from-[#0d9488] to-[#5eead4]" },
+                          { dot: "bg-[#93c5fd]", bar: "from-[#3b82f6] to-[#93c5fd]" },
+                          { dot: "bg-[#fbbf24]", bar: "from-[#d97706] to-[#fbbf24]" },
+                        ];
+                        const palette = rolePalettes[index % rolePalettes.length];
+
                         return (
                           <div
                             key={`${role}-${index}`}
@@ -1189,10 +1201,10 @@ const Dashboard = () => {
 
                               <div className="flex items-center gap-2 min-w-0">
 
-                                <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-purple-400 to-cyan-400 shrink-0" />
+                                <span className={`w-2 h-2 rounded-full ${palette.dot} shrink-0`} />
 
                                 <span
-                                  className="text-xs text-slate-300 leading-5"
+                                  className="text-xs text-[#f5f1ec] leading-5 truncate font-medium"
                                   title={role}
                                 >
                                   {role}
@@ -1202,11 +1214,11 @@ const Dashboard = () => {
 
                               <div className="flex items-center gap-2 shrink-0">
 
-                                <span className="text-[11px] text-slate-500">
+                                <span className="text-[11px] text-[#9a9a9a]">
                                   {count}
                                 </span>
 
-                                <span className="text-xs font-medium text-slate-300">
+                                <span className="text-xs font-semibold text-[#f5f1ec]">
                                   {percentage.toFixed(
                                     1
                                   )}
@@ -1217,10 +1229,10 @@ const Dashboard = () => {
 
                             </div>
 
-                            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                            <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
 
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-purple-600 to-cyan-400 transition-all duration-500"
+                                className={`h-full rounded-full bg-gradient-to-r ${palette.bar} transition-all duration-500`}
                                 style={{
                                   width: `${Math.min(
                                     100,
@@ -1242,7 +1254,7 @@ const Dashboard = () => {
                 </div>
 
                 {roleData.length > 8 && (
-                  <p className="text-[11px] text-slate-600 text-center pt-1">
+                  <p className="text-[11px] text-[#9a9a9a] text-center pt-1">
                     Showing top 8 roles
                   </p>
                 )}
@@ -1259,25 +1271,25 @@ const Dashboard = () => {
             YOUR PERFORMANCE
         ==================================================== */}
 
-        <section className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-cyan-500/10 bg-[#090e1e] p-5 min-h-[330px] shadow-lg shadow-cyan-950/10">
+        <section className="lg:col-span-3 relative overflow-hidden rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#131518] to-[#0f1013] p-5 min-h-[330px] shadow-2xl shadow-black/40">
 
-          <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-cyan-500/5 blur-3xl pointer-events-none" />
+          <div className="absolute -top-16 -right-16 w-36 h-36 rounded-full bg-[#5eead4]/5 blur-3xl pointer-events-none" />
 
-          <div className="flex items-center gap-2 mb-7 relative z-10">
+          <div className="flex items-center gap-2.5 mb-7 relative z-10">
 
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#5eead4]/10 border border-[#5eead4]/25 flex items-center justify-center">
 
-              <Target className="w-5 h-5 text-cyan-400" />
+              <Target className="w-5 h-5 text-[#5eead4]" />
 
             </div>
 
             <div>
 
-              <h3 className="font-semibold text-white">
+              <h3 className="font-semibold text-[#f5f1ec] text-sm">
                 Your Performance
               </h3>
 
-              <p className="text-[11px] text-slate-500">
+              <p className="text-[11px] text-[#9a9a9a]">
                 Average interview score
               </p>
 
@@ -1288,14 +1300,14 @@ const Dashboard = () => {
           <div className="flex flex-col items-center">
 
             <div
-              className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-xl shadow-purple-950/20"
+              className="relative w-44 h-44 rounded-full flex items-center justify-center shadow-xl shadow-black/40"
               style={{
                 background: `conic-gradient(
-                  #7c3aed ${
+                  #f3a078 ${
                     performancePercentage *
                     3.6
                   }deg,
-                  #172033 ${
+                  #1a1c20 ${
                     performancePercentage *
                     3.6
                   }deg
@@ -1303,16 +1315,16 @@ const Dashboard = () => {
               }}
             >
 
-              <div className="absolute inset-3 rounded-full bg-[#090e1e] flex flex-col items-center justify-center">
+              <div className="absolute inset-3 rounded-full bg-[#111316] flex flex-col items-center justify-center border border-white/[0.04]">
 
-                <span className="text-3xl font-bold text-white">
+                <span className="text-3xl font-bold text-[#f5f1ec]">
                   {performancePercentage.toFixed(
                     1
                   )}
                   %
                 </span>
 
-                <span className="text-sm text-slate-500">
+                <span className="text-xs text-[#9a9a9a] mt-0.5">
                   Performance
                 </span>
 
@@ -1320,23 +1332,23 @@ const Dashboard = () => {
 
             </div>
 
-            <h4 className="mt-6 text-lg font-semibold text-white">
+            <h4 className="mt-6 text-base font-semibold text-[#f5f1ec]">
               {performancePercentage > 0
                 ? performancePercentage >=
                   70
                   ? "Excellent Performance"
                   : performancePercentage >=
                     50
-                  ? "Good Progress"
-                  : "Keep Practicing"
+                    ? "Good Progress"
+                    : "Keep Practicing"
                 : "Keep Practicing"}
             </h4>
 
-            <p className="text-center text-sm text-slate-400 mt-2 leading-6">
+            <p className="text-center text-xs text-[#9a9a9a] mt-1.5 leading-5">
 
               Average score from{" "}
 
-              <span className="text-white font-medium">
+              <span className="text-[#f5f1ec] font-semibold">
                 {completedInterviews}
               </span>{" "}
 
@@ -1345,15 +1357,15 @@ const Dashboard = () => {
             </p>
 
             {bestScore > 0 && (
-              <div className="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/10 bg-emerald-500/5 px-3 py-2">
+              <div className="mt-4 flex items-center gap-2 rounded-lg border border-[#fbbf24]/25 bg-[#fbbf24]/5 px-3 py-1.5">
 
-                <Trophy className="w-4 h-4 text-emerald-400" />
+                <Trophy className="w-4 h-4 text-[#fbbf24]" />
 
-                <span className="text-xs text-slate-400">
+                <span className="text-xs text-[#9a9a9a]">
                   Best score:
                 </span>
 
-                <span className="text-xs font-bold text-emerald-400">
+                <span className="text-xs font-bold text-[#fbbf24]">
                   {bestScore}
                 </span>
 
@@ -1376,15 +1388,19 @@ const Dashboard = () => {
             RECENT INTERVIEWS
         ==================================================== */}
 
-        <section className="lg:col-span-9 rounded-2xl border border-slate-800 bg-[#090e1e] overflow-hidden">
+        <section className="lg:col-span-9 rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#131518] to-[#0f1013] overflow-hidden shadow-2xl shadow-black/40">
 
-          <div className="flex items-center justify-between px-5 py-5 border-b border-slate-800">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-white/[0.06]">
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
 
-              <Clock className="w-5 h-5 text-purple-400" />
+              <div className="w-9 h-9 rounded-xl bg-[#f3a078]/10 border border-[#f3a078]/25 flex items-center justify-center">
 
-              <h3 className="font-semibold text-white">
+                <Clock className="w-5 h-5 text-[#f3a078]" />
+
+              </div>
+
+              <h3 className="font-semibold text-[#f5f1ec] text-sm">
                 Recent Interviews
               </h3>
 
@@ -1394,7 +1410,7 @@ const Dashboard = () => {
               onClick={() =>
                 navigate("/history")
               }
-              className="text-sm text-purple-400 hover:text-purple-300"
+              className="text-xs font-semibold text-[#f3a078] hover:text-[#f29a72] transition-colors cursor-pointer"
             >
               View All →
             </button>
@@ -1403,7 +1419,7 @@ const Dashboard = () => {
 
           {history.length === 0 ? (
 
-            <div className="p-8 text-center text-slate-500">
+            <div className="p-8 text-center text-[#9a9a9a] text-sm">
               No interviews available yet.
             </div>
 
@@ -1415,7 +1431,7 @@ const Dashboard = () => {
 
                 <thead>
 
-                  <tr className="text-left text-xs uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                  <tr className="text-left text-xs uppercase tracking-wider text-[#9a9a9a] border-b border-white/[0.06] bg-white/[0.01]">
 
                     <th className="px-5 py-4">
                       Date
@@ -1460,10 +1476,10 @@ const Dashboard = () => {
                             item?.id ||
                             index
                           }
-                          className="border-b border-slate-800/70 last:border-0"
+                          className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
                         >
 
-                          <td className="px-5 py-4 text-sm text-slate-300">
+                          <td className="px-5 py-4 text-xs text-[#d1ccc7]">
 
                             {formatDate(
                               item?.date
@@ -1474,11 +1490,11 @@ const Dashboard = () => {
                           <td className="px-5 py-4">
 
                             <span
-                              className={`px-2.5 py-1 rounded-full text-xs ${
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                                 item?.type ===
                                 "technical"
-                                  ? "bg-blue-500/10 text-blue-400"
-                                  : "bg-purple-500/10 text-purple-400"
+                                  ? "bg-[#5eead4]/10 text-[#5eead4] border-[#5eead4]/25"
+                                  : "bg-[#c4b5fd]/10 text-[#c4b5fd] border-[#c4b5fd]/25"
                               }`}
                             >
 
@@ -1491,32 +1507,32 @@ const Dashboard = () => {
 
                           </td>
 
-                          <td className="px-5 py-4 text-sm text-white max-w-[260px]">
+                          <td className="px-5 py-4 text-xs text-[#f5f1ec] max-w-[260px]">
 
                             <span
                               title={
                                 item?.role
                               }
-                              className="block truncate"
+                              className="block truncate font-medium"
                             >
                               {item?.role}
                             </span>
 
                           </td>
 
-                          <td className="px-5 py-4">
+                          <td className="px-5 py-4 text-xs">
 
                             {item?.status ===
                             "completed" ? (
 
                               <>
 
-                                <span className="font-semibold text-white">
+                                <span className="font-semibold text-[#f5f1ec]">
                                   {item?.score ||
                                     0}
                                 </span>
 
-                                <span className="text-slate-500">
+                                <span className="text-[#9a9a9a]">
                                   {" "}
                                   / 100
                                 </span>
@@ -1525,7 +1541,7 @@ const Dashboard = () => {
 
                             ) : (
 
-                              <span className="text-slate-500">
+                              <span className="text-[#9a9a9a]">
                                 --
                               </span>
 
@@ -1536,11 +1552,11 @@ const Dashboard = () => {
                           <td className="px-5 py-4">
 
                             <span
-                              className={`px-2.5 py-1 rounded-full text-xs ${
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
                                 item?.status ===
                                 "completed"
-                                  ? "bg-emerald-500/10 text-emerald-400"
-                                  : "bg-yellow-500/10 text-yellow-400"
+                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/25"
+                                  : "bg-amber-500/10 text-amber-400 border-amber-500/25"
                               }`}
                             >
 
@@ -1561,7 +1577,7 @@ const Dashboard = () => {
                                   item?.actionUrl
                                 )
                               }
-                              className="w-9 h-9 rounded-lg border border-slate-700 flex items-center justify-center text-slate-400 hover:text-cyan-400 hover:border-cyan-500/40 transition"
+                              className="w-8 h-8 rounded-lg border border-white/[0.08] bg-white/[0.02] flex items-center justify-center text-[#9a9a9a] hover:text-[#f3a078] hover:border-[#f3a078]/40 hover:bg-[#f3a078]/5 transition-all cursor-pointer"
                             >
 
                               <Eye className="w-4 h-4" />
@@ -1589,19 +1605,23 @@ const Dashboard = () => {
             TIPS FOR SUCCESS
         ==================================================== */}
 
-        <section className="lg:col-span-3 rounded-2xl border border-slate-800 bg-[#090e1e] p-5">
+        <section className="lg:col-span-3 rounded-2xl border border-white/[0.07] bg-gradient-to-b from-[#131518] to-[#0f1013] p-5 shadow-2xl shadow-black/40">
 
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2.5 mb-6">
 
-            <Lightbulb className="w-5 h-5 text-cyan-400" />
+            <div className="w-9 h-9 rounded-xl bg-[#f3a078]/10 border border-[#f3a078]/25 flex items-center justify-center">
 
-            <h3 className="font-semibold text-white">
+              <Lightbulb className="w-5 h-5 text-[#f3a078]" />
+
+            </div>
+
+            <h3 className="font-semibold text-[#f5f1ec] text-sm">
               Tips for Success
             </h3>
 
           </div>
 
-          <div className="space-y-5">
+          <div className="space-y-4">
 
             <Tip text="Practice regularly" />
 
@@ -1629,30 +1649,83 @@ const StatBox = ({
   title,
   value,
   icon: Icon,
-  gradient,
+  variant = "peach",
 }) => {
+  const themes = {
+    peach: {
+      cornerLight: "from-[#f3a078]/25 via-[#f3a078]/6 to-transparent",
+      border: "border-[#f3a078]/30 hover:border-[#f3a078]/55",
+      iconBg: "bg-[#f3a078]/10",
+      iconBorder: "border-[#f3a078]/30",
+      iconColor: "text-[#f3a078]",
+      glowStyle: {
+        background: "radial-gradient(ellipse 260px 140px at 0% 0%, rgba(243, 160, 120, 0.10) 0%, transparent 80%)",
+      },
+    },
+    purple: {
+      cornerLight: "from-[#c4b5fd]/25 via-[#c4b5fd]/6 to-transparent",
+      border: "border-[#c4b5fd]/30 hover:border-[#c4b5fd]/55",
+      iconBg: "bg-[#c4b5fd]/10",
+      iconBorder: "border-[#c4b5fd]/30",
+      iconColor: "text-[#c4b5fd]",
+      glowStyle: {
+        background: "radial-gradient(ellipse 260px 140px at 0% 0%, rgba(196, 181, 253, 0.10) 0%, transparent 80%)",
+      },
+    },
+    teal: {
+      cornerLight: "from-[#5eead4]/25 via-[#5eead4]/6 to-transparent",
+      border: "border-[#5eead4]/30 hover:border-[#5eead4]/55",
+      iconBg: "bg-[#5eead4]/10",
+      iconBorder: "border-[#5eead4]/30",
+      iconColor: "text-[#5eead4]",
+      glowStyle: {
+        background: "radial-gradient(ellipse 260px 140px at 0% 0%, rgba(94, 234, 212, 0.10) 0%, transparent 80%)",
+      },
+    },
+    gold: {
+      cornerLight: "from-[#fbbf24]/25 via-[#fbbf24]/6 to-transparent",
+      border: "border-[#fbbf24]/30 hover:border-[#fbbf24]/55",
+      iconBg: "bg-[#fbbf24]/10",
+      iconBorder: "border-[#fbbf24]/30",
+      iconColor: "text-[#fbbf24]",
+      glowStyle: {
+        background: "radial-gradient(ellipse 260px 140px at 0% 0%, rgba(251, 191, 36, 0.10) 0%, transparent 80%)",
+      },
+    },
+  };
+
+  const current = themes[variant] || themes.peach;
+
   return (
     <div
-      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 min-h-[140px]`}
+      className={`relative overflow-hidden rounded-2xl border ${current.border} bg-gradient-to-b from-[#141619] via-[#101214] to-[#0c0d0f] p-5 min-h-[140px] shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.5)] transition-all duration-300 hover:-translate-y-0.5`}
     >
+      {/* Subtle internal accent glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={current.glowStyle}
+      />
 
-      <div className="flex items-start justify-between">
+      {/* Subtle soft corner lighting */}
+      <div className={`absolute -top-6 -right-6 w-28 h-28 bg-gradient-to-bl ${current.cornerLight} rounded-full blur-xl pointer-events-none`} />
+
+      <div className="flex items-start justify-between relative z-10">
 
         <div>
 
-          <p className="text-xs uppercase tracking-wider text-white/80">
+          <p className="text-xs uppercase tracking-wider text-[#9a9a9a] font-medium">
             {title}
           </p>
 
-          <p className="text-3xl font-bold text-white mt-3">
+          <p className="text-3xl font-bold text-[#f5f1ec] mt-3 tracking-tight">
             {value}
           </p>
 
         </div>
 
-        <div className="w-12 h-12 rounded-xl bg-white/15 flex items-center justify-center">
+        <div className={`w-12 h-12 rounded-xl ${current.iconBg} border ${current.iconBorder} flex items-center justify-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.08)]`}>
 
-          <Icon className="w-6 h-6 text-white" />
+          <Icon className={`w-6 h-6 ${current.iconColor}`} />
 
         </div>
 
@@ -1672,13 +1745,13 @@ const EmptyAnalytics = ({
   return (
     <div className="h-56 flex flex-col items-center justify-center text-center">
 
-      <div className="w-14 h-14 rounded-2xl bg-slate-800/70 flex items-center justify-center mb-4">
+      <div className="w-12 h-12 rounded-2xl border border-white/[0.06] bg-white/[0.02] flex items-center justify-center mb-3">
 
-        <AlertCircle className="w-7 h-7 text-slate-600" />
+        <AlertCircle className="w-6 h-6 text-[#9a9a9a]" />
 
       </div>
 
-      <p className="text-sm text-slate-500">
+      <p className="text-xs text-[#9a9a9a]">
         {text}
       </p>
 
@@ -1696,9 +1769,9 @@ const Tip = ({
   return (
     <div className="flex items-start gap-3">
 
-      <CheckCircle2 className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+      <CheckCircle2 className="w-4 h-4 text-[#f3a078] shrink-0 mt-0.5" />
 
-      <span className="text-sm text-slate-300">
+      <span className="text-xs text-[#d1ccc7] leading-relaxed">
         {text}
       </span>
 

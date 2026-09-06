@@ -238,8 +238,8 @@ const AIAvatar = ({
           background:
             radial-gradient(
               ellipse at 50% 72%,
-              rgba(8,145,178,.10),
-              transparent 58%
+              rgba(243,160,120,.15),
+              transparent 62%
             );
         }
 
@@ -264,9 +264,9 @@ const AIAvatar = ({
           z-index: 1;
 
           filter:
-            drop-shadow(0 0 12px rgba(34,211,238,.95))
-            drop-shadow(0 0 28px rgba(34,211,238,.62))
-            drop-shadow(0 0 52px rgba(34,211,238,.30));
+            drop-shadow(0 0 10px rgba(243,160,120,.85))
+            drop-shadow(0 0 24px rgba(243,160,120,.50))
+            drop-shadow(0 0 45px rgba(232,140,104,.25));
         }
 
 
@@ -296,11 +296,11 @@ const AIAvatar = ({
           border-width: 1px;
 
           border-color:
-            rgba(34,211,238,.78);
+            rgba(243,160,120,.70);
 
           box-shadow:
-            0 0 10px rgba(34,211,238,.35),
-            0 0 25px rgba(34,211,238,.18);
+            0 0 10px rgba(243,160,120,.30),
+            0 0 25px rgba(243,160,120,.15);
 
           animation:
             hologramRotate 18s linear infinite;
@@ -314,7 +314,7 @@ const AIAvatar = ({
           border-width: 2px;
 
           border-color:
-            rgba(34,211,238,.92);
+            rgba(243,160,120,.85);
 
           border-left-color:
             transparent;
@@ -323,8 +323,8 @@ const AIAvatar = ({
             transparent;
 
           filter:
-            drop-shadow(0 0 7px #22d3ee)
-            drop-shadow(0 0 14px rgba(34,211,238,.65));
+            drop-shadow(0 0 7px #f3a078)
+            drop-shadow(0 0 14px rgba(243,160,120,.55));
 
           animation:
             hologramReverse 12s linear infinite;
@@ -338,7 +338,7 @@ const AIAvatar = ({
           border-width: 1px;
 
           border-color:
-            rgba(103,232,249,.78);
+            rgba(251,191,154,.65);
 
           animation:
             hologramRotate 15s linear infinite;
@@ -362,8 +362,8 @@ const AIAvatar = ({
           border: 3px solid transparent;
 
           filter:
-            drop-shadow(0 0 8px #22d3ee)
-            drop-shadow(0 0 18px rgba(34,211,238,.80));
+            drop-shadow(0 0 7px #f3a078)
+            drop-shadow(0 0 16px rgba(243,160,120,.65));
         }
 
 
@@ -371,10 +371,10 @@ const AIAvatar = ({
           left: 5px;
 
           border-left-color:
-            #22d3ee;
+            #f3a078;
 
           border-top-color:
-            #22d3ee;
+            #f3a078;
         }
 
 
@@ -382,10 +382,10 @@ const AIAvatar = ({
           right: 5px;
 
           border-right-color:
-            #22d3ee;
+            #f3a078;
 
           border-top-color:
-            #22d3ee;
+            #f3a078;
         }
 
 
@@ -402,11 +402,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            #67e8f9;
+            #fbd1ba;
 
           box-shadow:
-            0 0 8px #22d3ee,
-            0 0 18px #22d3ee;
+            0 0 8px #f3a078,
+            0 0 16px #f3a078;
 
           animation:
             dataFloat 2.8s ease-in-out infinite;
@@ -458,7 +458,7 @@ const AIAvatar = ({
           background:
             linear-gradient(
               transparent,
-              rgba(34,211,238,.85),
+              rgba(243,160,120,.75),
               transparent
             );
 
@@ -550,13 +550,13 @@ const AIAvatar = ({
             );
 
           border:
-            1px solid rgba(165,243,252,.98);
+            1px solid rgba(243,160,120,.50);
 
           box-shadow:
 
-            0 0 17px rgba(34,211,238,.95),
-            0 0 34px rgba(34,211,238,.58),
-            0 0 58px rgba(34,211,238,.30),
+            0 0 14px rgba(243,160,120,.45),
+            0 0 28px rgba(243,160,120,.20),
+            0 0 45px rgba(243,160,120,.10),
 
             inset 0 5px 8px rgba(255,255,255,.98),
             inset 0 -8px 15px rgba(15,23,42,.20);
@@ -580,18 +580,18 @@ const AIAvatar = ({
           background:
             radial-gradient(
               ellipse at 50% 8%,
-              #3c5063 0%,
-              #182536 25%,
-              #050b14 63%,
+              #2c2420 0%,
+              #171412 25%,
+              #090909 63%,
               #000000 100%
             );
 
           border:
-            1px solid rgba(103,232,249,.22);
+            1px solid rgba(243,160,120,.20);
 
           box-shadow:
             inset 0 0 25px rgba(0,0,0,.98),
-            inset 0 0 10px rgba(34,211,238,.10);
+            inset 0 0 10px rgba(243,160,120,.08);
         }
 
 
@@ -643,12 +643,12 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            #67e8f9;
+            #e2f8ff;
 
           box-shadow:
-            0 0 8px #67e8f9,
-            0 0 18px #22d3ee,
-            0 0 30px rgba(34,211,238,.90);
+            0 0 4px #bae6fd,
+            0 0 9px rgba(186,230,253,.45),
+            0 0 20px rgba(243,160,120,.40);
 
           animation:
             blink 5.5s infinite;
@@ -698,13 +698,13 @@ const AIAvatar = ({
           margin: auto;
 
           border-bottom:
-            2px solid #67e8f9;
+            2px solid #fbd1ba;
 
           border-radius:
             0 0 50% 50%;
 
           filter:
-            drop-shadow(0 0 5px #22d3ee);
+            drop-shadow(0 0 4px rgba(243,160,120,.45));
         }
 
 
@@ -713,7 +713,7 @@ const AIAvatar = ({
           height: 10px;
 
           border:
-            2px solid #67e8f9;
+            2px solid #fbd1ba;
 
           border-radius: 50%;
 
@@ -746,11 +746,11 @@ const AIAvatar = ({
             );
 
           border:
-            1px solid rgba(165,243,252,.95);
+            1px solid rgba(243,160,120,.45);
 
           box-shadow:
-            0 0 13px rgba(34,211,238,.60),
-            0 0 24px rgba(34,211,238,.25);
+            0 0 10px rgba(243,160,120,.30),
+            0 0 20px rgba(243,160,120,.15);
         }
 
 
@@ -779,11 +779,11 @@ const AIAvatar = ({
           border-radius: 6px;
 
           background:
-            rgba(103,232,249,.98);
+            rgba(243,160,120,.95);
 
           box-shadow:
-            0 0 9px #22d3ee,
-            0 0 18px rgba(34,211,238,.90);
+            0 0 8px #f3a078,
+            0 0 16px rgba(243,160,120,.80);
         }
 
 
@@ -813,10 +813,10 @@ const AIAvatar = ({
           height: 8px;
 
           background:
-            #67e8f9;
+            #f3a078;
 
           box-shadow:
-            0 0 8px #22d3ee;
+            0 0 8px #f3a078;
         }
 
 
@@ -827,11 +827,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            #67e8f9;
+            #f3a078;
 
           box-shadow:
-            0 0 10px #67e8f9,
-            0 0 22px #22d3ee;
+            0 0 10px #f3a078,
+            0 0 20px rgba(243,160,120,.80);
 
           animation:
             pulse 1.7s infinite;
@@ -857,11 +857,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           border:
-            2px solid rgba(34,211,238,.90);
+            2px solid rgba(243,160,120,.85);
 
           box-shadow:
-            0 0 9px rgba(34,211,238,.90),
-            0 0 20px rgba(34,211,238,.55);
+            0 0 9px rgba(243,160,120,.80),
+            0 0 20px rgba(243,160,120,.45);
 
           z-index: 7;
         }
@@ -882,10 +882,10 @@ const AIAvatar = ({
           border-radius: 50%;
 
           border:
-            1px solid #67e8f9;
+            1px solid #f3a078;
 
           box-shadow:
-            0 0 9px #22d3ee;
+            0 0 9px #f3a078;
         }
 
 
@@ -984,13 +984,13 @@ const AIAvatar = ({
             );
 
           border:
-            1px solid rgba(165,243,252,.95);
+            1px solid rgba(243,160,120,.50);
 
           box-shadow:
 
-            0 0 18px rgba(34,211,238,.65),
-            0 0 36px rgba(34,211,238,.38),
-            0 0 54px rgba(34,211,238,.17),
+            0 0 16px rgba(243,160,120,.40),
+            0 0 32px rgba(243,160,120,.20),
+            0 0 50px rgba(243,160,120,.10),
 
             inset 0 5px 10px rgba(255,255,255,1),
             inset 0 -10px 17px rgba(15,23,42,.18);
@@ -1048,9 +1048,9 @@ const AIAvatar = ({
             3px solid #94a3b8;
 
           box-shadow:
-            0 0 16px rgba(34,211,238,1),
-            0 0 32px rgba(34,211,238,.60),
-            0 0 46px rgba(34,211,238,.32),
+            0 0 14px rgba(243,160,120,.85),
+            0 0 28px rgba(243,160,120,.45),
+            0 0 42px rgba(232,140,104,.25),
             inset 0 0 12px #000;
 
           display:
@@ -1071,11 +1071,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           border:
-            4px solid #22d3ee;
+            4px solid #f3a078;
 
           box-shadow:
-            0 0 10px #22d3ee,
-            0 0 22px rgba(34,211,238,.90);
+            0 0 10px #f3a078,
+            0 0 20px rgba(243,160,120,.80);
 
           display:
             flex;
@@ -1095,11 +1095,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            #67e8f9;
+            #fbd1ba;
 
           box-shadow:
-            0 0 13px #22d3ee,
-            0 0 24px #22d3ee;
+            0 0 12px #f3a078,
+            0 0 22px #f3a078;
 
           animation:
             pulse 1.8s infinite;
@@ -1125,14 +1125,14 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            rgba(34,211,238,.78);
+            rgba(243,160,120,.70);
 
           filter:
             blur(8px);
 
           box-shadow:
-            0 0 22px rgba(34,211,238,.70),
-            0 0 44px rgba(34,211,238,.42);
+            0 0 20px rgba(243,160,120,.65),
+            0 0 40px rgba(243,160,120,.35);
 
           animation:
             bodyGlow 2s infinite;
@@ -1176,15 +1176,15 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            rgba(34,211,238,.76);
+            rgba(243,160,120,.65);
 
           filter:
             blur(17px);
 
           box-shadow:
-            0 0 28px rgba(34,211,238,.75),
-            0 0 58px rgba(34,211,238,.45),
-            0 0 85px rgba(34,211,238,.25);
+            0 0 26px rgba(243,160,120,.65),
+            0 0 54px rgba(243,160,120,.38),
+            0 0 80px rgba(232,140,104,.20);
 
           animation:
             platformGlow 2s ease-in-out infinite;
@@ -1202,11 +1202,11 @@ const AIAvatar = ({
           border-radius: 50%;
 
           border:
-            2px solid rgba(34,211,238,.94);
+            2px solid rgba(243,160,120,.85);
 
           box-shadow:
-            0 0 11px rgba(34,211,238,.85),
-            0 0 24px rgba(34,211,238,.48);
+            0 0 10px rgba(243,160,120,.75),
+            0 0 22px rgba(243,160,120,.40);
         }
 
 
@@ -1249,13 +1249,13 @@ const AIAvatar = ({
           border-radius: 50%;
 
           background:
-            #67e8f9;
+            #f3a078;
 
           box-shadow:
-            0 0 14px #22d3ee,
-            0 0 30px #22d3ee,
-            0 0 55px rgba(34,211,238,1),
-            0 0 85px rgba(34,211,238,.65);
+            0 0 14px #f3a078,
+            0 0 28px #f3a078,
+            0 0 50px rgba(243,160,120,.85),
+            0 0 75px rgba(232,140,104,.50);
 
           animation:
             platformPulse 1.8s infinite;

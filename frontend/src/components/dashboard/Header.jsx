@@ -914,21 +914,28 @@ const Header = () => {
   return (
     <header
       className="
-        sticky
-        top-0
-        z-50
         h-[104px]
         min-h-[104px]
         px-10
         flex
         items-center
         justify-between
-        bg-[#070b1d]
-        text-white
+        bg-[#08090a]/35
+        backdrop-blur-md
+        text-[#f5f1ec]
         border-b
-        border-white/10
+        border-white/[0.05]
+        relative
+        z-20
       "
     >
+      {/* Soft warm reflection touching the right of the header */}
+      <div 
+        className="absolute top-0 right-0 w-[500px] h-full pointer-events-none"
+        style={{
+          background: 'linear-gradient(to left, rgba(201, 121, 80, 0.05), rgba(168, 94, 61, 0.015) 60%, transparent 100%)',
+        }}
+      />
 
       {/* ==================================================
           LEFT — WELCOME
@@ -940,13 +947,13 @@ const Header = () => {
             text-[28px]
             font-bold
             tracking-tight
-            text-white
+            text-[#f5f1ec]
           "
         >
           Welcome, {displayName}! 👋
         </h2>
 
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm text-[#9a9a9a] mt-1 font-normal">
           Ready to ace your next interview?
         </p>
       </div>
@@ -975,7 +982,7 @@ const Header = () => {
               relative
               p-2
               text-slate-300
-              hover:text-blue-400
+              hover:text-[#f4a07a]
               transition-colors
             "
             aria-label="Notifications"
@@ -993,15 +1000,15 @@ const Header = () => {
                   h-[18px]
                   px-1
                   rounded-full
-                  bg-red-500
-                  text-white
+                  bg-[#f3a078]
+                  text-[#0d0f10]
                   text-[10px]
                   font-bold
                   flex
                   items-center
                   justify-center
                   border-2
-                  border-[#070b1d]
+                  border-[#0a0b0d]
                 "
               >
                 {unreadCount}
@@ -1021,7 +1028,7 @@ const Header = () => {
                 right-0
                 top-12
                 w-[380px]
-                bg-[#0b1128]
+                bg-[#131416]
                 border
                 border-white/10
                 rounded-2xl
@@ -1073,8 +1080,8 @@ const Header = () => {
                       }
                       className="
                         text-xs
-                        text-blue-400
-                        hover:text-blue-300
+                        text-[#f4a07a]
+                        hover:text-[#f39a73]
                         transition-colors
                       "
                     >
@@ -1161,7 +1168,7 @@ const Header = () => {
                           transition-colors
                           ${
                             notification.unread
-                              ? "bg-blue-500/5"
+                              ? "bg-[#f4a07a]/[0.06]"
                               : ""
                           }
                         `}
@@ -1186,7 +1193,7 @@ const Header = () => {
                               </h4>
 
                               {notification.unread && (
-                                <span className="w-2 h-2 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                                <span className="w-2 h-2 rounded-full bg-[#f4a07a] mt-1.5 shrink-0" />
                               )}
 
                             </div>
@@ -1253,8 +1260,8 @@ const Header = () => {
                 rounded-full
                 p-[2px]
                 bg-gradient-to-br
-                from-blue-400
-                to-cyan-400
+                from-[#f3a078]
+                to-[#e88c68]
               "
             >
               <div
@@ -1262,17 +1269,17 @@ const Header = () => {
                   w-full
                   h-full
                   rounded-full
-                  bg-[#070b1d]
+                  bg-[#111315]
                   flex
                   items-center
                   justify-center
                   border
-                  border-blue-400/20
+                  border-[#f3a078]/30
                 "
               >
                 <span
                   className="
-                    text-blue-400
+                    text-[#f3a078]
                     font-bold
                     text-base
                   "
@@ -1287,9 +1294,9 @@ const Header = () => {
                 flex
                 items-center
                 gap-1.5
-                text-white
+                text-[#f7f5f0]
                 font-medium
-                group-hover:text-blue-400
+                group-hover:text-[#f4a07a]
                 transition-colors
               "
             >
@@ -1328,7 +1335,7 @@ const Header = () => {
                 right-0
                 top-14
                 w-[280px]
-                bg-[#0b1128]
+                bg-[#131416]
                 border
                 border-white/10
                 rounded-2xl
@@ -1355,15 +1362,15 @@ const Header = () => {
                       h-11
                       rounded-full
                       bg-gradient-to-br
-                      from-blue-400
-                      to-cyan-400
+                      from-[#f3a078]
+                      to-[#e88c68]
                       flex
                       items-center
                       justify-center
                       shrink-0
                     "
                   >
-                    <span className="text-slate-950 font-bold">
+                    <span className="text-[#0d0f10] font-bold">
                       {initial}
                     </span>
                   </div>
@@ -1402,8 +1409,8 @@ const Header = () => {
                     rounded-xl
                     text-sm
                     text-slate-300
-                    hover:text-white
-                    hover:bg-white/5
+                    hover:text-[#f4a07a]
+                    hover:bg-white/[0.04]
                     transition-colors
                   "
                 >
@@ -1426,8 +1433,8 @@ const Header = () => {
                     rounded-xl
                     text-sm
                     text-slate-300
-                    hover:text-white
-                    hover:bg-white/5
+                    hover:text-[#f4a07a]
+                    hover:bg-white/[0.04]
                     transition-colors
                   "
                 >

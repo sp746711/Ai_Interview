@@ -1258,10 +1258,10 @@ const Sidebar = () => {
         fixed
         top-0
         left-0
-        bg-gradient-to-b
-        from-slate-900
-        to-blue-950
-        text-white
+        bg-[#0a0b0d]
+        border-r
+        border-white/[0.05]
+        text-[#f5f1ec]
         flex
         flex-col
         shadow-2xl
@@ -1274,21 +1274,20 @@ const Sidebar = () => {
           UNCHANGED
       ===================================================== */}
 
-      <div className="p-6">
+      <div className="p-6 border-b border-white/[0.04] relative">
+        <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-[#f3a078]/[0.03] to-transparent pointer-events-none" />
 
         <h1
           className="
             text-2xl
             font-bold
-            tracking-wider
-            text-transparent
-            bg-clip-text
-            bg-gradient-to-r
-            from-blue-400
-            to-cyan-300
+            tracking-tight
+            relative
+            z-10
           "
         >
-          MockMind AI
+          <span className="text-[#f5f1ec]">MockMind </span>
+          <span className="text-[#f3a078]">AI</span>
         </h1>
 
       </div>
@@ -1314,12 +1313,10 @@ const Sidebar = () => {
               key={item.name}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                  isActive &&
-                  item.path ===
-                    '/dashboard'
-                    ? 'bg-white/10 text-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'
+                `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-medium ${
+                  isActive
+                    ? 'bg-[#f3a078]/12 text-[#f3a078] border border-[#f3a078]/30 shadow-[0_0_16px_rgba(243,160,120,0.18)]'
+                    : 'text-[#9a9a9a] hover:bg-white/[0.03] hover:text-[#f5f1ec]'
                 }`
               }
             >
@@ -1331,11 +1328,7 @@ const Sidebar = () => {
                 "
               />
 
-              <span
-                className="
-                  font-medium
-                "
-              >
+              <span>
                 {item.name}
               </span>
 
@@ -1364,8 +1357,11 @@ const Sidebar = () => {
           items-center
           justify-center
           overflow-hidden
+          relative
         "
       >
+
+        <div className="absolute w-40 h-40 rounded-full bg-[#f3a078]/[0.08] blur-3xl pointer-events-none" />
 
         <AIAvatar
           isSpeaking={
