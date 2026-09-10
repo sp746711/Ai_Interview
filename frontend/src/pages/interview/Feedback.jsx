@@ -1739,85 +1739,114 @@ const Feedback = () => {
       <section className="relative">
 
         {/* =====================================================
-            TOP ROUND PROGRESS AREA — Wide, Balanced Stepper with Visible Lines
+            PART 1 — ROUND 2 / 3 PROGRESS
         ===================================================== */}
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="mb-5 relative rounded-2xl border border-white/[0.06] bg-[linear-gradient(145deg,#0A0E17_0%,#0E1422_50%,#121828_100%)] p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.4)] overflow-hidden">
+          {/* Subtle curved decorative line treatment matching original reference */}
+          <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-25" preserveAspectRatio="none" viewBox="0 0 1000 120">
+            <path d="M 0,90 Q 250,20 500,80 T 1000,40" fill="none" stroke="url(#r2CurveGrad1)" strokeWidth="1.5" strokeDasharray="4 4" />
+            <path d="M 0,30 Q 350,110 700,30 T 1000,90" fill="none" stroke="url(#r2CurveGrad2)" strokeWidth="1.2" />
+            <defs>
+              <linearGradient id="r2CurveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF9A6B" stopOpacity="0.6" />
+                <stop offset="50%" stopColor="#8B5CF6" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#22D3EE" stopOpacity="0.5" />
+              </linearGradient>
+              <linearGradient id="r2CurveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF8A5B" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#FF6B6B" stopOpacity="0.4" />
+              </linearGradient>
+            </defs>
+          </svg>
 
-          {/* ROUND 2 / 3 on left */}
-          <div className="shrink-0">
-            <span className="text-sm font-black tracking-[0.16em] text-cyan-400 uppercase">
-              ROUND 2 / 3
-            </span>
-          </div>
-
-          {/* Wide & balanced stepper positioned across center/right */}
-          <div className="w-full max-w-xl md:max-w-2xl flex-1 md:ml-12 md:mr-2">
-            <div className="flex items-start">
-              {/* Step 1: Completed Resume Analysis */}
-              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-400/50 bg-emerald-500/15 text-xs sm:text-sm font-bold text-emerald-300 shadow-[0_0_14px_rgba(52,211,153,0.3)]">
-                  <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
-                </div>
-                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-emerald-300">
-                  Resume Analysis
-                </span>
+          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-5">
+            {/* Left: Round label and orange handwritten-style motivational quote */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0">
+              <span className="text-xs sm:text-sm font-black tracking-[0.18em] text-[#FF9A6B] uppercase">
+                ROUND 2 / 3
+              </span>
+              <div className="mt-1.5 flex items-center gap-1.5 text-[#FF9A6B]/90 font-serif italic text-xs leading-snug">
+                <Sparkles className="h-3 w-3 text-[#FF9A6B] shrink-0 inline" />
+                <span>&ldquo;Progress Turns Effort Into Results.&rdquo;</span>
               </div>
+            </div>
 
-              {/* Connecting Line 1 -> 2: Completed line */}
-              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-gradient-to-r from-emerald-400 via-cyan-400 to-[#8B5CF6]" />
-
-              {/* Step 2: Active Assessment */}
-              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-cyan-400 bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-600 text-xs sm:text-sm font-bold text-white shadow-[0_0_20px_rgba(34,211,238,0.5)]">
-                  2
+            {/* Center: Stepper (Resume Analysis completed | Assessment active | AI Interview upcoming) */}
+            <div className="flex-1 w-full max-w-xl px-2 sm:px-6">
+              <div className="flex items-center justify-between relative">
+                {/* Step 1: Resume Analysis (completed) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-emerald-400/60 bg-emerald-500/20 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.35)]">
+                    <CheckCircle2 className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-emerald-400" />
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-semibold text-emerald-300">
+                    Resume Analysis
+                  </span>
+                  <span className="text-[9px] font-medium text-emerald-400/80 uppercase tracking-wider">
+                    ✓ completed
+                  </span>
                 </div>
-                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#F5F5F5]">
-                  Assessment
-                </span>
+
+                {/* Connector 1 -> 2 */}
+                <div className="flex-1 h-[2px] mx-2 -mt-4 bg-gradient-to-r from-emerald-400 via-emerald-300 to-[#FF9A6B]" />
+
+                {/* Step 2: Assessment (active) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border-2 border-[#FF9A6B] bg-gradient-to-br from-[#FF9A6B] via-[#FF8A5B] to-[#FF6B6B] text-xs sm:text-sm font-bold text-slate-950 shadow-[0_0_20px_rgba(255,154,107,0.6)] animate-pulse">
+                    2
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-bold text-[#F5F5F5]">
+                    Assessment
+                  </span>
+                  <span className="text-[9px] font-semibold text-[#FF9A6B] uppercase tracking-wider">
+                    active
+                  </span>
+                </div>
+
+                {/* Connector 2 -> 3 */}
+                <div className="flex-1 h-[2px] mx-2 -mt-4 bg-[#2A3447]" />
+
+                {/* Step 3: AI Interview (upcoming) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-white/[0.12] bg-[#0E131E] text-xs sm:text-sm font-bold text-[#64748B]">
+                    3
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-semibold text-[#64748B]">
+                    AI Interview
+                  </span>
+                  <span className="text-[9px] font-medium text-[#64748B] uppercase tracking-wider">
+                    upcoming
+                  </span>
+                </div>
               </div>
+            </div>
 
-              {/* Connecting Line 2 -> 3: Upcoming line */}
-              <div className="flex-1 mt-4.5 -mx-3 h-[2px] bg-[#334155]" />
-
-              {/* Step 3: Upcoming AI Interview */}
-              <div className="flex flex-col items-center shrink-0 w-24 sm:w-28">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/[0.12] bg-[#0E131E] text-xs sm:text-sm font-bold text-[#64748B]">
-                  3
-                </div>
-                <span className="mt-2 text-center text-[11px] sm:text-xs font-semibold tracking-wide text-[#64748B]">
-                  AI Interview
-                </span>
+            {/* Right: Motivational Quote */}
+            <div className="flex flex-col items-center lg:items-end text-center lg:text-right shrink-0">
+              <div className="text-[#FF9A6B]/90 font-serif italic text-xs leading-snug">
+                &ldquo;Keep Practicing<br />
+                Keep Improving<br />
+                <span className="text-[#FFAA7A] font-semibold">You&apos;re Getting There!&rdquo;</span>
               </div>
             </div>
           </div>
-
         </div>
 
         {/* =====================================================
-            ROUND 2 HEADER
+            PART 2 — MAIN HEADING
         ===================================================== */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-5">
-          <div className="flex items-start gap-4">
-            <div className="flex h-13 w-13 shrink-0 items-center justify-center rounded-2xl border border-violet-500/40 bg-[#161224] shadow-[0_0_22px_rgba(139,92,246,0.22)]">
-              <Target className="h-6 w-6 text-violet-400" />
+        <div className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            {/* Orange assessment/target icon inside rounded dark square */}
+            <div className="flex h-12 w-12 sm:h-13 sm:w-13 shrink-0 items-center justify-center rounded-2xl border border-[#FF9A6B]/40 bg-[#1C1412] shadow-[0_0_20px_rgba(255,154,107,0.22)]">
+              <Target className="h-6 w-6 text-[#FF9A6B]" />
             </div>
 
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-[0.16em] text-cyan-400">
-                  ASSESSMENT INTELLIGENCE
-                </span>
-                <span className="text-[11px] text-[#64748B]">·</span>
-                <span className="text-xs text-[#858585]">
-                  Technical Evaluation
-                </span>
-              </div>
-
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F5] mt-0.5">
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F5]">
                 Round 2 — Assessment Feedback
               </h2>
-
-              <p className="mt-1 text-xs sm:text-sm text-[#94A3B8]">
+              <p className="mt-0.5 text-xs sm:text-sm text-[#94A3B8]">
                 Your performance in the online assessment
               </p>
             </div>
@@ -1825,15 +1854,15 @@ const Feedback = () => {
 
           <div className="flex flex-wrap items-center gap-3">
             {/* AI Analysis Ready */}
-            <div className="flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-4 py-2 shadow-[0_0_20px_rgba(16,185,129,0.12)]">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.9)] animate-pulse" />
+            <div className="flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3.5 py-1.5 shadow-[0_0_18px_rgba(16,185,129,0.12)]">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
               <span className="text-xs font-bold tracking-wider text-emerald-300">
                 AI ANALYSIS READY
               </span>
             </div>
 
             {/* Interview Type */}
-            <div className="flex shrink-0 items-center gap-2.5 rounded-xl border border-white/[0.08] bg-[#0E131E] px-4 py-2 shadow-sm">
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E131E] px-3.5 py-1.5 shadow-sm">
               {isNonTechnical ? (
                 <Sparkles className="h-4 w-4 text-violet-400" />
               ) : (
@@ -1852,170 +1881,156 @@ const Feedback = () => {
         </div>
 
         {/* =====================================================
-            MAIN SCORE & KEY METRICS SECTION
+            PART 3 — SCORE + STATISTICS (Unified Horizontal Strip)
         ===================================================== */}
-        <div className="mb-8 rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)]">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-            {/* Overall Score Circular Ring */}
-            <div className="lg:col-span-4 flex flex-col items-center justify-center p-4 lg:border-r lg:border-white/[0.08]">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#A1A1AA] mb-4">
-                OVERALL SCORE
-              </span>
-
-              <div className="relative flex h-40 w-40 items-center justify-center">
-                <svg className="h-38 w-38 -rotate-90 transform" viewBox="0 0 160 160">
-                  <defs>
-                    <linearGradient id="r2OverallScoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#22D3EE" />
-                      <stop offset="50%" stopColor="#3B82F6" />
-                      <stop offset="100%" stopColor="#A855F7" />
-                    </linearGradient>
-                  </defs>
+        <div className="mb-5 rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)]">
+          <div className="grid grid-cols-2 md:grid-cols-5 divide-y md:divide-y-0 md:divide-x divide-white/[0.08] items-center">
+            
+            {/* 1. Overall Score (2D Donut with coral/orange progress arc) */}
+            <div className="col-span-2 md:col-span-1 flex items-center justify-center gap-3.5 p-3">
+              <div className="relative flex h-20 w-20 shrink-0 items-center justify-center">
+                <svg className="h-20 w-20 -rotate-90 transform" viewBox="0 0 80 80">
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="64"
+                    cx="40"
+                    cy="40"
+                    r="32"
                     fill="transparent"
                     stroke="#141926"
-                    strokeWidth="12"
+                    strokeWidth="7"
                   />
                   <circle
-                    cx="80"
-                    cy="80"
-                    r="64"
+                    cx="40"
+                    cy="40"
+                    r="32"
                     fill="transparent"
-                    stroke="url(#r2OverallScoreGradient)"
-                    strokeWidth="12"
-                    strokeDasharray={2 * Math.PI * 64}
+                    stroke="#FF9A6B"
+                    strokeWidth="7"
+                    strokeDasharray={2 * Math.PI * 32}
                     strokeDashoffset={
-                      2 * Math.PI * 64 * (1 - Math.max(0, Math.min(100, overallScore ?? 0)) / 100)
+                      2 * Math.PI * 32 * (1 - Math.max(0, Math.min(100, overallScore ?? 0)) / 100)
                     }
                     strokeLinecap="round"
                     className="transition-all duration-1000 ease-out"
                   />
                 </svg>
-
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <p className="text-4xl font-extrabold tracking-tight text-[#F5F5F5]">
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-base font-extrabold tracking-tight text-[#F5F5F5]">
                     {overallScore !== null ? `${overallScore}%` : '—'}
-                  </p>
-                  <p className="mt-1 text-[11px] font-bold tracking-wider text-cyan-400 uppercase">
-                    {performanceLabel || (overallScore >= 70 ? 'EXCELLENT' : overallScore >= 50 ? 'GOOD' : 'NEEDS WORK')}
-                  </p>
+                  </span>
                 </div>
-              </div>
-
-              <div className="mt-3 flex items-center gap-2 text-xs text-[#94A3B8]">
-                <span className="h-2 w-2 rounded-full bg-cyan-400" />
-                <span>Weighted Performance Score</span>
-              </div>
-            </div>
-
-            {/* 4 Key Metrics: Total, Correct, Incorrect, Skipped */}
-            <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {/* Total Questions */}
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
-                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10">
-                  <Target className="h-4.5 w-4.5 text-blue-400" />
-                </div>
-                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
-                  TOTAL QUESTIONS
-                </span>
-                <span className="mt-1 text-3xl font-extrabold text-[#F5F5F5]">
-                  {totalQuestions ?? '—'}
-                </span>
-                <span className="mt-1 text-xs text-blue-300">
-                  Questions
-                </span>
-              </div>
-
-              {/* Correct */}
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
-                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-500/10">
-                  <CheckCircle2 className="h-4.5 w-4.5 text-emerald-400" />
-                </div>
-                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
-                  CORRECT
-                </span>
-                <span className="mt-1 text-3xl font-extrabold text-emerald-400">
-                  {correct ?? 0}
-                </span>
-                <span className="mt-1 text-xs font-semibold text-emerald-300/90">
-                  {totalQuestions ? Math.round(((correct || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
-                </span>
-              </div>
-
-              {/* Incorrect */}
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
-                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-500/10">
-                  <CircleAlert className="h-4.5 w-4.5 text-rose-400" />
-                </div>
-                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
-                  INCORRECT
-                </span>
-                <span className="mt-1 text-3xl font-extrabold text-rose-400">
-                  {incorrect ?? 0}
-                </span>
-                <span className="mt-1 text-xs font-semibold text-rose-300/90">
-                  {totalQuestions ? Math.round(((incorrect || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
-                </span>
-              </div>
-
-              {/* Skipped */}
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/[0.06] bg-[#070A10]/60 p-4 text-center">
-                <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-500/10">
-                  <CircleAlert className="h-4.5 w-4.5 text-amber-400" />
-                </div>
-                <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
-                  SKIPPED
-                </span>
-                <span className="mt-1 text-3xl font-extrabold text-amber-400">
-                  {skipped ?? 0}
-                </span>
-                <span className="mt-1 text-xs font-semibold text-amber-300/90">
-                  {totalQuestions ? Math.round(((skipped || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Assessment Feedback Highlight Panel */}
-          {performanceMessage && (
-            <div className="mt-5 flex items-start gap-3 rounded-xl border border-white/[0.08] bg-[#070A10]/80 p-4">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10">
-                <Award className="h-4 w-4 text-amber-400" />
               </div>
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                  ASSESSMENT FEEDBACK
+                <span className="block text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                  OVERALL SCORE
                 </span>
-                <p className="mt-0.5 text-xs sm:text-sm text-[#D1D5DB] leading-relaxed">
-                  {performanceMessage}
-                </p>
+                <span className="text-[11px] font-bold text-[#FF9A6B] uppercase">
+                  {performanceLabel || (overallScore >= 70 ? 'Excellent' : overallScore >= 50 ? 'Good' : 'Needs Work')}
+                </span>
               </div>
             </div>
-          )}
+
+            {/* 2. Total Questions */}
+            <div className="flex flex-col items-center justify-center p-3 text-center">
+              <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg border border-blue-400/20 bg-blue-500/10">
+                <Target className="h-3.5 w-3.5 text-blue-400" />
+              </div>
+              <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                TOTAL QUESTIONS
+              </span>
+              <span className="mt-0.5 text-2xl font-extrabold text-[#F5F5F5]">
+                {totalQuestions ?? '—'}
+              </span>
+              <span className="text-[11px] text-blue-300">
+                Questions
+              </span>
+            </div>
+
+            {/* 3. Correct */}
+            <div className="flex flex-col items-center justify-center p-3 text-center">
+              <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-400/20 bg-emerald-500/10">
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+              </div>
+              <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                CORRECT
+              </span>
+              <span className="mt-0.5 text-2xl font-extrabold text-emerald-400">
+                {correct ?? 0}
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-300/90">
+                {totalQuestions ? Math.round(((correct || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+              </span>
+            </div>
+
+            {/* 4. Incorrect */}
+            <div className="flex flex-col items-center justify-center p-3 text-center">
+              <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg border border-rose-400/20 bg-rose-500/10">
+                <CircleAlert className="h-3.5 w-3.5 text-rose-400" />
+              </div>
+              <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                INCORRECT
+              </span>
+              <span className="mt-0.5 text-2xl font-extrabold text-rose-400">
+                {incorrect ?? 0}
+              </span>
+              <span className="text-[11px] font-semibold text-rose-300/90">
+                {totalQuestions ? Math.round(((incorrect || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+              </span>
+            </div>
+
+            {/* 5. Skipped */}
+            <div className="flex flex-col items-center justify-center p-3 text-center">
+              <div className="mb-1 flex h-7 w-7 items-center justify-center rounded-lg border border-amber-400/20 bg-amber-500/10">
+                <CircleAlert className="h-3.5 w-3.5 text-amber-400" />
+              </div>
+              <span className="text-[10px] font-bold tracking-wider text-[#A1A1AA] uppercase">
+                SKIPPED
+              </span>
+              <span className="mt-0.5 text-2xl font-extrabold text-amber-400">
+                {skipped ?? 0}
+              </span>
+              <span className="text-[11px] font-semibold text-amber-300/90">
+                {totalQuestions ? Math.round(((skipped || 0) / Math.max(totalQuestions, 1)) * 100) : 0}%
+              </span>
+            </div>
+
+          </div>
         </div>
 
         {/* =====================================================
-            ANALYTICS ROW 1: Performance Overview | Category Performance | Time Analysis
+            PART 4 — ASSESSMENT FEEDBACK BANNER (Full-width compact card)
         ===================================================== */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="mb-5 flex items-center gap-3.5 rounded-2xl border border-[#FF9A6B]/30 bg-gradient-to-r from-[#1D1412]/90 via-[#16121D]/80 to-[#101420]/90 p-3.5 sm:p-4 shadow-[0_4px_20px_rgba(255,154,107,0.08)]">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#FF9A6B]/40 bg-[#FF9A6B]/15 shadow-[0_0_12px_rgba(255,154,107,0.25)]">
+            <Award className="h-4.5 w-4.5 text-[#FF9A6B]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <span className="block text-[10px] font-extrabold uppercase tracking-wider text-[#FF9A6B]">
+              ASSESSMENT FEEDBACK
+            </span>
+            <p className="mt-0.5 text-xs sm:text-sm text-[#D1D5DB] leading-relaxed">
+              {performanceMessage ||
+                'Your assessment analysis reflects solid technical foundations. Focus on pacing and section-specific mastery for optimal results.'}
+            </p>
+          </div>
+        </div>
+
+        {/* =====================================================
+            PART 5, 6, 7 — ANALYTICS ROW 1
+            Performance Overview | Category Performance | Time Analysis
+        ===================================================== */}
+        <div className="mb-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
 
           {/* 1. PERFORMANCE OVERVIEW */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
-                  <Sparkles className="h-4 w-4 text-cyan-300" />
+              <div className="mb-3.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                  <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                     PERFORMANCE OVERVIEW
                   </h3>
-                  <p className="text-[11px] text-[#858585]">
-                    Core assessment efficiency metrics
-                  </p>
                 </div>
               </div>
 
@@ -2025,187 +2040,250 @@ const Feedback = () => {
                     label: 'Accuracy',
                     value: `${overallScore ?? 0}%`,
                     sub: overallScore >= 70 ? 'High' : overallScore >= 50 ? 'Moderate' : 'Low',
+                    valPct: Math.min(100, Math.max(0, overallScore ?? 0)),
                     color: 'text-cyan-300',
+                    barColor: 'from-cyan-500 to-teal-400',
+                    icon: Target,
+                    iconColor: 'text-cyan-400',
                   },
                   {
                     label: 'Time Taken',
                     value: timeTaken || '—',
                     sub: 'of 30:00 allocated',
+                    valPct: timeTaken ? 65 : 0,
                     color: 'text-[#F5F5F5]',
+                    barColor: 'from-blue-500 to-indigo-500',
+                    icon: TrendingUp,
+                    iconColor: 'text-blue-400',
                   },
                   {
                     label: 'Average Time / Question',
                     value: averageTime || '—',
                     sub: 'Optimal pacing',
+                    valPct: averageTime ? 60 : 0,
                     color: 'text-violet-300',
+                    barColor: 'from-purple-500 to-violet-400',
+                    icon: Lightbulb,
+                    iconColor: 'text-violet-400',
                   },
                   {
                     label: 'Questions Attempted',
                     value: `${Math.min(totalQuestions || 0, (correct || 0) + (incorrect || 0))} / ${totalQuestions || 0}`,
                     sub: `${totalQuestions ? Math.round(((correct + incorrect) / Math.max(totalQuestions, 1)) * 100) : 0}% completion`,
+                    valPct: totalQuestions ? Math.min(100, Math.round(((correct + incorrect) / Math.max(totalQuestions, 1)) * 100)) : 0,
                     color: 'text-emerald-400',
+                    barColor: 'from-emerald-500 to-teal-400',
+                    icon: CheckCircle2,
+                    iconColor: 'text-emerald-400',
                   },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3"
-                  >
-                    <div>
-                      <span className="text-xs font-medium text-[#94A3B8]">
-                        {item.label}
-                      </span>
-                      <p className="text-[10px] text-[#64748B] mt-0.5">
-                        {item.sub}
-                      </p>
-                    </div>
-                    <span className={`text-base font-bold ${item.color}`}>
-                      {item.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* 2. CATEGORY PERFORMANCE */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
-            <div>
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-400/10">
-                  <Award className="h-4 w-4 text-violet-300" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
-                    CATEGORY PERFORMANCE
-                  </h3>
-                  <p className="text-[11px] text-[#858585]">
-                    Score and accuracy by assessment category
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3.5">
-                {sectionData.map((section) => {
-                  const Icon = section.icon;
+                ].map((item) => {
+                  const ItemIcon = item.icon;
                   return (
-                    <div key={section.name}>
-                      <div className="flex items-center justify-between text-xs mb-1.5">
+                    <div
+                      key={item.label}
+                      className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                    >
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Icon className="h-3.5 w-3.5 text-cyan-300" />
-                          <span className="font-semibold text-[#E5E7EB]">
-                            {section.name}
-                          </span>
+                          <ItemIcon className={`h-3.5 w-3.5 ${item.iconColor}`} />
+                          <div>
+                            <span className="text-xs font-medium text-[#94A3B8]">
+                              {item.label}
+                            </span>
+                            <p className="text-[10px] text-[#64748B]">
+                              {item.sub}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] text-[#64748B]">
-                            {section.correct !== null ? `${section.correct} / ${section.total}` : `— / ${section.total}`}
-                          </span>
-                          <span className="font-bold text-cyan-300 w-10 text-right">
-                            {section.score !== null ? `${section.score}%` : '—'}
-                          </span>
-                        </div>
+                        <span className={`text-sm font-bold ${item.color}`}>
+                          {item.value}
+                        </span>
                       </div>
-
-                      <div className="h-2 overflow-hidden rounded-full bg-[#161B26]">
+                      {/* Thin progress bar */}
+                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]">
                         <div
-                          className={`h-full rounded-full bg-gradient-to-r ${section.gradient} shadow-[0_0_12px_rgba(34,211,238,0.2)]`}
-                          style={{ width: `${Math.min(100, Math.max(0, section.score ?? 0))}%` }}
+                          className={`h-full rounded-full bg-gradient-to-r ${item.barColor}`}
+                          style={{ width: `${item.valPct}%` }}
                         />
                       </div>
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
 
-                {/* Overall Performance */}
-                <div className="border-t border-white/[0.06] pt-3 mt-3">
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-semibold text-[#F5F5F5]">
-                      Overall Performance
-                    </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-[#64748B]">
-                        {correct !== null && totalQuestions !== null
-                          ? `${correct} / ${totalQuestions}`
-                          : '—'}
+          {/* 2. CATEGORY PERFORMANCE (Vertical bar chart visualization) */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-400/10">
+                <Award className="h-3.5 w-3.5 text-violet-300" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  CATEGORY PERFORMANCE
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col justify-center my-auto space-y-3 pt-1">
+              {/* Vertical bar visualization */}
+              <div className="flex h-36 items-end justify-around gap-3 px-2 pt-2 pb-1 bg-[#070A10]/40 rounded-xl border border-white/[0.04]">
+                {sectionData.map((section) => {
+                  const scoreVal = section.score ?? 0;
+                  const barHeight = Math.max(8, Math.min(100, scoreVal));
+                  return (
+                    <div
+                      key={section.name}
+                      className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
+                    >
+                      {/* Percentage above */}
+                      <span className="text-[11px] font-bold text-[#F5F5F5]">
+                        {section.score !== null ? `${section.score}%` : '—'}
                       </span>
-                      <span className="font-bold text-[#FF9A6B] w-10 text-right">
-                        {overallScore !== null ? `${overallScore}%` : '—'}
+
+                      {/* Vertical Bar */}
+                      <div className="w-full max-w-[42px] h-[85px] flex items-end justify-center rounded-t-lg bg-[#141926]/70 p-0.5">
+                        <div
+                          className={`w-full rounded-t-md bg-gradient-to-t ${section.gradient} shadow-[0_0_12px_rgba(59,130,246,0.25)] transition-all duration-700`}
+                          style={{ height: `${barHeight}%` }}
+                        />
+                      </div>
+
+                      {/* Category label below */}
+                      <span className="text-center text-[10px] font-semibold text-[#E5E7EB] truncate max-w-full">
+                        {section.name}
+                      </span>
+
+                      {/* correct / total below */}
+                      <span className="text-[10px] text-[#64748B]">
+                        {section.correct !== null ? `${section.correct} / ${section.total}` : `— / ${section.total}`}
                       </span>
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Overall Performance */}
+              <div className="border-t border-white/[0.06] pt-3">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="font-semibold text-[#F5F5F5]">
+                    Overall Performance
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-[#64748B]">
+                      {correct !== null && totalQuestions !== null
+                        ? `${correct} / ${totalQuestions}`
+                        : '—'}
+                    </span>
+                    <span className="font-bold text-[#FF9A6B] w-10 text-right">
+                      {overallScore !== null ? `${overallScore}%` : '—'}
+                    </span>
                   </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-[#161B26]">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#FF9A6B] via-[#E57A4B] to-[#8B5CF6]"
-                      style={{ width: `${Math.min(100, Math.max(0, overallScore ?? 0))}%` }}
-                    />
-                  </div>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#161B26]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#FF9A6B] via-[#E57A4B] to-[#8B5CF6]"
+                    style={{ width: `${Math.min(100, Math.max(0, overallScore ?? 0))}%` }}
+                  />
                 </div>
               </div>
             </div>
           </div>
 
           {/* 3. TIME ANALYSIS */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between min-h-[350px]">
-            <div>
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
-                  <Target className="h-4 w-4 text-cyan-300" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
-                    TIME ANALYSIS
-                  </h3>
-                  <p className="text-[11px] text-[#858585]">
-                    Pacing across assessment sections
-                  </p>
-                </div>
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col">
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                <Target className="h-3.5 w-3.5 text-cyan-300" />
               </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  TIME ANALYSIS
+                </h3>
+              </div>
+            </div>
 
-              <div className="space-y-3">
-                <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
-                    Fastest Avg. Time
-                  </span>
-                  <div className="mt-1 flex items-center justify-between">
+            <div className="flex-1 flex flex-col justify-center my-auto space-y-2.5 py-1">
+              {/* 1. Fastest Avg. Time */}
+              <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] p-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30">
+                    <TrendingUp className="h-3.5 w-3.5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                      Fastest Avg. Time
+                    </span>
                     <span className="text-xs font-semibold text-[#E5E7EB]">
                       {fastestCategory || 'Reasoning'}
                     </span>
-                    <span className="text-sm font-bold text-emerald-400">
-                      {fastestTime || '—'}
-                    </span>
                   </div>
                 </div>
-
-                <div className="rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-400">
-                    Slowest Avg. Time
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-emerald-400">
+                    {fastestTime || '—'}
                   </span>
-                  <div className="mt-1 flex items-center justify-between">
+                  {/* Decorative mini waveform */}
+                  <svg className="w-14 h-4 mt-0.5 opacity-80" viewBox="0 0 60 16" fill="none">
+                    <path d="M 2,12 Q 10,2 20,9 T 40,4 T 58,10" stroke="#34D399" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* 2. Slowest Avg. Time */}
+              <div className="flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/[0.04] p-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-500/15 border border-rose-500/30">
+                    <CircleAlert className="h-3.5 w-3.5 text-rose-400" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-rose-400">
+                      Slowest Avg. Time
+                    </span>
                     <span className="text-xs font-semibold text-[#E5E7EB]">
                       {slowestCategory || 'Technical'}
                     </span>
-                    <span className="text-sm font-bold text-rose-400">
-                      {slowestTime || '—'}
-                    </span>
                   </div>
                 </div>
-
-                <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">
-                    Time Efficiency
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-rose-400">
+                    {slowestTime || '—'}
                   </span>
-                  <div className="mt-1 flex items-center justify-between">
+                  {/* Decorative mini waveform */}
+                  <svg className="w-14 h-4 mt-0.5 opacity-80" viewBox="0 0 60 16" fill="none">
+                    <path d="M 2,6 Q 12,14 24,5 T 44,12 T 58,6" stroke="#FB7185" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* 3. Time Efficiency */}
+              <div className="flex items-center justify-between rounded-xl border border-cyan-500/20 bg-cyan-500/[0.04] p-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-500/15 border border-cyan-500/30">
+                    <Sparkles className="h-3.5 w-3.5 text-cyan-300" />
+                  </div>
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+                      Time Efficiency
+                    </span>
                     <span className="text-xs text-[#94A3B8]">
                       Overall Pace
                     </span>
-                    <span className="text-sm font-bold text-cyan-300">
-                      {textValue(
-                        round2.time_efficiency,
-                        round2.time_efficiency_label,
-                        result?.time_efficiency
-                      ) || 'Optimal'}
-                    </span>
                   </div>
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-sm font-bold text-cyan-300">
+                    {textValue(
+                      round2.time_efficiency,
+                      round2.time_efficiency_label,
+                      result?.time_efficiency
+                    ) || 'Optimal'}
+                  </span>
+                  {/* Decorative mini waveform */}
+                  <svg className="w-14 h-4 mt-0.5 opacity-80" viewBox="0 0 60 16" fill="none">
+                    <path d="M 2,10 Q 15,3 28,11 T 46,5 T 58,9" stroke="#22D3EE" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
                 </div>
               </div>
             </div>
@@ -2214,26 +2292,26 @@ const Feedback = () => {
         </div>
 
         {/* =====================================================
-            ANALYTICS ROW 2: Answer Breakdown | Category Comparison | Strengths
+            PART 8, 10 — ANALYTICS ROW 2: Answer Breakdown | Strengths
         ===================================================== */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
 
           {/* 1. ANSWER BREAKDOWN */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
               <div className="mb-3 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
-                  <CheckCircle2 className="h-4 w-4 text-cyan-300" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-cyan-300" />
                 </div>
-                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                   ANSWER BREAKDOWN
                 </h3>
               </div>
 
-              <div className="flex items-center justify-around gap-4 mt-4">
-                {/* Conic donut ring */}
+              <div className="flex items-center justify-around gap-4 my-2">
+                {/* 2D Donut with Correct, Incorrect, Skipped */}
                 <div
-                  className="relative h-28 w-28 shrink-0 rounded-full shadow-[0_0_20px_rgba(0,0,0,0.6)]"
+                  className="relative h-24 w-24 shrink-0 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.6)]"
                   style={{
                     background:
                       correct !== null || incorrect !== null || skipped !== null
@@ -2245,18 +2323,18 @@ const Feedback = () => {
                         : '#1e293b',
                   }}
                 >
-                  <div className="absolute inset-3 flex flex-col items-center justify-center rounded-full bg-[#0B1017]">
-                    <span className="text-xl font-extrabold text-[#F5F5F5]">
+                  <div className="absolute inset-2.5 flex flex-col items-center justify-center rounded-full bg-[#0B1017]">
+                    <span className="text-base font-extrabold text-[#F5F5F5]">
                       {overallScore !== null ? `${overallScore}%` : '—'}
                     </span>
-                    <span className="text-[9px] font-bold text-[#64748B] uppercase">
+                    <span className="text-[8px] font-bold text-[#64748B] uppercase">
                       Score
                     </span>
                   </div>
                 </div>
 
                 {/* Legend list */}
-                <div className="space-y-3 flex-1 max-w-[140px]">
+                <div className="space-y-2.5 flex-1 max-w-[160px]">
                   {answerBreakdown.map((item) => (
                     <div key={item.label} className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
@@ -2264,11 +2342,11 @@ const Feedback = () => {
                           className="h-2.5 w-2.5 rounded-full shrink-0"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="text-[#94A3B8]">
+                        <span className="text-[11px] text-[#94A3B8]">
                           {item.label}
                         </span>
                       </div>
-                      <span className="font-bold text-[#F5F5F5]">
+                      <span className="text-xs font-bold text-[#F5F5F5]">
                         {item.value !== null ? item.value : '—'}
                       </span>
                     </div>
@@ -2277,72 +2355,29 @@ const Feedback = () => {
               </div>
             </div>
 
-            <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5 text-center text-[11px] text-[#64748B]">
+            <div className="mt-2 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2 text-center text-[10px] text-[#64748B]">
               Total evaluated answers: {totalQuestions ?? 50} questions
             </div>
           </div>
 
-          {/* 2. CATEGORY COMPARISON */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
+          {/* 2. STRENGTHS */}
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(145deg,#0A1218_0%,#0D151D_55%,#0F1922_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
-              <div className="mb-2 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-400/10 border border-violet-400/20">
-                  <TrendingUp className="h-4 w-4 text-violet-300" />
-                </div>
-                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
-                  CATEGORY COMPARISON
-                </h3>
-              </div>
-
-              {/* Visual Vertical Comparison Bar Chart */}
-              <div className="flex h-36 items-end justify-around gap-4 border-b border-white/[0.08] px-2 pt-2 pb-1 mt-2">
-                {sectionData.map((section) => {
-                  const scoreVal = section.score ?? 0;
-                  const barHeight = Math.max(12, Math.min(100, scoreVal));
-                  return (
-                    <div
-                      key={section.name}
-                      className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
-                    >
-                      <span className="text-[11px] font-bold text-[#F5F5F5]">
-                        {section.score !== null ? `${section.score}%` : '—'}
-                      </span>
-                      <div
-                        className={`w-full max-w-14 rounded-t-lg bg-gradient-to-t ${section.gradient} shadow-[0_0_16px_rgba(59,130,246,0.2)] transition-all duration-700`}
-                        style={{ height: `${barHeight}%` }}
-                      />
-                      <span className="text-center text-[10px] font-medium text-[#94A3B8] truncate max-w-full">
-                        {section.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5 text-center text-[11px] text-[#64748B]">
-              Relative accuracy across domains
-            </div>
-          </div>
-
-          {/* 3. STRENGTHS */}
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-[linear-gradient(145deg,#0A1218_0%,#0D151D_55%,#0F1922_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[320px]">
-            <div>
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-2.5 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                 </div>
-                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                   STRENGTHS
                 </h3>
               </div>
 
-              <div className="h-[210px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-emerald-400/40 space-y-2.5">
+              <div className="max-h-[190px] overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-emerald-400/40 space-y-2">
                 {strengthItems.length > 0 ? (
                   strengthItems.map(([title, description], index) => (
                     <div
                       key={`${title}-${index}`}
-                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#0E161C]/80 p-2.5"
+                      className="flex items-start gap-2 rounded-xl border border-white/[0.05] bg-[#0E161C]/80 p-2"
                     >
                       <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
                       <div>
@@ -2350,7 +2385,7 @@ const Feedback = () => {
                           {title}
                         </p>
                         {description && (
-                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#94A3B8]">
+                          <p className="mt-0.5 text-[10px] leading-relaxed text-[#94A3B8]">
                             {description}
                           </p>
                         )}
@@ -2369,28 +2404,29 @@ const Feedback = () => {
         </div>
 
         {/* =====================================================
-            ANALYTICS ROW 3: Areas to Improve | Question Analysis | AI Recommendations
+            PART 11, 12, 13 — ANALYTICS ROW 3
+            Areas to Improve | Question Analysis | AI Recommendations
         ===================================================== */}
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        <div className="mb-5 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
 
           {/* 1. AREAS TO IMPROVE */}
-          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[linear-gradient(145deg,#0E1219_0%,#0F141D_55%,#15141D_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+          <div className="relative overflow-hidden rounded-2xl border border-amber-500/20 bg-[linear-gradient(145deg,#0E1219_0%,#0F141D_55%,#15141D_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
-              <div className="mb-3 flex items-center gap-2">
+              <div className="mb-2.5 flex items-center gap-2">
                 <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/30">
-                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
                 </div>
-                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                   AREAS TO IMPROVE
                 </h3>
               </div>
 
-              <div className="h-[255px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-amber-400/40 space-y-2.5">
+              <div className="max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-amber-400/40 space-y-2">
                 {improvementItems.length > 0 ? (
                   improvementItems.map(([title, description], index) => (
                     <div
                       key={`${title}-${index}`}
-                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#16131D]/80 p-2.5"
+                      className="flex items-start gap-2 rounded-xl border border-white/[0.05] bg-[#16131D]/80 p-2"
                     >
                       <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-400" />
                       <div>
@@ -2398,7 +2434,7 @@ const Feedback = () => {
                           {title}
                         </p>
                         {description && (
-                          <p className="mt-0.5 text-[11px] leading-relaxed text-[#94A3B8]">
+                          <p className="mt-0.5 text-[10px] leading-relaxed text-[#94A3B8]">
                             {description}
                           </p>
                         )}
@@ -2415,14 +2451,14 @@ const Feedback = () => {
           </div>
 
           {/* 2. QUESTION ANALYSIS */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-2.5 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
-                    <FileText className="h-4 w-4 text-cyan-300" />
+                    <FileText className="h-3.5 w-3.5 text-cyan-300" />
                   </div>
-                  <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                     QUESTION ANALYSIS
                   </h3>
                 </div>
@@ -2431,8 +2467,15 @@ const Feedback = () => {
                 </span>
               </div>
 
-              <div className="h-[235px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.06] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/40">
-                <div className="grid grid-cols-[36px_1fr_68px_56px] bg-[#070A10]/90 px-3 py-2 text-[9px] font-bold uppercase text-[#64748B] sticky top-0 z-10 border-b border-white/[0.05]">
+              <div
+                ref={(el) => {
+                  if (el && el.scrollTop !== 0) {
+                    el.scrollTop = 0;
+                  }
+                }}
+                className="max-h-[200px] overflow-y-auto overflow-x-hidden rounded-xl border border-white/[0.06] pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/40"
+              >
+                <div className="grid grid-cols-[36px_1fr_68px_56px] bg-[#070A10]/95 px-3 py-1.5 text-[9px] font-bold uppercase text-[#64748B] sticky top-0 z-10 border-b border-white/[0.05]">
                   <span>Q#</span>
                   <span>Category</span>
                   <span>Result</span>
@@ -2485,12 +2528,12 @@ const Feedback = () => {
                     return (
                       <div
                         key={question?.id || question?._id || index}
-                        className="grid grid-cols-[36px_1fr_68px_56px] items-center border-b border-white/[0.04] px-3 py-2 text-xs last:border-b-0 hover:bg-white/[0.02]"
+                        className="grid grid-cols-[36px_1fr_68px_56px] items-center border-b border-white/[0.04] px-3 py-1.5 text-xs last:border-b-0 hover:bg-white/[0.02]"
                       >
-                        <span className="text-[#64748B] text-[11px] font-medium">{index + 1}</span>
-                        <span className="truncate text-[#E5E7EB] text-[11px] pr-1">{category}</span>
+                        <span className="text-[#64748B] text-[10px] font-medium">{index + 1}</span>
+                        <span className="truncate text-[#E5E7EB] text-[10px] pr-1">{category}</span>
                         <span
-                          className={`text-[11px] font-semibold ${
+                          className={`text-[10px] font-semibold ${
                             String(questionResult).toLowerCase() === 'correct'
                               ? 'text-emerald-400'
                               : String(questionResult).toLowerCase() === 'incorrect'
@@ -2500,12 +2543,12 @@ const Feedback = () => {
                         >
                           {questionResult}
                         </span>
-                        <span className="text-[#94A3B8] text-[11px]">{questionTime}</span>
+                        <span className="text-[#94A3B8] text-[10px]">{questionTime}</span>
                       </div>
                     );
                   })
                 ) : (
-                  <div className="px-3 py-6 text-center text-xs text-[#64748B]">
+                  <div className="px-3 py-4 text-center text-xs text-[#64748B]">
                     Question-level analysis is not available in the backend result.
                   </div>
                 )}
@@ -2518,23 +2561,23 @@ const Feedback = () => {
           </div>
 
           {/* 3. AI RECOMMENDATIONS */}
-          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0E131E_0%,#111726_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between h-[360px]">
+          <div className="relative overflow-hidden rounded-2xl border border-purple-500/20 bg-[linear-gradient(145deg,#0E0F1A_0%,#111222_55%,#151426_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
             <div>
-              <div className="mb-3 flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-400/10 border border-cyan-400/20">
-                  <Lightbulb className="h-4 w-4 text-cyan-300" />
+              <div className="mb-2.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/30">
+                  <Lightbulb className="h-3.5 w-3.5 text-purple-300" />
                 </div>
-                <h3 className="text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
                   AI RECOMMENDATIONS
                 </h3>
               </div>
 
-              <div className="h-[255px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-cyan-400/40 space-y-2.5">
+              <div className="max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-purple-400/40 space-y-2">
                 {recommendations.length > 0 ? (
                   recommendations.map((item, index) => (
                     <div
                       key={`${item}-${index}`}
-                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                      className="flex items-start gap-2 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2"
                     >
                       <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
                       <p className="text-xs leading-relaxed text-[#D1D5DB]">
@@ -2554,23 +2597,24 @@ const Feedback = () => {
         </div>
 
         {/* =====================================================
-            ANALYTICS ROW 4: AI Assessment Summary (Full-Width Premium Card)
+            PART 14 — AI ASSESSMENT SUMMARY (Full-Width Card)
         ===================================================== */}
-        <div className="mb-8 overflow-hidden rounded-2xl border border-violet-500/30 bg-[linear-gradient(135deg,#0C101A_0%,#131128_50%,#0B0F17_100%)] p-6 sm:p-7 shadow-[0_15px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(139,92,246,0.08)] relative">
+        <div className="mb-6 overflow-hidden rounded-2xl border border-purple-500/30 bg-[linear-gradient(135deg,#0C101A_0%,#131128_50%,#0B0F17_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(139,92,246,0.08)] relative">
           <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-violet-500/[0.10] blur-[60px]" />
 
-          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-start gap-4 flex-1 min-w-0">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-violet-400/35 bg-violet-400/15 shadow-[0_0_18px_rgba(139,92,246,0.2)]">
-                <Sparkles className="h-5 w-5 text-violet-300" />
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            {/* Left: Purple AI icon + heading + dynamic summary text */}
+            <div className="flex items-start gap-3.5 flex-1 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/35 bg-purple-500/15 shadow-[0_0_16px_rgba(168,85,247,0.25)]">
+                <Sparkles className="h-5 w-5 text-purple-300" />
               </div>
 
               <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-bold text-[#F5F5F5] tracking-tight">
+                <h3 className="text-sm sm:text-base font-bold text-[#F5F5F5] tracking-tight">
                   AI ASSESSMENT SUMMARY
                 </h3>
-                <p className="text-xs text-[#858585] mb-2">
-                  Round 2 comprehensive performance overview
+                <p className="text-[11px] text-[#858585] mb-1.5">
+                  Round 2 performance overview
                 </p>
                 <p className="text-xs sm:text-sm leading-relaxed text-[#D1D5DB] max-w-3xl">
                   {performanceMessage ||
@@ -2579,40 +2623,43 @@ const Feedback = () => {
               </div>
             </div>
 
-            {/* Right-Side Quote / Badge element matching premium design */}
-            <div className="shrink-0 w-full md:w-56 rounded-xl border border-violet-400/25 bg-white/[0.03] p-3.5 text-center relative overflow-hidden backdrop-blur-sm shadow-sm">
-              <p className="text-xs font-medium text-[#E5E7EB] italic leading-snug">
-                &ldquo;Master your fundamentals.<br />
-                Refine your problem solving.<br />
-                <span className="text-cyan-300 font-bold not-italic">Ready for Round 3!&rdquo;</span>
+            {/* Right: Decorative quote panel with chart/achievement style element */}
+            <div className="shrink-0 w-full md:w-56 rounded-xl border border-purple-400/25 bg-white/[0.03] p-3 text-center relative overflow-hidden backdrop-blur-sm shadow-sm">
+              <p className="text-xs font-serif italic text-[#E5E7EB] leading-snug">
+                &ldquo;Mistakes are proof<br />
+                that you&apos;re trying.<br />
+                <span className="text-[#FF9A6B] font-bold not-italic">Keep going!&rdquo;</span>
               </p>
+              <div className="mt-2 flex items-center justify-center gap-1.5 opacity-75">
+                <Award className="h-3.5 w-3.5 text-[#FF9A6B]" />
+                <div className="h-1 w-16 rounded-full bg-gradient-to-r from-[#FF9A6B] to-[#8B5CF6]" />
+              </div>
             </div>
           </div>
         </div>
 
         {/* =====================================================
-            BOTTOM ACTION BUTTONS
+            PART 15 — BOTTOM NAVIGATION BUTTONS
+            (Back to Round 1 on LEFT, Continue to Round 3 on RIGHT, same horizontal row)
         ===================================================== */}
-        <div className="relative pt-2 pb-8">
-          <div className="relative flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => setCurrentRound(1)}
-              className="flex min-w-[200px] items-center justify-center gap-2 rounded-xl border border-white/[0.12] bg-[#0E131E]/80 hover:bg-[#161B26] px-6 py-3.5 text-sm font-semibold text-[#E5E7EB] shadow-sm transition cursor-pointer"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Round 1
-            </button>
+        <div className="relative pt-4 pb-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+          <button
+            type="button"
+            onClick={() => setCurrentRound(1)}
+            className="flex w-full sm:w-auto min-w-[220px] items-center justify-center gap-2 rounded-2xl border border-white/[0.12] bg-[#0E131E]/90 hover:bg-[#161D2B] hover:border-white/[0.2] px-7 py-3.5 text-sm font-semibold text-[#E5E7EB] shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer"
+          >
+            <ArrowLeft className="h-4 w-4 text-[#A1A1AA]" />
+            Back to Round 1
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setCurrentRound(3)}
-              className="flex min-w-[260px] items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-purple-600 to-blue-500 hover:brightness-110 active:scale-[0.99] px-8 py-3.5 text-sm font-bold text-white shadow-[0_4px_25px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_30px_rgba(124,58,237,0.5)] transition-all cursor-pointer"
-            >
-              Continue to Round 3
-              <ArrowRight className="h-4 w-4 text-white" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setCurrentRound(3)}
+            className="flex w-full sm:w-auto min-w-[260px] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF7A45] via-[#FF5E62] to-[#FF9966] hover:brightness-110 active:scale-[0.99] px-8 py-3.5 text-sm font-bold text-white shadow-[0_4px_25px_rgba(255,106,61,0.35)] hover:shadow-[0_6px_30px_rgba(255,106,61,0.5)] transition-all cursor-pointer"
+          >
+            Continue to Round 3
+            <ArrowRight className="h-4 w-4 text-white" />
+          </button>
         </div>
 
       </section>
