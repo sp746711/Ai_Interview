@@ -2670,165 +2670,760 @@ const Feedback = () => {
   // ROUND 3
   // =========================================================
 
-  const renderRound3 = () => (
+  const renderRound3 = () => {
+    const round3 =
+      (result?.round3_result && typeof result.round3_result === 'object' ? result.round3_result : null) ||
+      (result?.round3_feedback && typeof result.round3_feedback === 'object' ? result.round3_feedback : null) ||
+      (result?.ai_interview_feedback && typeof result.ai_interview_feedback === 'object' ? result.ai_interview_feedback : null) ||
+      (result?.ai_interview_result && typeof result.ai_interview_result === 'object' ? result.ai_interview_result : null) ||
+      {};
 
-    <section className="space-y-6">
+    const rawInterviewScore =
+      round3?.interview_score ??
+      round3?.overall_score ??
+      round3?.score ??
+      result?.interview_score ??
+      null;
 
-      <div className="flex items-start gap-4">
+    const hasScore =
+      rawInterviewScore !== null &&
+      rawInterviewScore !== undefined &&
+      rawInterviewScore !== '' &&
+      !isNaN(Number(rawInterviewScore)) &&
+      Number(rawInterviewScore) > 0;
 
-        <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-6 h-6 text-purple-400" />
+    const overallScoreDisplay = hasScore ? `${Math.round(Number(rawInterviewScore))}%` : '--';
+
+    const totalQuestionsDisplay = round3?.total_questions ?? round3?.question_count ?? '--';
+    const answeredQuestionsDisplay = round3?.answered_questions ?? round3?.answered_count ?? round3?.completed_questions ?? '--';
+    const skippedQuestionsDisplay = round3?.skipped_questions ?? round3?.skipped_count ?? '--';
+    const averageScoreDisplay =
+      round3?.average_score !== undefined && round3?.average_score !== null
+        ? `${round3.average_score}%`
+        : '--';
+
+    const strengthsList = Array.isArray(round3?.strengths) && round3.strengths.length > 0 ? round3.strengths : [];
+    const weaknessesList = Array.isArray(round3?.weaknesses) && round3.weaknesses.length > 0 ? round3.weaknesses : [];
+    const improvementsList = Array.isArray(round3?.improvements) && round3.improvements.length > 0 ? round3.improvements : [];
+    const coachingList = Array.isArray(round3?.coaching) && round3.coaching.length > 0 ? round3.coaching : [];
+    const summaryText = round3?.summary || round3?.assessment_summary || round3?.final_summary || null;
+
+    return (
+      <section className="relative">
+
+        {/* =====================================================
+            PART 1 — ROUND 3 / 3 PROGRESS
+        ===================================================== */}
+        <div className="mb-5 relative rounded-2xl border border-white/[0.06] bg-[linear-gradient(145deg,#0A0E17_0%,#0E1422_50%,#121828_100%)] p-4 sm:p-5 shadow-[0_10px_30px_rgba(0,0,0,0.4)] overflow-hidden">
+          {/* Subtle curved decorative line treatment */}
+          <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-25" preserveAspectRatio="none" viewBox="0 0 1000 120">
+            <path d="M 0,90 Q 250,20 500,80 T 1000,40" fill="none" stroke="url(#r3CurveGrad1)" strokeWidth="1.5" strokeDasharray="4 4" />
+            <path d="M 0,30 Q 350,110 700,30 T 1000,90" fill="none" stroke="url(#r3CurveGrad2)" strokeWidth="1.2" />
+            <defs>
+              <linearGradient id="r3CurveGrad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF9A6B" stopOpacity="0.6" />
+                <stop offset="50%" stopColor="#8B5CF6" stopOpacity="0.4" />
+                <stop offset="100%" stopColor="#22D3EE" stopOpacity="0.5" />
+              </linearGradient>
+              <linearGradient id="r3CurveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF8A5B" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#FF6B6B" stopOpacity="0.4" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-5">
+            {/* Left: Round label and orange handwritten-style motivational quote */}
+            <div className="flex flex-col items-center lg:items-start text-center lg:text-left shrink-0">
+              <span className="text-xs sm:text-sm font-black tracking-[0.18em] text-[#FF9A6B] uppercase">
+                ROUND 3 / 3
+              </span>
+              <div className="mt-1.5 flex items-center gap-1.5 text-[#FF9A6B]/90 font-serif italic text-xs leading-snug">
+                <Sparkles className="h-3 w-3 text-[#FF9A6B] shrink-0 inline" />
+                <span>&ldquo;Every Interview Is a Step Toward Mastery.&rdquo;</span>
+              </div>
+            </div>
+
+            {/* Center: Stepper (Resume Analysis completed | Assessment completed | AI Interview active) */}
+            <div className="flex-1 w-full max-w-xl px-2 sm:px-6">
+              <div className="flex items-center justify-between relative">
+                {/* Step 1: Resume Analysis (completed) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-emerald-400/60 bg-emerald-500/20 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.35)]">
+                    <CheckCircle2 className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-emerald-400" />
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-semibold text-emerald-300">
+                    Resume Analysis
+                  </span>
+                  <span className="text-[9px] font-medium text-emerald-400/80 uppercase tracking-wider">
+                    ✓ completed
+                  </span>
+                </div>
+
+                {/* Connector 1 -> 2 */}
+                <div className="flex-1 h-[2px] mx-2 -mt-4 bg-gradient-to-r from-emerald-400 via-emerald-300 to-emerald-400" />
+
+                {/* Step 2: Assessment (completed) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border border-emerald-400/60 bg-emerald-500/20 text-emerald-400 shadow-[0_0_14px_rgba(52,211,153,0.35)]">
+                    <CheckCircle2 className="h-4 w-4 sm:h-4.5 sm:w-4.5 text-emerald-400" />
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-semibold text-emerald-300">
+                    Assessment
+                  </span>
+                  <span className="text-[9px] font-medium text-emerald-400/80 uppercase tracking-wider">
+                    ✓ completed
+                  </span>
+                </div>
+
+                {/* Connector 2 -> 3 */}
+                <div className="flex-1 h-[2px] mx-2 -mt-4 bg-gradient-to-r from-emerald-400 via-emerald-300 to-[#FF9A6B]" />
+
+                {/* Step 3: AI Interview (active) */}
+                <div className="flex flex-col items-center shrink-0 z-10">
+                  <div className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full border-2 border-[#FF9A6B] bg-gradient-to-br from-[#FF9A6B] via-[#FF8A5B] to-[#FF6B6B] text-xs sm:text-sm font-bold text-slate-950 shadow-[0_0_20px_rgba(255,154,107,0.6)] animate-pulse">
+                    3
+                  </div>
+                  <span className="mt-1 text-center text-[11px] font-bold text-[#F5F5F5]">
+                    AI Interview
+                  </span>
+                  <span className="text-[9px] font-semibold text-[#FF9A6B] uppercase tracking-wider">
+                    active
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Motivational Quote */}
+            <div className="flex flex-col items-center lg:items-end text-center lg:text-right shrink-0">
+              <div className="text-[#FF9A6B]/90 font-serif italic text-xs leading-snug">
+                &ldquo;Master Your Presence<br />
+                Refine Your Delivery<br />
+                <span className="text-[#FFAA7A] font-semibold">You&apos;re Almost There!&rdquo;</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div>
-
-          <p className="text-xs font-semibold tracking-widest uppercase mb-1 text-purple-400">
-            Round 3 • AI Interview
-          </p>
-
-          <h2 className="text-2xl font-bold text-white">
-            Round 3 — AI Interview Feedback
-          </h2>
-
-          <p className="text-gray-400 text-sm mt-1">
-            Your AI interview performance, communication
-            and response quality.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div className="glass-card p-8 flex flex-col md:flex-row items-center gap-8">
-
-        <ScoreRing
-          score={interviewScore}
-          size={150}
-          strokeWidth={10}
-          colorCls={getScoreColor(interviewScore)}
-        />
-
-        <div>
-
-          <p className="text-xs text-purple-400 font-semibold uppercase tracking-wider mb-2">
-            AI Interview Result
-          </p>
-
-          <h3 className="text-2xl font-semibold mb-2">
-            AI Interview Score
-          </h3>
-
-          <p className="text-gray-400 leading-relaxed max-w-2xl">
-            Your Round 3 score reflects your AI interview
-            performance, communication, reasoning and
-            response quality.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-
-        <div className="glass-card p-7">
-
-          <div className="flex items-center gap-3 mb-5">
-
-            <div className="w-11 h-11 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-              <Bot className="w-5 h-5 text-purple-400" />
+        {/* =====================================================
+            PART 2 — PAGE HEADER
+        ===================================================== */}
+        <div className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            {/* Orange interview icon inside rounded dark square */}
+            <div className="flex h-12 w-12 sm:h-13 sm:w-13 shrink-0 items-center justify-center rounded-2xl border border-[#FF9A6B]/40 bg-[#1C1412] shadow-[0_0_20px_rgba(255,154,107,0.22)]">
+              <Bot className="h-6 w-6 text-[#FF9A6B]" />
             </div>
 
             <div>
-
-              <p className="text-xs text-purple-400 font-semibold">
-                ROUND 3
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F5F5]">
+                Round 3 — Final AI Interview Feedback
+              </h2>
+              <p className="mt-0.5 text-xs sm:text-sm text-[#94A3B8]">
+                Your AI interview performance, communication and response quality.
               </p>
-
-              <h3 className="text-xl font-semibold">
-                Interview Performance
-              </h3>
-
             </div>
-
           </div>
 
-          <p
-            className={`text-2xl font-bold ${getScoreColor(
-              interviewScore
-            )}`}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Interview Completed Status Badge */}
+            <div className="flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3.5 py-1.5 shadow-[0_0_18px_rgba(16,185,129,0.12)]">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)] animate-pulse" />
+              <span className="text-xs font-bold tracking-wider text-emerald-300">
+                INTERVIEW COMPLETED
+              </span>
+            </div>
+
+            {/* Stage Badge */}
+            <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/[0.08] bg-[#0E131E] px-3.5 py-1.5 shadow-sm">
+              <Sparkles className="h-4 w-4 text-violet-400" />
+              <div>
+                <span className="block text-[9px] uppercase tracking-wider text-[#64748B]">
+                  INTERVIEW STAGE
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wide text-violet-300">
+                  FINAL ROUND
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            PART 3 — OVERALL SCORE & INTERVIEW STATISTICS
+        ===================================================== */}
+        <div className="mb-5 grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* Card A: OVERALL AI INTERVIEW SCORE */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] lg:col-span-7">
+            <div className="mb-4 flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#FF9A6B]/30 bg-[#FF9A6B]/10">
+                <Award className="h-4 w-4 text-[#FF9A6B]" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  OVERALL AI INTERVIEW SCORE
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-6 mt-2">
+              {/* Circular / Donut Score Visual */}
+              <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
+                <svg className="h-28 w-28 -rotate-90 transform" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="transparent"
+                    stroke="#141926"
+                    strokeWidth="8"
+                  />
+                  {hasScore ? (
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="#FF9A6B"
+                      strokeWidth="8"
+                      strokeDasharray={2 * Math.PI * 40}
+                      strokeDashoffset={2 * Math.PI * 40 * (1 - Math.max(0, Math.min(100, Number(rawInterviewScore))) / 100)}
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  ) : (
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="40"
+                      fill="transparent"
+                      stroke="#2A3447"
+                      strokeWidth="8"
+                      strokeDasharray="4 6"
+                      strokeLinecap="round"
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-extrabold tracking-tight text-[#F5F5F5]">
+                    {overallScoreDisplay}
+                  </span>
+                  <span className="text-[9px] font-bold text-[#64748B] uppercase tracking-wider">
+                    Score
+                  </span>
+                </div>
+              </div>
+
+              {/* Score Description & Legend */}
+              <div className="flex-1 min-w-0 text-center sm:text-left">
+                <h4 className="text-sm sm:text-base font-bold text-[#F5F5F5]">
+                  Overall Performance
+                </h4>
+                <p className="mt-1 text-xs text-[#94A3B8] leading-relaxed">
+                  Your overall performance will be displayed here after the interview is analyzed.
+                </p>
+
+                {/* Score Legend */}
+                <div className="mt-3.5 flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-3 border-t border-white/[0.06]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-rose-400" />
+                    <span className="text-[11px] font-medium text-[#94A3B8]">Needs Work</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-400" />
+                    <span className="text-[11px] font-medium text-[#94A3B8]">Good</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                    <span className="text-[11px] font-medium text-[#94A3B8]">Excellent</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card B: INTERVIEW STATISTICS */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5)] lg:col-span-5 flex flex-col justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                <Target className="h-4 w-4 text-cyan-300" />
+              </div>
+              <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                INTERVIEW STATISTICS
+              </h3>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3 text-center">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                  Total Questions
+                </span>
+                <span className="mt-1 block text-xl sm:text-2xl font-extrabold text-[#F5F5F5]">
+                  {totalQuestionsDisplay}
+                </span>
+                <span className="text-[10px] text-cyan-400/80">Questions</span>
+              </div>
+
+              <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3 text-center">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                  Answered
+                </span>
+                <span className="mt-1 block text-xl sm:text-2xl font-extrabold text-emerald-400">
+                  {answeredQuestionsDisplay}
+                </span>
+                <span className="text-[10px] text-emerald-400/80">Completed</span>
+              </div>
+
+              <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3 text-center">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                  Skipped
+                </span>
+                <span className="mt-1 block text-xl sm:text-2xl font-extrabold text-amber-400">
+                  {skippedQuestionsDisplay}
+                </span>
+                <span className="text-[10px] text-amber-400/80">Unanswered</span>
+              </div>
+
+              <div className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3 text-center">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                  Average Score
+                </span>
+                <span className="mt-1 block text-xl sm:text-2xl font-extrabold text-violet-400">
+                  {averageScoreDisplay}
+                </span>
+                <span className="text-[10px] text-violet-400/80">Avg. Rating</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            PART 4 — FOUR PERFORMANCE CARDS
+            (Answer Quality | Communication | Camera Engagement | Interview Presence)
+        ===================================================== */}
+        <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+
+          {/* 1. Answer Quality */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                    <Target className="h-3.5 w-3.5 text-cyan-300" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    Answer Quality
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-cyan-400">--</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  'Relevance',
+                  'Completeness',
+                  'Technical Accuracy',
+                  'Examples & Clarity',
+                ].map((metric) => (
+                  <div
+                    key={metric}
+                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-[#94A3B8]">
+                        {metric}
+                      </span>
+                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Communication */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-violet-400/30 bg-violet-400/10">
+                    <Sparkles className="h-3.5 w-3.5 text-violet-300" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    Communication
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-violet-400">--</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  'Speaking Pace',
+                  'Filler Words',
+                  'Clarity',
+                  'Response Length',
+                ].map((metric) => (
+                  <div
+                    key={metric}
+                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-[#94A3B8]">
+                        {metric}
+                      </span>
+                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Camera Engagement */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                    {/* Camera icon */}
+                    <svg className="h-3.5 w-3.5 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    Camera Engagement
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-cyan-400">--</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  'Face Visibility',
+                  'Eye Contact',
+                  'Looking Away',
+                  'Camera Stability',
+                ].map((metric) => (
+                  <div
+                    key={metric}
+                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-[#94A3B8]">
+                        {metric}
+                      </span>
+                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Interview Presence */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-3.5">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10">
+                    <Award className="h-3.5 w-3.5 text-amber-400" />
+                  </div>
+                  <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                    Interview Presence
+                  </h3>
+                </div>
+                <span className="text-sm font-bold text-amber-400">--</span>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  'Consistency',
+                  'Confidence (Estimated)',
+                  'Engagement',
+                  'Overall Presence',
+                ].map((metric) => (
+                  <div
+                    key={metric}
+                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-[#94A3B8]">
+                        {metric}
+                      </span>
+                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            PART 5 — ROUND 3 STRENGTHS & WEAKNESSES
+        ===================================================== */}
+        <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          {/* Round 3 Strengths */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="mb-3.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-400/10">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  Round 3 Strengths
+                </h3>
+              </div>
+
+              {strengthsList.length > 0 ? (
+                <div className="space-y-2">
+                  {strengthsList.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-400" />
+                      <p className="text-xs text-[#D1D5DB] leading-relaxed">
+                        {typeof item === 'string' ? item : item?.text || item?.title || '--'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-emerald-500/20 bg-emerald-500/[0.03] p-6 text-center flex flex-col items-center justify-center my-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 mb-2">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400/70" />
+                  </div>
+                  <p className="text-sm font-semibold text-[#E5E7EB]">
+                    No data yet
+                  </p>
+                  <p className="text-xs text-[#94A3B8] mt-1 max-w-xs">
+                    Your key strengths will be shown here after analysis.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Round 3 Weaknesses */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="mb-3.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-400/30 bg-rose-400/10">
+                  <CircleAlert className="h-3.5 w-3.5 text-rose-400" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  Round 3 Weaknesses
+                </h3>
+              </div>
+
+              {weaknessesList.length > 0 ? (
+                <div className="space-y-2">
+                  {weaknessesList.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                    >
+                      <CircleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-rose-400" />
+                      <p className="text-xs text-[#D1D5DB] leading-relaxed">
+                        {typeof item === 'string' ? item : item?.text || item?.title || '--'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-rose-500/20 bg-rose-500/[0.03] p-6 text-center flex flex-col items-center justify-center my-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 mb-2">
+                    <CircleAlert className="h-5 w-5 text-rose-400/70" />
+                  </div>
+                  <p className="text-sm font-semibold text-[#E5E7EB]">
+                    No data yet
+                  </p>
+                  <p className="text-xs text-[#94A3B8] mt-1 max-w-xs">
+                    Areas for improvement will be shown here after analysis.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            PART 6 — WHAT YOU NEED TO IMPROVE & AI INTERVIEW COACHING
+        ===================================================== */}
+        <div className="mb-5 grid grid-cols-1 md:grid-cols-2 gap-5">
+
+          {/* What You Need to Improve */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="mb-3.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10">
+                  <TrendingUp className="h-3.5 w-3.5 text-amber-400" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  What You Need to Improve
+                </h3>
+              </div>
+
+              <div className="space-y-2.5">
+                {[1, 2, 3, 4].map((num) => (
+                  <div
+                    key={num}
+                    className="flex items-center gap-3 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-3"
+                  >
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 text-xs font-bold text-amber-400">
+                      {num}
+                    </div>
+                    <span className="text-xs text-[#94A3B8] font-medium">
+                      {improvementsList[num - 1] || '--'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Interview Coaching */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-[linear-gradient(145deg,#0A0E18_0%,#0E1422_50%,#131B2B_100%)] p-4 sm:p-5 shadow-[0_15px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between">
+            <div>
+              <div className="mb-3.5 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
+                  <Lightbulb className="h-3.5 w-3.5 text-cyan-300" />
+                </div>
+                <h3 className="text-xs sm:text-sm font-bold tracking-wider text-[#F5F5F5] uppercase">
+                  AI Interview Coaching
+                </h3>
+              </div>
+
+              {coachingList.length > 0 ? (
+                <div className="space-y-2">
+                  {coachingList.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2.5 rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
+                    >
+                      <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0 text-cyan-400" />
+                      <p className="text-xs text-[#D1D5DB] leading-relaxed">
+                        {typeof item === 'string' ? item : item?.text || item?.tip || '--'}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-cyan-500/20 bg-cyan-500/[0.03] p-6 text-center flex flex-col items-center justify-center my-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/20 mb-2">
+                    <Lightbulb className="h-5 w-5 text-cyan-400/70" />
+                  </div>
+                  <p className="text-sm font-semibold text-[#E5E7EB]">
+                    No coaching advice yet
+                  </p>
+                  <p className="text-xs text-[#94A3B8] mt-1 max-w-xs">
+                    Personalized coaching tips will appear here after analysis.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* =====================================================
+            PART 7 — FINAL ROUND 3 SUMMARY (Full-Width Card)
+        ===================================================== */}
+        <div className="mb-6 overflow-hidden rounded-2xl border border-purple-500/30 bg-[linear-gradient(135deg,#0C101A_0%,#131128_50%,#0B0F17_100%)] p-5 sm:p-6 shadow-[0_15px_40px_rgba(0,0,0,0.5),0_0_30px_rgba(139,92,246,0.08)] relative">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-48 w-48 rounded-full bg-violet-500/[0.10] blur-[60px]" />
+
+          <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            {/* Left: Purple AI icon + heading + summary text/placeholder */}
+            <div className="flex items-start gap-3.5 flex-1 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-purple-400/35 bg-purple-500/15 shadow-[0_0_16px_rgba(168,85,247,0.25)]">
+                <Sparkles className="h-5 w-5 text-purple-300" />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm sm:text-base font-bold text-[#F5F5F5] tracking-tight">
+                  FINAL ROUND 3 SUMMARY
+                </h3>
+                <p className="text-[11px] text-[#858585] mb-1.5">
+                  Round 3 performance evaluation
+                </p>
+                {summaryText ? (
+                  <p className="text-xs sm:text-sm leading-relaxed text-[#D1D5DB] max-w-3xl">
+                    {summaryText}
+                  </p>
+                ) : (
+                  <div className="space-y-0.5">
+                    <p className="text-xs sm:text-sm font-semibold text-[#E5E7EB]">
+                      No summary yet
+                    </p>
+                    <p className="text-xs text-[#94A3B8]">
+                      Your final interview summary will be generated here.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Decorative quote panel */}
+            <div className="shrink-0 w-full md:w-56 rounded-xl border border-purple-400/25 bg-white/[0.03] p-3 text-center relative overflow-hidden backdrop-blur-sm shadow-sm">
+              <p className="text-xs font-serif italic text-[#E5E7EB] leading-snug">
+                &ldquo;Every interview is<br />
+                a stepping stone.<br />
+                <span className="text-[#FF9A6B] font-bold not-italic">Keep Growing!&rdquo;</span>
+              </p>
+              <div className="mt-2 flex items-center justify-center gap-1.5 opacity-75">
+                <Award className="h-3.5 w-3.5 text-[#FF9A6B]" />
+                <div className="h-1 w-16 rounded-full bg-gradient-to-r from-[#FF9A6B] to-[#8B5CF6]" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* =====================================================
+            PART 8 — BOTTOM NAVIGATION BUTTONS
+            (Back to Round 2 secondary, Back to Dashboard on LEFT, View Final Dashboard on RIGHT)
+        ===================================================== */}
+        <div className="relative pt-4 pb-8 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+          <button
+            type="button"
+            onClick={() => setCurrentRound(2)}
+            className="flex w-full sm:w-auto min-w-[180px] items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-[#0E131E]/60 hover:bg-[#161D2B] px-5 py-3.5 text-xs font-semibold text-[#94A3B8] hover:text-white transition-all cursor-pointer"
           >
-            {getScoreLabel(interviewScore)}
-          </p>
+            <ArrowLeft className="h-4 w-4" />
+            Back to Round 2
+          </button>
 
-          <p className="text-gray-400 text-sm mt-3 leading-relaxed">
-            Your final interview performance has been
-            evaluated based on the available interview result.
-          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex w-full sm:w-auto min-w-[220px] items-center justify-center gap-2 rounded-2xl border border-white/[0.12] bg-[#0E131E]/90 hover:bg-[#161D2B] hover:border-white/[0.2] px-7 py-3.5 text-sm font-semibold text-[#E5E7EB] shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all cursor-pointer"
+          >
+            <Home className="h-4 w-4 text-[#A1A1AA]" />
+            Back to Dashboard
+          </button>
 
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex w-full sm:w-auto min-w-[260px] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FF7A45] via-[#FF5E62] to-[#FF9966] hover:brightness-110 active:scale-[0.99] px-8 py-3.5 text-sm font-bold text-white shadow-[0_4px_25px_rgba(255,106,61,0.35)] hover:shadow-[0_6px_30px_rgba(255,106,61,0.5)] transition-all cursor-pointer"
+          >
+            View Final Dashboard
+            <ArrowRight className="h-4 w-4 text-white" />
+          </button>
         </div>
 
-
-        <div className="glass-card p-7">
-
-          <div className="flex items-center gap-3 mb-5">
-
-            <div className="w-11 h-11 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5 text-green-400" />
-            </div>
-
-            <div>
-
-              <p className="text-xs text-green-400 font-semibold">
-                INTERVIEW COMPLETE
-              </p>
-
-              <h3 className="text-xl font-semibold">
-                Feedback Ready
-              </h3>
-
-            </div>
-
-          </div>
-
-          <p className="text-gray-300 leading-relaxed">
-            You have completed all three interview rounds.
-            Your Round 1, Round 2 and Round 3 feedback can now
-            be reviewed separately.
-          </p>
-
-        </div>
-
-      </div>
-
-
-      <div className="flex flex-col sm:flex-row justify-between gap-4 pt-5 pb-10">
-
-        <button
-          type="button"
-          onClick={() => setCurrentRound(2)}
-          className="btn-secondary flex items-center justify-center gap-2 px-7 py-3"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Round 2
-        </button>
-
-
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          className="btn-primary flex items-center justify-center gap-2 px-8 py-3"
-        >
-          <Home className="w-5 h-5" />
-          Back to Dashboard
-        </button>
-
-      </div>
-
-    </section>
-  );
+      </section>
+    );
+  };
 
 
   // =========================================================
