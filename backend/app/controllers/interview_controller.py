@@ -889,6 +889,94 @@ class InterviewController:
         ai_s = int(round(ai_s))
 
         # =====================================================
+        # TASK 18 — ROUND 3 BASIC RESULT SUMMARY
+        # =====================================================
+        # This object is consumed by the existing Round 3 feedback UI.
+        # It is built only from the real saved Round 3 responses.
+        # The question count is dynamic; it is never hardcoded to 5.
+
+        round3_total_questions = interview.get(
+            "round3_total_questions"
+        )
+
+        try:
+            round3_total_questions = int(
+                round3_total_questions
+            )
+        except (TypeError, ValueError):
+            round3_total_questions = 0
+
+        answered_count = 0
+        skipped_count = 0
+        answered_scores = []
+
+        for response in ai_responses:
+
+            if not isinstance(response, dict):
+                continue
+
+            status = str(
+                response.get("status", "") or ""
+            ).strip().lower()
+
+            if status == "answered":
+                answered_count += 1
+
+                try:
+                    response_score = float(
+                        response.get("score", 0) or 0
+                    )
+                    answered_scores.append(response_score)
+                except (TypeError, ValueError):
+                    pass
+
+            elif status == "skipped":
+                skipped_count += 1
+
+        # Older interviews may not have round3_total_questions.
+        # Derive the count from the saved question numbers instead.
+        if round3_total_questions <= 0:
+            question_numbers = []
+
+            for response in ai_responses:
+
+                if not isinstance(response, dict):
+                    continue
+
+                try:
+                    question_numbers.append(
+                        int(response.get("question_number"))
+                    )
+                except (TypeError, ValueError):
+                    continue
+
+            round3_total_questions = (
+                max(question_numbers)
+                if question_numbers
+                else len(ai_responses)
+            )
+
+        round3_average_score = (
+            int(
+                round(
+                    sum(answered_scores)
+                    / len(answered_scores)
+                )
+            )
+            if answered_scores
+            else 0
+        )
+
+        round3_result = {
+            "overall_score": ai_s,
+            "interview_score": ai_s,
+            "total_questions": round3_total_questions,
+            "answered_questions": answered_count,
+            "skipped_questions": skipped_count,
+            "average_score": round3_average_score,
+        }
+
+        # =====================================================
         # FINAL SCORE
         # =====================================================
 
@@ -1226,6 +1314,9 @@ class InterviewController:
 
             "interview_score":
                 ai_s,
+
+            "round3_result":
+                round3_result,
 
             # =================================================
             # FINAL

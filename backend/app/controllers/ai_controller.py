@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from backend.app.services.ai_service import AIService
 from bson import ObjectId
 from pydantic import BaseModel
+from typing import Any, Dict, Optional
 import re
 
 
@@ -27,6 +28,10 @@ class AIAnswerSubmit(BaseModel):
     interview_id: str
     question: str
     answer: str
+    transcript: Optional[str] = None
+    duration_seconds: Optional[float] = None
+    communication_metrics: Optional[Dict[str, Any]] = None
+    camera_metrics: Optional[Dict[str, Any]] = None
 
 
 class AIReadinessSubmit(BaseModel):
@@ -411,6 +416,32 @@ class AIController:
             "feedback": evaluation["feedback"],
             "status": "answered",
         }
+
+        # -------------------------------------------------
+        # Optional Round 3 analytics data
+        # -------------------------------------------------
+        # These fields are stored only when the frontend actually
+        # provides them. No fake/default analytics are created here.
+        if data.transcript is not None:
+            response_model["transcript"] = str(data.transcript).strip()
+
+        if data.duration_seconds is not None:
+            try:
+                duration = float(data.duration_seconds)
+                if duration >= 0:
+                    response_model["duration_seconds"] = duration
+            except (TypeError, ValueError):
+                pass
+
+        if isinstance(data.communication_metrics, dict):
+            response_model["communication_metrics"] = dict(
+                data.communication_metrics
+            )
+
+        if isinstance(data.camera_metrics, dict):
+            response_model["camera_metrics"] = dict(
+                data.camera_metrics
+            )
 
         next_index = index + 1
 

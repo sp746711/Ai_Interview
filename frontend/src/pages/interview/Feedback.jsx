@@ -2686,13 +2686,12 @@ const Feedback = () => {
       null;
 
     const hasScore =
-      rawInterviewScore !== null &&
-      rawInterviewScore !== undefined &&
-      rawInterviewScore !== '' &&
-      !isNaN(Number(rawInterviewScore)) &&
-      Number(rawInterviewScore) > 0;
+       rawInterviewScore !== null &&
+       rawInterviewScore !== undefined &&
+       rawInterviewScore !== '' &&
+       Number.isFinite(Number(rawInterviewScore));
 
-    const overallScoreDisplay = hasScore ? `${Math.round(Number(rawInterviewScore))}%` : '--';
+    const overallScoreDisplay = hasScore ? `${Math.round(Number(rawInterviewScore))}%`: '--';
 
     const totalQuestionsDisplay = round3?.total_questions ?? round3?.question_count ?? '--';
     const answeredQuestionsDisplay = round3?.answered_questions ?? round3?.answered_count ?? round3?.completed_questions ?? '--';
