@@ -54,15 +54,10 @@ import {
 
 const QUESTION_TIME = 60;
 
-// Round 3 demo source currently contains exactly 5 questions.
-// The UI never hard-codes the count: it always uses questions.length.
-const DEMO_QUESTIONS = [
-  'Tell me about yourself and your experience related to this role.',
-  'How have you used your technical skills in one of your projects?',
-  'Describe a challenging project you have worked on and how you overcame the difficulties.',
-  'How do you approach debugging a problem when your first solution does not work?',
-  'Why are you a good fit for this role, and what would you like to contribute to the team?',
-];
+// Round 3 questions are owned by the backend QuestionBankService.
+// Q1 is fixed by the backend; Q2-Q21 are randomly selected from the
+// selected domain CSV and persisted on the interview document.
+const DEFAULT_TOTAL_QUESTIONS = 21;
 
 const normalizeQuestions = (value) => {
   const source = Array.isArray(value)
@@ -482,16 +477,13 @@ const AIInterview = () => {
       : 'Technical Interview');
 
   /* =======================================================
-     ROUND 3 QUESTION SOURCE — PHASE 1 DEMO
+     ROUND 3 QUESTION SOURCE — BACKEND
      -------------------------------------------------------
-     The current goal is to make the complete Final Round work
-     end-to-end. Therefore the frontend uses the same five demo
-     questions as the audited AIController. Dynamic question
-     generation is intentionally NOT used yet.
+     The backend owns the complete 21-question sequence.
+     The frontend only displays the current server question and
+     uses the server-provided total question count.
      ======================================================= */
-  const [questions, setQuestions] = useState(DEMO_QUESTIONS);
-
-  const totalQuestions = questions.length;
+  const [totalQuestions, setTotalQuestions] = useState(DEFAULT_TOTAL_QUESTIONS);
   const totalInterviewTime = totalQuestions * QUESTION_TIME;
 
   /* =======================================================
@@ -761,7 +753,7 @@ const AIInterview = () => {
 
         stopMediaStream();
 
-        // Demo-phase persistence. Backend/MongoDB persistence can replace this later.
+        // Persist the interruption locally for the existing exit flow.
         const interruptedInterview = {
           interviewId:
             currentInterview?.id ||
@@ -1602,13 +1594,7 @@ const AIInterview = () => {
 
   const fetchRound3Question = async () => {
     if (!interviewId) {
-      return {
-        state: 'interview_active',
-        ready: true,
-        question_number: currentQuestionIndex + 1,
-        total_questions: DEMO_QUESTIONS.length,
-        question: DEMO_QUESTIONS[currentQuestionIndex] || '',
-      };
+      throw new Error('Interview ID is missing. Please restart the interview.');
     }
 
     return apiRequest(
@@ -2387,36 +2373,26 @@ const AIInterview = () => {
         throw new Error('The interview server did not return the first question.');
       }
 
+      const serverTotal = Number(response?.total_questions);
+      const resolvedTotalQuestions =
+        Number.isFinite(serverTotal) && serverTotal > 0
+          ? serverTotal
+          : DEFAULT_TOTAL_QUESTIONS;
+
       const serverIndex = Number(response?.question_number);
       const nextIndex = Number.isFinite(serverIndex) && serverIndex > 0
         ? serverIndex - 1
         : 0;
 
+      setTotalQuestions(resolvedTotalQuestions);
       setCurrentQuestionIndex(nextIndex);
       setCurrentQuestion(question);
       setVoiceTranscript('');
       setReadinessTranscript('');
       setRound3State('interview_active');
       setTimeLeft(QUESTION_TIME);
-      setTotalTimeLeft(totalInterviewTime);
+      setTotalTimeLeft(resolvedTotalQuestions * QUESTION_TIME);
 
-      window.requestAnimationFrame(() => {
-        void speakQuestion(question);
-      });
-    } catch (err) {
-      // Demo fallback: if the backend is temporarily unavailable, continue
-      // with the same five audited demo questions instead of breaking the UI.
-      console.warn('Unable to load Q1 from backend; using demo fallback.', err);
-      const question = DEMO_QUESTIONS[0];
-      setQuestions((previous) => previous.length ? previous : DEMO_QUESTIONS);
-      setCurrentQuestionIndex(0);
-      setCurrentQuestion(question);
-      setVoiceTranscript('');
-      setReadinessTranscript('');
-      setRound3State('interview_active');
-      setTimeLeft(QUESTION_TIME);
-      setTotalTimeLeft(totalInterviewTime);
-      setError('Interview server did not return the question. Demo question mode is active.');
       window.requestAnimationFrame(() => {
         void speakQuestion(question);
       });
@@ -2747,18 +2723,23 @@ const AIInterview = () => {
       setAiSpeaking(false);
       setRecording(false);
 
-      let response = null;
-      if (interviewId) {
-        response = await fetchRound3Question();
-      }
+      const response = await fetchRound3Question();
 
-      const nextQuestion = String(response?.question || '').trim() || DEMO_QUESTIONS[currentQuestionIndex + 1] || '';
+      const serverTotal = Number(response?.total_questions);
+      const resolvedTotalQuestions =
+        Number.isFinite(serverTotal) && serverTotal > 0
+          ? serverTotal
+          : totalQuestions;
+
+      const nextQuestion = String(response?.question || '').trim();
       const serverNumber = Number(response?.question_number);
       const nextIndex = Number.isFinite(serverNumber) && serverNumber > 0
         ? serverNumber - 1
         : currentQuestionIndex + 1;
 
-      if (!nextQuestion || nextIndex >= totalQuestions) {
+      setTotalQuestions(resolvedTotalQuestions);
+
+      if (!nextQuestion || nextIndex >= resolvedTotalQuestions) {
         await finishInterview();
         return;
       }
@@ -2775,20 +2756,7 @@ const AIInterview = () => {
       });
     } catch (err) {
       console.error('Unable to load next question:', err);
-      const nextIndex = currentQuestionIndex + 1;
-      const nextQuestion = DEMO_QUESTIONS[nextIndex] || '';
-
-      if (!nextQuestion) {
-        await finishInterview();
-        return;
-      }
-
-      setError('Interview server did not return the next question. Demo question mode is active.');
-      setCurrentQuestionIndex(nextIndex);
-      setCurrentQuestion(nextQuestion);
-      setVoiceTranscript('');
-      setTimeLeft(QUESTION_TIME);
-      window.requestAnimationFrame(() => void speakQuestion(nextQuestion));
+      setError(err?.message || 'Interview server did not return the next question. Please try again.');
     } finally {
       questionTransitionRef.current = false;
     }
@@ -3882,9 +3850,9 @@ const AIInterview = () => {
                     </div>
                   </section>
 
-                {/* RIGHT SIDEBAR — STRETCHES FROM TOP TO THE BOTTOM OF TIPS */}
-                <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:row-span-3">
-                  <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl lg:min-h-0">
+                {/* RIGHT SIDEBAR — FIXED PANEL WITH INTERNAL QUESTION SCROLL */}
+                <aside className="min-w-0 self-start lg:col-start-2 lg:row-start-1">
+                  <div className="flex h-[350px] min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
                     <h2 className="shrink-0 font-semibold">Interview Progress</h2>
 
                     <div className="relative mx-auto my-3 flex h-32 w-32 shrink-0 items-center justify-center rounded-full border-[14px] border-violet-500/20">
@@ -3895,7 +3863,10 @@ const AIInterview = () => {
                       </div>
                     </div>
 
-                    <div className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1">
+                    <div
+                      className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain pr-1 scrollbar-thin"
+                      aria-label="Interview question progress"
+                    >
                       {Array.from({ length: totalQuestions }).map((_, i) => (
                         <div
                           key={i}
