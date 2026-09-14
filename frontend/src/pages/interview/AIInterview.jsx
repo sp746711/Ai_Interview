@@ -94,31 +94,41 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
      * with the robot's own head/body speaking animations.
      */
     <div className="relative flex h-[190px] w-[230px] items-center justify-center">
-      {/* Background glow */}
+      {/* Background glow matching dark cinematic Cyan + Orange depth */}
       <div
-        className={`absolute h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl transition-all duration-500 ${
+        className={`absolute h-44 w-44 rounded-full bg-gradient-to-r from-cyan-500/25 via-sky-500/10 to-orange-500/20 blur-3xl transition-all duration-700 ${
           speaking
             ? 'scale-125 opacity-100'
-            : 'scale-100 opacity-60'
+            : 'scale-100 opacity-75'
         }`}
       />
 
-      {/* AI VOICE WAVEFORM — restored without changing robot structure */}
+      {/* AI VOICE WAVEFORM — dual-color spectrum: Cyan on left, Orange on right */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-3 top-1/2 z-0 flex h-16 -translate-y-1/2 items-center justify-center gap-1.5 opacity-80"
+        className="pointer-events-none absolute inset-x-3 top-1/2 z-0 flex h-16 -translate-y-1/2 items-center justify-center gap-1.5 opacity-85"
       >
-        {[24, 38, 52, 68, 46, 74, 58, 36, 62, 44, 70, 50, 30].map((height, index) => (
-          <span
-            key={index}
-            className={`mockmind-wave-bar w-1 rounded-full bg-gradient-to-t from-violet-500/30 via-cyan-400/80 to-cyan-200 ${speaking ? 'opacity-100' : 'opacity-50'}`}
-            style={{
-              height: `${height}%`,
-              animationDelay: `${index * 0.06}s`,
-              animationPlayState: speaking ? 'running' : 'paused',
-            }}
-          />
-        ))}
+        {[24, 38, 52, 68, 46, 74, 58, 36, 62, 44, 70, 50, 30].map((height, index) => {
+          const isLeft = index < 6;
+          const isCenter = index === 6;
+          const barGradient = isLeft
+            ? 'from-[#00BFFF]/30 via-[#00E5FF] to-[#08C8FF]'
+            : isCenter
+              ? 'from-[#00E5FF] via-[#FF9D2E] to-[#FF8A00]'
+              : 'from-[#FF8A00]/30 via-[#FF9D2E] to-[#FFB347]';
+
+          return (
+            <span
+              key={index}
+              className={`mockmind-wave-bar w-1 rounded-full bg-gradient-to-t ${barGradient} ${speaking ? 'opacity-100' : 'opacity-50'}`}
+              style={{
+                height: `${height}%`,
+                animationDelay: `${index * 0.06}s`,
+                animationPlayState: speaking ? 'running' : 'paused',
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* ROBOT */}
@@ -129,33 +139,33 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
             : 'mockmind-robot-idle'
         }`}
       >
-        {/* Antenna */}
+        {/* Antenna — Warm Orange Accent matching Reference #4 */}
         <div className="flex flex-col items-center">
           <div
-            className={`h-4 w-4 rounded-full border-2 border-cyan-100 bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.95)] ${
+            className={`h-4 w-4 rounded-full border-2 border-orange-100 bg-[#FF8A00] shadow-[0_0_18px_rgba(255,138,0,0.95)] ${
               speaking ? 'mockmind-antenna-speaking' : ''
             }`}
           />
 
-          <div className="h-6 w-[3px] bg-gradient-to-b from-cyan-300 to-cyan-700" />
+          <div className="h-6 w-[3px] bg-gradient-to-b from-[#FF8A00] via-[#D96A00] to-slate-500" />
         </div>
 
         {/* Head */}
         <div
           className={`relative flex h-[112px] w-[150px] items-center justify-center rounded-[38px] border-[4px] bg-gradient-to-br from-slate-100 via-slate-300 to-slate-600 shadow-2xl transition-all duration-300 ${
             speaking
-              ? 'border-cyan-200 shadow-[0_0_50px_rgba(34,211,238,0.4)]'
-              : 'border-slate-300 shadow-[0_0_30px_rgba(34,211,238,0.15)]'
+              ? 'border-cyan-200 shadow-[0_0_50px_rgba(0,229,255,0.4)]'
+              : 'border-slate-300 shadow-[0_0_30px_rgba(0,229,255,0.15)]'
           }`}
         >
-          {/* Left ear */}
+          {/* Left ear — Cyan */}
           <div className="absolute -left-5 top-[30px] h-[52px] w-[22px] rounded-l-2xl border-2 border-cyan-300/60 bg-gradient-to-b from-slate-300 to-slate-600">
-            <div className="absolute inset-y-2 right-1 w-1 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+            <div className="absolute inset-y-2 right-1 w-1 rounded-full bg-[#00E5FF] shadow-[0_0_10px_rgba(0,229,255,0.85)]" />
           </div>
 
-          {/* Right ear */}
-          <div className="absolute -right-5 top-[30px] h-[52px] w-[22px] rounded-r-2xl border-2 border-cyan-300/60 bg-gradient-to-b from-slate-300 to-slate-600">
-            <div className="absolute inset-y-2 left-1 w-1 rounded-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" />
+          {/* Right ear — Warm Orange */}
+          <div className="absolute -right-5 top-[30px] h-[52px] w-[22px] rounded-r-2xl border-2 border-amber-400/50 bg-gradient-to-b from-slate-300 to-slate-600">
+            <div className="absolute inset-y-2 left-1 w-1 rounded-full bg-[#FF8A00] shadow-[0_0_10px_rgba(255,138,0,0.9)]" />
           </div>
 
           {/* Face */}
@@ -165,10 +175,10 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
 
             {/* Eyes */}
             <div className="absolute left-0 right-0 top-[25px] flex justify-center gap-8">
-              <div className="mockmind-robot-eye h-[15px] w-[15px] rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(34,211,238,1)]" />
+              <div className="mockmind-robot-eye h-[15px] w-[15px] rounded-full bg-[#00E5FF] shadow-[0_0_16px_rgba(0,229,255,1)]" />
 
               <div
-                className="mockmind-robot-eye h-[15px] w-[15px] rounded-full bg-cyan-300 shadow-[0_0_16px_rgba(34,211,238,1)]"
+                className="mockmind-robot-eye h-[15px] w-[15px] rounded-full bg-[#00E5FF] shadow-[0_0_16px_rgba(0,229,255,1)]"
                 style={{ animationDelay: '0.05s' }}
               />
             </div>
@@ -176,9 +186,9 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
             {/* Mouth */}
             <div className="absolute bottom-[15px] left-1/2 -translate-x-1/2">
               {speaking ? (
-                <div className="mockmind-robot-mouth h-[12px] w-[28px] rounded-full border-2 border-cyan-300 bg-cyan-400/10 shadow-[0_0_12px_rgba(34,211,238,0.9)]" />
+                <div className="mockmind-robot-mouth h-[12px] w-[28px] rounded-full border-2 border-cyan-300 bg-cyan-400/10 shadow-[0_0_12px_rgba(0,229,255,0.9)]" />
               ) : (
-                <div className="h-[9px] w-[28px] rounded-b-full border-b-[3px] border-cyan-300 shadow-[0_3px_8px_rgba(34,211,238,0.6)]" />
+                <div className="h-[9px] w-[28px] rounded-b-full border-b-[3px] border-cyan-300 shadow-[0_3px_8px_rgba(0,229,255,0.6)]" />
               )}
             </div>
           </div>
@@ -189,9 +199,9 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
 
         {/* Body */}
         <div className="relative -mt-1 h-[46px] w-[105px] rounded-t-[38px] border-2 border-slate-300 bg-gradient-to-br from-slate-100 via-slate-300 to-slate-600 shadow-xl">
-          {/* Chest light */}
+          {/* Small Warm Orange Body Accent + Cyan Core Light */}
           <div
-            className={`absolute left-1/2 top-3 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-cyan-100 bg-cyan-400 shadow-[0_0_16px_rgba(34,211,238,0.95)] ${
+            className={`absolute left-1/2 top-2.5 h-5 w-5 -translate-x-1/2 rounded-full border-2 border-amber-200 bg-gradient-to-br from-[#00E5FF] via-[#FF9D2E] to-[#FF8A00] shadow-[0_0_16px_rgba(0,229,255,0.85),0_0_10px_rgba(255,138,0,0.7)] ${
               speaking ? 'mockmind-chest-speaking' : ''
             }`}
           />
@@ -443,7 +453,7 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
          */
         .mockmind-progress-scroll {
           scrollbar-width: thin;
-          scrollbar-color: rgba(30, 174, 255, 0.4) transparent;
+          scrollbar-color: rgba(0, 210, 255, 0.4) transparent;
         }
 
         .mockmind-progress-scroll::-webkit-scrollbar {
@@ -455,12 +465,12 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
         }
 
         .mockmind-progress-scroll::-webkit-scrollbar-thumb {
-          background: rgba(30, 174, 255, 0.35);
+          background: rgba(0, 210, 255, 0.35);
           border-radius: 9999px;
         }
 
         .mockmind-progress-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(30, 174, 255, 0.65);
+          background: rgba(255, 136, 0, 0.65);
         }
 
         .mockmind-orange-wave-bar {
@@ -480,6 +490,103 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
           }
         }
 
+        @keyframes mockmindAmbientBreathe {
+          0%, 100% {
+            opacity: 0.12;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.20;
+            transform: scale(1.05);
+          }
+        }
+
+        .mockmind-ambient-breathe {
+          animation: mockmindAmbientBreathe 14s ease-in-out infinite;
+        }
+
+        @keyframes mockmindCyanWaveFloat {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scaleY(1);
+          }
+          50% {
+            transform: translate3d(2%, -15px, 0) scaleY(1.08);
+          }
+        }
+
+        .mockmind-cyan-wave {
+          animation: mockmindCyanWaveFloat 24s ease-in-out infinite;
+        }
+
+        @keyframes mockmindOrangeWaveFloat {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scaleY(1);
+          }
+          50% {
+            transform: translate3d(-2.5%, 18px, 0) scaleY(0.94);
+          }
+        }
+
+        .mockmind-orange-wave {
+          animation: mockmindOrangeWaveFloat 28s ease-in-out infinite;
+        }
+
+        @keyframes mockmindRingPulse {
+          0%, 100% {
+            opacity: 0.5;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.85;
+            transform: scale(1.02);
+          }
+        }
+
+        .mockmind-ring-pulse {
+          animation: mockmindRingPulse 3.5s ease-in-out infinite;
+        }
+
+        @keyframes mockmindHeaderWaveFloat {
+          0%, 100% {
+            transform: translate3d(0, 0, 0);
+          }
+          50% {
+            transform: translate3d(-35px, 0, 0);
+          }
+        }
+
+        .mockmind-header-wave {
+          animation: mockmindHeaderWaveFloat 24s ease-in-out infinite alternate;
+        }
+
+        @keyframes mockmindBadgePulse {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+            border-color: rgba(0, 210, 255, 0.35);
+          }
+          50% {
+            box-shadow: 0 0 16px rgba(0, 210, 255, 0.4), 0 0 8px rgba(255, 136, 0, 0.2);
+            border-color: rgba(0, 210, 255, 0.55);
+          }
+        }
+
+        .mockmind-badge-pulse {
+          animation: mockmindBadgePulse 4s ease-in-out infinite;
+        }
+
+        @keyframes mockmindLowerWaveFloat {
+          0%, 100% {
+            transform: translate3d(0, 0, 0) scaleY(1);
+          }
+          50% {
+            transform: translate3d(1.5%, -12px, 0) scaleY(1.06);
+          }
+        }
+
+        .mockmind-lower-wave {
+          animation: mockmindLowerWaveFloat 32s ease-in-out infinite;
+        }
+
         /*
          * Reduced motion accessibility.
          */
@@ -492,7 +599,9 @@ const AIInterviewerAvatar = ({ speaking = false }) => {
           .mockmind-chest-speaking,
           .mockmind-wave-bar,
           .mockmind-preflight-wave-bar,
-          .mockmind-orange-wave-bar {
+          .mockmind-orange-wave-bar,
+          .mockmind-ambient-breathe,
+          .mockmind-ring-pulse {
             animation: none !important;
           }
         }
@@ -3300,113 +3409,210 @@ const AIInterview = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#020508] bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(24,213,255,0.07),transparent_70%),radial-gradient(ellipse_60%_50%_at_85%_75%,rgba(255,154,46,0.035),transparent_60%),radial-gradient(ellipse_70%_50%_at_15%_65%,rgba(22,139,255,0.05),transparent_60%)] text-white relative">
-      {/* GLOBAL STUDIO BACKGROUND ATMOSPHERIC WAVE (COHESIVE ACROSS PRE-INTERVIEW & ACTIVE INTERVIEW) */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden opacity-25 z-0" aria-hidden="true">
-        <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 1440 900">
+    <div className="min-h-screen bg-[#030609] text-[#F5F7FA] relative overflow-x-hidden selection:bg-[#00E5FF]/30 selection:text-white">
+      {/* ===================================================
+          MOCKMIND AI — 5-LAYER CINEMATIC BACKGROUND SYSTEM
+          Deep Black/Navy base + Cyan & Orange atmosphere + Waves + Dots
+      ==================================================== */}
+      {/* LAYER 1: Cyan / Electric Blue Atmospheric Glow (Top-Left) */}
+      <div 
+        className="fixed -top-[120px] -left-[100px] w-[950px] h-[750px] pointer-events-none z-0 mockmind-ambient-breathe"
+        style={{
+          background: 'radial-gradient(ellipse at 25% 20%, rgba(0, 229, 255, 0.16) 0%, rgba(8, 200, 255, 0.07) 40%, rgba(3, 15, 38, 0.015) 70%, transparent 85%)',
+          filter: 'blur(70px)',
+        }}
+      />
+
+      {/* LAYER 2: Warm Orange / Amber Atmospheric Glow (Top-Right) */}
+      <div 
+        className="fixed -top-[120px] -right-[100px] w-[950px] h-[750px] pointer-events-none z-0 mockmind-ambient-breathe"
+        style={{
+          background: 'radial-gradient(ellipse at 80% 18%, rgba(255, 138, 0, 0.15) 0%, rgba(255, 157, 46, 0.07) 40%, rgba(38, 15, 5, 0.015) 70%, transparent 85%)',
+          filter: 'blur(70px)',
+        }}
+      />
+
+      {/* LAYER 3: Secondary Blue & Orange Lower Atmospheric Anchor */}
+      <div 
+        className="fixed -bottom-[120px] left-1/2 -translate-x-1/2 w-[1100px] h-[550px] pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(ellipse at 50% 85%, rgba(0, 191, 255, 0.10) 0%, rgba(8, 119, 184, 0.04) 50%, transparent 75%)',
+          filter: 'blur(75px)',
+        }}
+      />
+      <div 
+        className="fixed -bottom-[80px] -right-[60px] w-[650px] h-[450px] pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(ellipse at 80% 85%, rgba(255, 138, 0, 0.09) 0%, rgba(245, 166, 35, 0.03) 45%, transparent 70%)',
+          filter: 'blur(60px)',
+        }}
+      />
+
+      {/* LAYER 4: Dark Cinematic Vignette Transitions */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background: 'radial-gradient(1400px 950px at 50% 45%, transparent 45%, rgba(5, 8, 13, 0.7) 80%, #030609 100%)',
+        }}
+      />
+
+      {/* LAYER 5: DECORATIVE FLOWING WAVES (TOP & LOWER) */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-30 select-none" aria-hidden="true">
+        {/* Upper Blue / Cyan Flowing Wave */}
+        <svg className="absolute w-[180%] sm:w-[130%] h-[550px] top-[12%] -left-[15%] mockmind-cyan-wave" viewBox="0 0 1440 450" fill="none" preserveAspectRatio="none">
           <defs>
-            <linearGradient id="mockmindStudioAtmosphereWave" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#18D5FF" stopOpacity="0" />
-              <stop offset="25%" stopColor="#168BFF" stopOpacity="0.12" />
-              <stop offset="60%" stopColor="#22D3EE" stopOpacity="0.08" />
-              <stop offset="85%" stopColor="#FF9A2E" stopOpacity="0.05" />
-              <stop offset="100%" stopColor="#FF9A2E" stopOpacity="0" />
+            <linearGradient id="mockmindCyanBgWave" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#00BFFF" stopOpacity="0" />
+              <stop offset="25%" stopColor="#00E5FF" stopOpacity="0.5" />
+              <stop offset="70%" stopColor="#08C8FF" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#00BFFF" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="mockmindCyanBgFill" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#00E5FF" stopOpacity="0.04" />
+              <stop offset="100%" stopColor="#00E5FF" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path
-            d="M-100,250 C300,100 600,420 1000,200 C1250,80 1400,320 1600,220"
-            fill="none"
-            stroke="url(#mockmindStudioAtmosphereWave)"
-            strokeWidth="2.5"
-          />
-          <path
-            d="M-50,600 C250,750 700,500 1100,680 C1350,800 1500,620 1600,700"
-            fill="none"
-            stroke="url(#mockmindStudioAtmosphereWave)"
-            strokeWidth="1.8"
-          />
+          <path d="M0,220 C320,320 420,120 720,240 C1020,360 1120,160 1440,260 L1440,450 L0,450 Z" fill="url(#mockmindCyanBgFill)" />
+          <path d="M0,220 C320,320 420,120 720,240 C1020,360 1120,160 1440,260" stroke="url(#mockmindCyanBgWave)" strokeWidth="2" />
+          <path d="M0,250 C300,340 450,150 720,260 C990,370 1140,190 1440,280" stroke="url(#mockmindCyanBgWave)" strokeWidth="1" strokeDasharray="6 8" opacity="0.6" />
+        </svg>
+
+        {/* Upper Orange / Amber Flowing Wave */}
+        <svg className="absolute w-[180%] sm:w-[130%] h-[520px] top-[18%] -right-[15%] mockmind-orange-wave" viewBox="0 0 1440 450" fill="none" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="mockmindOrangeBgWave" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FF8A00" stopOpacity="0" />
+              <stop offset="35%" stopColor="#FF9D2E" stopOpacity="0.45" />
+              <stop offset="75%" stopColor="#FF8A00" stopOpacity="0.38" />
+              <stop offset="100%" stopColor="#FF8A00" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="mockmindOrangeBgFill" x1="50%" y1="0%" x2="50%" y2="100%">
+              <stop offset="0%" stopColor="#FF8A00" stopOpacity="0.03" />
+              <stop offset="100%" stopColor="#FF8A00" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M0,280 C360,160 500,340 820,200 C1140,60 1260,300 1440,180 L1440,450 L0,450 Z" fill="url(#mockmindOrangeBgFill)" />
+          <path d="M0,280 C360,160 500,340 820,200 C1140,60 1260,300 1440,180" stroke="url(#mockmindOrangeBgWave)" strokeWidth="1.8" />
+        </svg>
+
+        {/* Lower Background Wave — flowing blue/orange energy behind buttons & footer */}
+        <svg className="absolute w-[180%] sm:w-[130%] h-[360px] -bottom-[40px] -left-[15%] mockmind-lower-wave" viewBox="0 0 1440 320" fill="none" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="mockmindLowerWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#00E5FF" stopOpacity="0" />
+              <stop offset="30%" stopColor="#00E5FF" stopOpacity="0.35" />
+              <stop offset="65%" stopColor="#08C8FF" stopOpacity="0.22" />
+              <stop offset="85%" stopColor="#FF8A00" stopOpacity="0.35" />
+              <stop offset="100%" stopColor="#FF9D2E" stopOpacity="0" />
+            </linearGradient>
+            <linearGradient id="mockmindLowerOrangeWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#FF8A00" stopOpacity="0" />
+              <stop offset="35%" stopColor="#FF9D2E" stopOpacity="0.28" />
+              <stop offset="75%" stopColor="#FF8A00" stopOpacity="0.32" />
+              <stop offset="100%" stopColor="#FF8A00" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <path d="M0,160 C380,80 620,240 980,120 C1200,40 1340,180 1440,100" stroke="url(#mockmindLowerWaveGrad)" strokeWidth="1.8" />
+          <path d="M0,210 C340,150 560,280 920,180 C1140,120 1300,240 1440,170" stroke="url(#mockmindLowerOrangeWaveGrad)" strokeWidth="1.3" strokeDasharray="6 8" />
         </svg>
       </div>
 
+      {/* Decorative dot matrix layer (Subtle technical texture matching Reference C) */}
+      <div 
+        className="fixed inset-0 pointer-events-none z-0 opacity-[0.06] select-none" 
+        style={{
+          backgroundImage: 'radial-gradient(circle, #00E5FF 0.9px, transparent 0.9px)',
+          backgroundSize: '30px 30px',
+        }}
+        aria-hidden="true"
+      />
+
       {interviewComplete ? (
-        <div className="flex min-h-screen items-center justify-center px-4">
-          <div className="w-full max-w-xl rounded-3xl border border-emerald-400/20 bg-slate-950/90 p-8 text-center shadow-2xl">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10"><CheckCircle2 className="h-8 w-8 text-emerald-400" /></div>
-            <h1 className="text-3xl font-bold">Interview Complete</h1>
-            <p className="mt-3 text-gray-400">You completed all {totalQuestions} questions in your {selectedRole} interview.</p>
-            <p className="mt-2 text-sm text-gray-500">Your Round 3 responses have been saved for feedback generation.</p>
-            <button type="button" onClick={() => navigate('/feedback')} className="mt-8 w-full rounded-xl bg-gradient-to-r from-blue-500 to-violet-600 px-6 py-3.5 font-semibold text-white transition hover:opacity-90">Continue to Feedback</button>
+        <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+          <div className="w-full max-w-xl rounded-3xl border border-white/[0.08] bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-8 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_16px_36px_rgba(0,0,0,0.6)]">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#19D98B]/30 bg-[#19D98B]/10 text-[#19D98B]">
+              <CheckCircle2 className="h-8 w-8 text-[#19D98B]" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#F5F7FA]">Interview Complete</h1>
+            <p className="mt-3 text-[#A5AFBC]">You completed all {totalQuestions} questions in your {selectedRole} interview.</p>
+            <p className="mt-2 text-sm text-[#687483]">Your Round 3 responses have been saved for feedback generation.</p>
+            <button
+              type="button"
+              onClick={() => navigate('/feedback')}
+              className="mt-8 w-full rounded-xl bg-gradient-to-r from-[#FF8A00] via-[#FF9D2E] to-[#D96A00] hover:from-[#FFA742] hover:via-[#FFB347] hover:to-[#E07200] px-6 py-3.5 font-bold text-black shadow-[0_4px_24px_rgba(255,138,0,0.38)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_32px_rgba(255,138,0,0.55)] active:translate-y-0 cursor-pointer"
+            >
+              Continue to Feedback
+            </button>
           </div>
         </div>
       ) : (
         <>
-      <header className={`sticky top-0 z-50 border-b backdrop-blur-xl relative overflow-hidden transition-all ${interviewStarted ? 'border-[#168BFF]/20 bg-[#071019]/95 h-[62px] shadow-[0_4px_30px_rgba(0,0,0,0.8)]' : 'border-[#168BFF]/15 bg-[#071019]/90 h-[58px]'}`}>
-        {/* WIDE FLOWING CYAN, BLUE & AMBER AI ENERGY FIELD ACROSS ACTIVE HEADER WITH SUBTLE PARTICLES */}
-        {interviewStarted && (
-          <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <svg className="h-full w-full opacity-45" preserveAspectRatio="none" viewBox="0 0 1440 62">
-              <defs>
-                <linearGradient id="mockmindAiEnergyField" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#18D5FF" stopOpacity="0" />
-                  <stop offset="15%" stopColor="#18D5FF" stopOpacity="0.35" />
-                  <stop offset="38%" stopColor="#168BFF" stopOpacity="0.75" />
-                  <stop offset="62%" stopColor="#29A8FF" stopOpacity="0.7" />
-                  <stop offset="80%" stopColor="#FF9A2E" stopOpacity="0.45" />
-                  <stop offset="92%" stopColor="#F27A18" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="#F27A18" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="mockmindCyanAccentRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#22D3EE" stopOpacity="0" />
-                  <stop offset="25%" stopColor="#22D3EE" stopOpacity="0.3" />
-                  <stop offset="60%" stopColor="#168BFF" stopOpacity="0.25" />
-                  <stop offset="85%" stopColor="#FFB84D" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="#22D3EE" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M0,32 Q220,10 440,34 T880,26 T1320,38 T1440,28"
-                fill="none"
-                stroke="url(#mockmindAiEnergyField)"
-                strokeWidth="2.5"
-              />
-              <path
-                d="M0,38 Q280,52 560,28 T1120,42 T1440,32"
-                fill="none"
-                stroke="url(#mockmindCyanAccentRibbon)"
-                strokeWidth="1.5"
-              />
-              {/* Subtle particle/dot accents along the flowing wave */}
-              <circle cx="280" cy="22" r="1.5" fill="#22D3EE" opacity="0.6" />
-              <circle cx="560" cy="28" r="2" fill="#168BFF" opacity="0.5" />
-              <circle cx="840" cy="30" r="1.5" fill="#29A8FF" opacity="0.6" />
-              <circle cx="1120" cy="40" r="2" fill="#FF9A2E" opacity="0.45" />
-              <circle cx="1300" cy="28" r="1.5" fill="#FFB84D" opacity="0.35" />
-            </svg>
-          </div>
-        )}
+      {/* ===================================================
+          MASTER HEADER (DARK CINEMATIC CYAN + ORANGE SYSTEM)
+      ==================================================== */}
+      <header className="sticky top-0 z-50 h-[64px] min-h-[64px] px-[clamp(14px,1.7vw,28px)] flex items-center justify-between bg-[#071019]/90 backdrop-blur-md text-[#F5F7FA] border-b border-white/[0.08] relative transition-all overflow-hidden">
+        {/* Animated dual-wave SVG background in header — Orange & Cyan clearly visible per Reference #4 */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-35 z-0 select-none" aria-hidden="true">
+          <svg className="absolute w-[160%] sm:w-[130%] h-full -left-[15%] top-0 mockmind-header-wave" viewBox="0 0 1200 64" fill="none" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="headerCyanWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#00BFFF" stopOpacity="0" />
+                <stop offset="30%" stopColor="#00E5FF" stopOpacity="0.85" />
+                <stop offset="70%" stopColor="#08C8FF" stopOpacity="0.65" />
+                <stop offset="100%" stopColor="#00BFFF" stopOpacity="0" />
+              </linearGradient>
+              <linearGradient id="headerOrangeWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FF8A00" stopOpacity="0" />
+                <stop offset="35%" stopColor="#FF9D2E" stopOpacity="0.85" />
+                <stop offset="75%" stopColor="#FF8A00" stopOpacity="0.75" />
+                <stop offset="100%" stopColor="#FF8A00" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            {/* Cyan Wave Curves */}
+            <path d="M0,28 C220,8 440,48 660,24 C880,4 1040,44 1200,20" stroke="url(#headerCyanWaveGrad)" strokeWidth="1.6" />
+            <path d="M0,42 C200,22 460,56 700,32 C920,12 1100,48 1200,28" stroke="url(#headerCyanWaveGrad)" strokeWidth="1.0" strokeDasharray="4 6" opacity="0.7" />
+            {/* Orange / Amber Wave Curves — Clearly visible */}
+            <path d="M0,34 C240,54 480,18 720,44 C960,68 1120,26 1200,38" stroke="url(#headerOrangeWaveGrad)" strokeWidth="1.8" />
+            <path d="M0,46 C260,60 500,28 740,50 C960,70 1120,36 1200,46" stroke="url(#headerOrangeWaveGrad)" strokeWidth="1.2" strokeDasharray="5 7" opacity="0.8" />
+            {/* Header accent dots */}
+            <circle cx="280" cy="22" r="1.5" fill="#00E5FF" opacity="0.7" />
+            <circle cx="560" cy="40" r="1.8" fill="#FF8A00" opacity="0.85" />
+            <circle cx="880" cy="18" r="1.5" fill="#08C8FF" opacity="0.6" />
+            <circle cx="1020" cy="42" r="1.8" fill="#FF9D2E" opacity="0.8" />
+          </svg>
+        </div>
 
-        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1550px] items-center justify-between px-[clamp(14px,1.7vw,28px)]">
-          {/* LEFT: BRAND */}
+        {/* Subtle dual-accent wave highlight across header border */}
+        <div 
+          className="absolute inset-x-0 bottom-0 h-[1px] pointer-events-none z-10"
+          style={{
+            background: 'linear-gradient(to right, transparent, rgba(0, 229, 255, 0.45) 25%, rgba(8, 200, 255, 0.2) 50%, rgba(255, 138, 0, 0.5) 75%, transparent 100%)',
+          }}
+        />
+
+        <div className="relative z-10 mx-auto flex h-full w-full max-w-[1550px] items-center justify-between">
+          {/* LEFT: BRAND — Mock (white), Mind (cyan), AI (orange) */}
           <div className="flex items-center gap-3">
-            <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${interviewStarted ? 'bg-gradient-to-br from-[#168BFF] via-[#22D3EE] to-[#FF9A2E] shadow-[0_0_15px_rgba(22,139,255,0.3)]' : 'bg-gradient-to-br from-blue-500 to-violet-600 shadow-lg'}`}>
-              <Bot className={`h-5 w-5 ${interviewStarted ? 'text-[#05080D] font-bold' : 'text-white'}`} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/20 via-[#00E5FF]/10 to-orange-500/20 border border-cyan-500/30 shadow-[0_0_15px_rgba(0,229,255,0.2)] shrink-0">
+              <Bot className="h-5 w-5 text-[#00E5FF]" />
             </div>
-            {interviewStarted ? (
-              <span className="text-[clamp(19px,1.5vw,22px)] font-black tracking-tight text-[#F5F7FA]">
-                Mock<span className="bg-gradient-to-r from-[#22D3EE] to-[#168BFF] bg-clip-text text-transparent">Mind</span> <span className="text-[#FF9A2E]">AI</span>
-              </span>
-            ) : (
-              <span className="text-[clamp(18px,1.5vw,24px)] font-bold">MockMind AI</span>
-            )}
+            <span className="text-xl sm:text-2xl font-black tracking-tight">
+              <span className="text-[#F5F7FA]">Mock</span>
+              <span className="text-[#00E5FF]">Mind </span>
+              <span className="text-[#FF8A00]">AI</span>
+            </span>
           </div>
 
           {/* CENTER NAVIGATION ONLY FOR PRE-INTERVIEW */}
           {!interviewStarted && (
-            <div className="hidden items-center gap-3 text-[clamp(13px,1.1vw,17px)] font-medium md:flex">
-              <span className="text-violet-300">▥▥▥</span>
-              <span>AI Interview</span>
-              <span className="text-gray-500">•</span>
-              <span>Round 3</span>
+            <div className="hidden items-center gap-2.5 text-xs font-semibold md:flex">
+              <span className="rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[#d1ccc7]">
+                AI Interview Preparation
+              </span>
+              <span className="text-[#74808C]">•</span>
+              <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[#00d2ff]">
+                Round 3
+              </span>
             </div>
           )}
 
@@ -3414,8 +3620,9 @@ const AIInterview = () => {
           <div className="flex items-center gap-3">
             {!interviewStarted && (
               <button
+                type="button"
                 onClick={() => navigate('/dashboard')}
-                className="hidden rounded-xl border border-blue-400/30 bg-slate-900/60 px-4 py-2 text-sm font-medium text-gray-200 transition hover:border-blue-400/60 hover:bg-blue-500/10 sm:block"
+                className="hidden sm:inline-flex items-center rounded-xl border border-white/[0.12] bg-[#0c101d] px-4 py-2 text-sm font-medium text-[#f5f1ec] hover:border-cyan-500/40 hover:bg-white/[0.03] transition cursor-pointer"
               >
                 Dashboard
               </button>
@@ -3423,18 +3630,16 @@ const AIInterview = () => {
 
             {interviewStarted && (
               <button
+                type="button"
                 onClick={handleEndInterview}
-                className="flex items-center gap-2 rounded-xl border border-red-500/40 bg-red-500/10 px-3.5 py-1.5 text-sm font-medium text-red-400 transition hover:border-red-500/70 hover:bg-red-500/20"
+                className="flex items-center gap-2 rounded-xl border border-red-500/35 bg-red-500/10 px-3.5 py-1.5 text-sm font-medium text-red-400 hover:border-red-500/60 hover:bg-red-500/20 transition cursor-pointer shadow-[0_0_12px_rgba(239,68,68,0.15)]"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Exit Interview</span>
               </button>
             )}
 
-            {/* =================================================
-                TASK 11 — STEP 2: WORKING USER MENU
-                Pre-Interview + Final AI Interview
-                ================================================= */}
+            {/* USER MENU */}
             <div
               ref={userMenuRef}
               className="relative hidden sm:block"
@@ -3444,28 +3649,20 @@ const AIInterview = () => {
                 onClick={() =>
                   setIsUserMenuOpen((previous) => !previous)
                 }
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 transition ${
-                  interviewStarted
-                    ? 'border-[#168BFF]/25 bg-[#071019] hover:border-[#168BFF]/50'
-                    : 'border-white/10 bg-slate-900/70 hover:border-white/20 hover:bg-slate-800/80'
-                }`}
+                className="flex items-center gap-2.5 rounded-full border border-white/[0.12] bg-[#0c101d] px-3 py-1.5 hover:border-cyan-500/30 transition cursor-pointer text-[#f5f1ec]"
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="menu"
               >
-                <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                  interviewStarted
-                    ? 'bg-gradient-to-br from-[#168BFF] to-[#22D3EE] text-black shadow-[0_0_10px_rgba(22,139,255,0.25)]'
-                    : 'bg-gradient-to-br from-amber-200 to-orange-500 text-slate-900'
-                }`}>
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 text-xs font-bold text-black shadow-[0_0_10px_rgba(0,210,255,0.4)]">
                   {userName.charAt(0).toUpperCase()}
                 </div>
 
-                <span className="max-w-[110px] truncate text-sm font-medium text-[#F5F7FA]">
+                <span className="max-w-[110px] truncate text-sm font-medium text-[#f5f1ec]">
                   {userName}
                 </span>
 
                 <ChevronDown
-                  className={`h-4 w-4 text-[#A8B3BF] transition-transform duration-200 ${
+                  className={`h-4 w-4 text-[#9a9a9a] transition-transform duration-200 ${
                     isUserMenuOpen ? 'rotate-180' : ''
                   }`}
                 />
@@ -3474,17 +3671,13 @@ const AIInterview = () => {
               {isUserMenuOpen && (
                 <div
                   role="menu"
-                  className={`absolute right-0 top-full z-[200] mt-3 w-56 overflow-hidden rounded-xl border shadow-2xl ${
-                    interviewStarted
-                      ? 'border-[#1EAEFF]/20 bg-[#0A1016] shadow-black/80'
-                      : 'border-white/10 bg-[#0b1024] shadow-black/50'
-                  }`}
+                  className="absolute right-0 top-full z-[200] mt-3 w-56 overflow-hidden rounded-2xl border border-white/10 bg-[#131416] shadow-2xl shadow-black/80"
                 >
                   <div className="border-b border-white/10 px-4 py-3">
-                    <p className="truncate text-sm font-semibold text-white">
+                    <p className="truncate text-sm font-semibold text-[#f5f1ec]">
                       {userName}
                     </p>
-                    <p className="mt-1 truncate text-xs text-slate-400">
+                    <p className="mt-1 truncate text-xs text-[#9a9a9a]">
                       {JSON.parse(localStorage.getItem('user') || '{}')?.email || ''}
                     </p>
                   </div>
@@ -3493,9 +3686,9 @@ const AIInterview = () => {
                     type="button"
                     role="menuitem"
                     onClick={handleUserProfile}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-200 transition-colors hover:bg-white/5 hover:text-white"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[#d1ccc7] transition-colors hover:bg-white/5 hover:text-[#f5f1ec]"
                   >
-                    <UserRound className="h-4 w-4 text-slate-400" />
+                    <UserRound className="h-4 w-4 text-[#9a9a9a]" />
                     <span>Profile</span>
                   </button>
 
@@ -3515,160 +3708,233 @@ const AIInterview = () => {
         </div>
       </header>
 
-      {/* PRE-INTERVIEW */}
+      {/* ===================================================
+          PRE-INTERVIEW (DARK CINEMATIC CYAN + ORANGE SYSTEM)
+      ==================================================== */}
       {!interviewStarted && (
-        <main className="mx-auto w-full max-w-[1500px] px-[clamp(14px,1.7vw,28px)] pb-8 pt-6">
-          <section className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <main className="relative z-10 mx-auto w-full max-w-[1500px] px-[clamp(14px,1.7vw,28px)] pb-10 pt-6">
+          {/* HEADER SECTION */}
+          <section className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10">
-                <ShieldCheck className="h-7 w-7 text-emerald-400" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/30 bg-cyan-500/10 shadow-[0_0_20px_rgba(0,210,255,0.2)]">
+                <ShieldCheck className="h-7 w-7 text-[#00d2ff]" />
               </div>
               <div>
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <h1 className="text-[clamp(20px,1.8vw,28px)] font-bold">Get Ready for Your AI Interview</h1>
-                  <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-violet-300">Round 3</span>
+                <div className="mb-1 flex flex-wrap items-center gap-2.5">
+                  <h1 className="text-[clamp(20px,1.8vw,28px)] font-bold tracking-tight text-white">
+                    Get Ready for Your AI Interview
+                  </h1>
+                  <span className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#00d2ff]">
+                    Round 3
+                  </span>
                 </div>
-                <p className="text-sm text-gray-300">Check your camera, microphone, voice, connection and interview environment before starting.</p>
+                <p className="text-sm text-[#94a3b8]">
+                  Check your camera, microphone, voice, connection and interview environment before starting.
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/5 px-4 py-3">
-              <Clock3 className="h-9 w-9 text-violet-400" />
-              <div className="text-right">
-                <p className="text-xs text-gray-400">Interview Duration</p>
-                <p className="font-mono text-2xl font-bold">{formatTime(totalInterviewTime)}</p>
+
+            {/* INTERVIEW DURATION METRIC CARD */}
+            <div className="relative overflow-hidden flex items-center gap-4 rounded-2xl border border-[#FF8A00]/25 hover:border-[#FF8A00]/45 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6),0_0_20px_rgba(255,138,0,0.08)] transition-all duration-300 before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00BFFF]/40 before:via-[#0877B8]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: "radial-gradient(ellipse 260px 140px at 0% 0%, rgba(0, 191, 255, 0.08) 0%, transparent 80%)",
+                }}
+              />
+              <div className="absolute -top-6 -right-6 w-28 h-28 bg-gradient-to-bl from-[#FF8A00]/25 via-[#FF8A00]/6 to-transparent rounded-full blur-xl pointer-events-none" />
+              <div className="w-12 h-12 rounded-xl bg-[#FF8A00]/15 border border-[#FF8A00]/35 flex items-center justify-center shadow-[0_0_18px_rgba(255,138,0,0.25)] relative z-10 shrink-0">
+                <Clock3 className="h-6 w-6 text-[#FF8A00]" />
+              </div>
+              <div className="relative z-10">
+                <p className="text-xs uppercase tracking-wider text-[#A5AFBC] font-medium">Interview Duration</p>
+                <p className="font-mono text-2xl sm:text-3xl font-bold text-[#F5F7FA] mt-0.5 tracking-tight">{formatTime(totalInterviewTime)}</p>
               </div>
             </div>
           </section>
 
           {preflightMessage && (
-            <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-400/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-200">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+            <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[#FFB020]/35 bg-[#FFB020]/10 px-4 py-3 text-sm text-[#FFB020] shadow-[0_0_15px_rgba(255,176,32,0.1)]">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[#FFB020]" />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">Setup attention required</p>
-                <p className="mt-0.5 text-amber-100/80">{preflightMessage}</p>
+                <p className="font-semibold text-[#FFB020]">Setup attention required</p>
+                <p className="mt-0.5 text-[#FFB020]/80">{preflightMessage}</p>
               </div>
-              <button type="button" onClick={() => setPreflightMessage('')} className="text-xs text-amber-300 hover:text-white">Dismiss</button>
+              <button type="button" onClick={() => setPreflightMessage('')} className="text-xs text-[#FFB020] hover:text-white transition cursor-pointer">Dismiss</button>
             </div>
           )}
 
-          <section className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr_0.75fr]">
-            {/* CAMERA */}
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 font-semibold"><Video className="h-5 w-5 text-violet-400" />Your Camera</h2>
+          <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr_0.75fr]">
+            {/* CAMERA SETUP CARD */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-cyan-500/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] transition-all before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00BFFF]/45 before:via-[#0877B8]/15 before:to-[#FF8A00]/40 before:pointer-events-none before:z-10">
+              <div className="pointer-events-none absolute -top-8 -left-8 h-28 w-28 rounded-full bg-cyan-500/12 blur-xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-full bg-orange-500/12 blur-xl" aria-hidden="true" />
+
+              <div className="mb-3.5 flex items-center justify-between gap-3 relative z-10">
+                <h2 className="flex items-center gap-2 font-bold text-sm text-white">
+                  <Video className="h-5 w-5 text-[#FF8A00]" />
+                  Your Camera
+                </h2>
                 <div className="flex items-center gap-2">
-                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cameraOn ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${cameraOn ? 'bg-red-500/15 text-red-400 border border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.3)]' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                     ● {cameraOn ? 'LIVE' : 'OFF'}
                   </span>
                   <button
                     type="button"
                     onClick={() => { void toggleCamera(); }}
-                    className={`rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${cameraOn ? 'border-red-400/30 text-red-300 hover:bg-red-500/10' : 'border-violet-400/30 text-violet-300 hover:bg-violet-500/10'}`}
+                    className={`rounded-xl border px-3 py-1.5 text-xs font-semibold transition cursor-pointer ${cameraOn ? 'border-red-500/30 text-red-300 hover:bg-red-500/10' : 'border-white/[0.12] bg-[#0c101d] text-[#f5f1ec] hover:border-cyan-500/30'}`}
                     aria-label={cameraOn ? 'Turn camera off' : 'Turn camera on'}
                   >
                     {cameraOn ? 'Turn Off Camera' : 'Enable Camera'}
                   </button>
                 </div>
               </div>
-              <div className="relative overflow-hidden rounded-xl bg-black">
-                <video ref={handleVideoElementRef} autoPlay playsInline muted className={`aspect-[16/9] w-full object-cover transition-opacity ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
+
+              <div className="relative overflow-hidden rounded-xl bg-black border border-white/[0.06]">
+                <video ref={handleVideoElementRef} autoPlay playsInline muted className={`aspect-[16/9] sm:aspect-[4/3] max-h-[290px] w-full object-cover object-[center_20%] transition-opacity ${cameraOn ? 'opacity-100' : 'opacity-0'}`} />
                 {!cameraOn && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-[#74808C]">
                     <VideoOff className="mb-3 h-12 w-12" />
-                    <p>Camera is turned off</p>
-                    <button type="button" onClick={() => startCamera({ force: true })} className="mt-3 rounded-lg border border-violet-400/30 px-3 py-2 text-xs text-violet-300 hover:bg-violet-500/10">Enable Camera</button>
+                    <p className="text-sm">Camera is turned off</p>
+                    <button type="button" onClick={() => startCamera({ force: true })} className="mt-3 rounded-xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-[#00d2ff] hover:bg-cyan-500/20 transition cursor-pointer">Enable Camera</button>
                   </div>
                 )}
                 {cameraOn && faceStatus === 'none' && (
-                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/65 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Position your face clearly in the camera frame.</div>
+                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/75 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Position your face clearly in the camera frame.</div>
                 )}
                 {cameraOn && faceStatus === 'multiple' && (
-                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-red-300/30 bg-black/70 px-3 py-2 text-center text-xs text-red-200 backdrop-blur">Only one person should be visible.</div>
+                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-red-300/30 bg-black/75 px-3 py-2 text-center text-xs text-red-200 backdrop-blur">Only one person should be visible.</div>
                 )}
                 {cameraOn && faceStatus === 'far' && (
-                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/70 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Move a little closer so your face is clearly visible.</div>
+                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/75 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Move a little closer so your face is clearly visible.</div>
                 )}
                 {cameraOn && faceStatus === 'eyes' && (
-                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/70 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Keep both eyes visible and face the camera.</div>
+                  <div className="absolute bottom-3 left-3 right-3 rounded-lg border border-amber-300/30 bg-black/75 px-3 py-2 text-center text-xs text-amber-200 backdrop-blur">Keep both eyes visible and face the camera.</div>
                 )}
               </div>
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-center">
+
+              <div className="mt-3.5 grid grid-cols-3 gap-2 relative z-10">
+                <div className="rounded-xl border border-white/[0.06] bg-[#060a14]/80 p-3 text-center transition hover:border-cyan-500/20">
                   <Video className={`mx-auto h-5 w-5 ${cameraOn ? 'text-emerald-400' : 'text-amber-400'}`} />
-                  <p className="mt-1 text-xs text-gray-300">Camera</p>
+                  <p className="mt-1 text-xs text-[#94a3b8]">Camera</p>
                   <p className={`text-sm font-semibold ${cameraOn ? 'text-emerald-400' : 'text-amber-400'}`}>{cameraOn ? 'Connected' : 'Not Ready'}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-center">
+                <div className="rounded-xl border border-white/[0.06] bg-[#060a14]/80 p-3 text-center transition hover:border-cyan-500/20">
                   <UserRound className={`mx-auto h-5 w-5 ${faceReady ? 'text-emerald-400' : 'text-amber-400'}`} />
-                  <p className="mt-1 text-xs text-gray-300">Face Detection</p>
+                  <p className="mt-1 text-xs text-[#94a3b8]">Face Detection</p>
                   <p className={`text-sm font-semibold ${getPreflightStatus(faceStatus).className}`}>{getPreflightStatus(faceStatus).label}</p>
                 </div>
-                <div className="rounded-xl border border-white/10 bg-slate-950/40 p-3 text-center">
+                <div className="rounded-xl border border-white/[0.06] bg-[#060a14]/80 p-3 text-center transition hover:border-cyan-500/20">
                   <Lightbulb className={`mx-auto h-5 w-5 ${lightingStatus === 'good' ? 'text-emerald-400' : 'text-amber-400'}`} />
-                  <p className="mt-1 text-xs text-gray-300">Lighting</p>
+                  <p className="mt-1 text-xs text-[#94a3b8]">Lighting</p>
                   <p className={`text-sm font-semibold ${getPreflightStatus(lightingStatus).className}`}>{getPreflightStatus(lightingStatus).label}</p>
                 </div>
               </div>
             </div>
 
-            {/* AI */}
-            <div className="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-5 text-center shadow-xl">
-              <div className="mb-3 flex w-full items-center justify-between text-left font-semibold">
-                <span className="flex items-center gap-2"><Bot className="h-5 w-5 text-violet-400" />AI Interviewer</span>
-                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${aiVoiceReady ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-300'}`}>{aiVoiceReady ? 'VOICE READY' : 'VOICE CHECKING'}</span>
+            {/* AI INTERVIEWER CARD */}
+            <div className="relative overflow-hidden flex min-h-[360px] flex-col items-center justify-between rounded-2xl border border-white/[0.08] hover:border-[#00E5FF]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] transition-all before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+              <div className="pointer-events-none absolute -top-8 -left-8 h-28 w-28 rounded-full bg-[#00E5FF]/15 blur-xl" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-full bg-[#FF8A00]/15 blur-xl" aria-hidden="true" />
+
+              <div className="mb-3 flex w-full items-center justify-between text-left font-bold text-sm text-[#F5F7FA] relative z-10">
+                <span className="flex items-center gap-2"><Bot className="h-5 w-5 text-[#00E5FF]" />AI Interviewer</span>
+                <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${aiVoiceReady ? 'bg-[#19D98B]/10 text-[#19D98B] border border-[#19D98B]/30 shadow-[0_0_8px_rgba(25,217,139,0.2)]' : 'bg-[#FFB020]/10 text-[#FFB020] border border-[#FFB020]/30'}`}>{aiVoiceReady ? 'VOICE READY' : 'VOICE CHECKING'}</span>
               </div>
-              <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden">
-                {/* Permanent left/right AI voice waveform. It stays visible even while idle. */}
+
+              <div className="relative flex w-full flex-1 items-center justify-center overflow-hidden py-4">
+                <div className="absolute w-44 h-44 rounded-full bg-gradient-to-r from-[#00E5FF]/15 via-[#FF8A00]/10 to-transparent blur-3xl pointer-events-none" />
+
+                {/* Left/Right AI voice waveform with Cyan & Orange dual spectrum */}
                 <div className="pointer-events-none absolute inset-x-2 top-1/2 z-0 flex -translate-y-1/2 items-center justify-center gap-2">
                   <div className="flex h-20 w-[31%] items-center justify-end gap-1 overflow-hidden">
                     {[18, 30, 44, 62, 38, 72, 50, 30, 58, 42, 68, 34, 52, 26, 46].map((height, i) => (
                       <span
                         key={`left-wave-${i}`}
-                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-violet-500/40 via-violet-400 to-cyan-300"
+                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-[#00BFFF]/30 via-[#00E5FF] to-[#08C8FF]"
                         style={{ height: `${height}%`, animationDelay: `${i * 0.055}s`, opacity: aiSpeaking ? 1 : 0.7 }}
                       />
                     ))}
                   </div>
-                  <div className="relative z-10 shrink-0 scale-[0.88] sm:scale-100"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
+                  <div className="relative z-10 shrink-0 scale-[0.95] sm:scale-105"><AIInterviewerAvatar speaking={aiSpeaking} /></div>
                   <div className="flex h-20 w-[31%] items-center justify-start gap-1 overflow-hidden">
                     {[46, 26, 52, 34, 68, 42, 58, 30, 50, 72, 38, 62, 44, 30, 18].map((height, i) => (
                       <span
                         key={`right-wave-${i}`}
-                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-cyan-400 via-cyan-300 to-violet-400"
+                        className="mockmind-preflight-wave-bar w-1 rounded-full bg-gradient-to-t from-[#FF8A00]/30 via-[#FF9D2E] to-[#FFB347]"
                         style={{ height: `${height}%`, animationDelay: `${i * 0.055}s`, opacity: aiSpeaking ? 1 : 0.7 }}
                       />
                     ))}
                   </div>
                 </div>
               </div>
-              <div className={`rounded-full border px-5 py-2 text-sm font-semibold ${aiVoiceReady ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-400' : 'border-amber-400/30 bg-amber-500/10 text-amber-300'}`}>
-                {aiVoiceReady ? <CircleCheck className="mr-2 inline h-5 w-5" /> : <RefreshCw className="mr-2 inline h-5 w-5 animate-spin" />}
-                {aiVoiceReady ? 'AI Voice Ready' : 'Checking AI Voice'}
+
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <div className={`rounded-full border px-5 py-2 text-sm font-semibold shadow-sm ${aiVoiceReady ? 'border-[#19D98B]/30 bg-[#19D98B]/10 text-[#19D98B]' : 'border-[#FFB020]/30 bg-[#FFB020]/10 text-[#FFB020]'}`}>
+                  {aiVoiceReady ? <CircleCheck className="mr-2 inline h-4 w-4" /> : <RefreshCw className="mr-2 inline h-4 w-4 animate-spin" />}
+                  {aiVoiceReady ? 'AI Voice Ready' : 'Checking AI Voice'}
+                </div>
+                <p className="mt-3 text-xs text-[#A5AFBC] leading-relaxed max-w-sm">{aiGreetingText}</p>
               </div>
-              <p className="mt-4 text-gray-200">{aiGreetingText}</p>
             </div>
 
-            {/* OVERVIEW */}
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5 shadow-xl">
-              <h2 className="mb-5 font-semibold">Interview Overview</h2>
-              <div className="space-y-5">
-                <div className="flex gap-3"><ClipboardCheck className="h-6 w-6 text-violet-400" /><div><p className="text-xs text-gray-400">Interview Type</p><p className="font-medium">{interviewTypeLabel}</p></div></div>
-                <div className="flex gap-3"><CheckCircle2 className="h-6 w-6 text-blue-400" /><div><p className="text-xs text-gray-400">Total Questions</p><p className="font-medium">{totalQuestions} Questions</p></div></div>
-                <div className="flex gap-3"><Clock3 className="h-6 w-6 text-amber-400" /><div><p className="text-xs text-gray-400">Time per Question</p><p className="font-medium">{QUESTION_TIME} Seconds</p></div></div>
-                <div className="flex gap-3"><Clock3 className="h-6 w-6 text-cyan-400" /><div><p className="text-xs text-gray-400">Total Duration</p><p className="font-medium">{formatTime(totalInterviewTime)}</p></div></div>
-                <div className="flex gap-3"><Globe2 className="h-6 w-6 text-cyan-400" /><div><p className="text-xs text-gray-400">Language</p><p className="font-medium">English</p></div></div>
-                <div className="flex gap-3"><Volume2 className="h-6 w-6 text-emerald-400" /><div><p className="text-xs text-gray-400">AI Voice</p><p className={`font-medium ${aiVoiceReady ? 'text-emerald-400' : 'text-amber-300'}`}>{aiVoiceReady ? 'Enabled' : 'Checking'}</p></div></div>
+            {/* OVERVIEW CARD */}
+            <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-[#00E5FF]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] flex flex-col justify-between transition-all before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+              <h2 className="mb-4 font-bold text-sm text-[#F5F7FA]">Interview Overview</h2>
+              <div className="space-y-4">
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#00E5FF]/10 border border-[#00E5FF]/25 flex items-center justify-center shrink-0">
+                    <ClipboardCheck className="h-4 w-4 text-[#00E5FF]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">Interview Type</p><p className="font-medium text-sm text-[#F5F7FA]">{interviewTypeLabel}</p></div>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#19D98B]/10 border border-[#19D98B]/25 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="h-4 w-4 text-[#19D98B]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">Total Questions</p><p className="font-medium text-sm text-[#F5F7FA]">{totalQuestions} Questions</p></div>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#FF8A00]/10 border border-[#FF8A00]/25 flex items-center justify-center shrink-0">
+                    <Clock3 className="h-4 w-4 text-[#FF8A00]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">Time per Question</p><p className="font-medium text-sm text-[#F5F7FA]">{QUESTION_TIME} Seconds</p></div>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#08C8FF]/10 border border-[#08C8FF]/25 flex items-center justify-center shrink-0">
+                    <Clock3 className="h-4 w-4 text-[#08C8FF]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">Total Duration</p><p className="font-medium text-sm text-[#F5F7FA]">{formatTime(totalInterviewTime)}</p></div>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-white/[0.05] border border-white/10 flex items-center justify-center shrink-0">
+                    <Globe2 className="h-4 w-4 text-[#A5AFBC]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">Language</p><p className="font-medium text-sm text-[#F5F7FA]">English</p></div>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <div className="w-8 h-8 rounded-lg bg-[#19D98B]/10 border border-[#19D98B]/25 flex items-center justify-center shrink-0">
+                    <Volume2 className="h-4 w-4 text-[#19D98B]" />
+                  </div>
+                  <div><p className="text-xs text-[#A5AFBC]">AI Voice</p><p className={`font-medium text-sm ${aiVoiceReady ? 'text-[#19D98B]' : 'text-[#FFB020]'}`}>{aiVoiceReady ? 'Enabled' : 'Checking'}</p></div>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* CHECKLIST */}
-          <section className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="flex items-center gap-2 font-semibold"><ClipboardCheck className="h-5 w-5 text-blue-400" />Pre-Interview Checklist</h2>
-              <span className={`text-xs font-semibold ${canStartInterview ? 'text-emerald-400' : 'text-amber-300'}`}>{canStartInterview ? 'All required checks passed' : 'Complete required checks to continue'}</span>
+          {/* CHECKLIST SECTION */}
+          <section className="mt-5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10 relative overflow-hidden">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between relative z-10">
+              <h2 className="flex items-center gap-2 font-bold text-sm text-[#F5F7FA]">
+                <ClipboardCheck className="h-5 w-5 text-[#00E5FF]" />
+                Pre-Interview Checklist
+              </h2>
+              <span className={`text-xs font-semibold ${canStartInterview ? 'text-[#19D98B]' : 'text-[#FFB020]'}`}>
+                {canStartInterview ? 'All required checks passed' : 'Complete required checks to continue'}
+              </span>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 relative z-10">
               {checklistItems.map(({ Icon, label, status, ready }) => {
                 const meta = getPreflightStatus(status);
                 return (
@@ -3677,99 +3943,161 @@ const AIInterview = () => {
                     type="button"
                     onClick={label === 'Microphone' ? startMicrophoneTest : undefined}
                     disabled={label === 'Microphone' && (micTestStatus === 'listening' || micTestStatus === 'prompting')}
-                    className={`flex w-full items-center gap-3 rounded-xl border border-white/10 bg-slate-950/40 p-3 text-left ${label === 'Microphone' ? 'cursor-pointer hover:border-violet-400/40 hover:bg-violet-500/5' : ''} disabled:cursor-not-allowed disabled:opacity-70`}
+                    className={`flex w-full items-center gap-3 rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3 text-left transition ${label === 'Microphone' ? 'cursor-pointer hover:border-[#00E5FF]/40 hover:bg-[#00E5FF]/5' : ''} disabled:cursor-not-allowed disabled:opacity-70`}
                   >
-                    <Icon className={`h-6 w-6 shrink-0 ${ready ? 'text-emerald-400' : meta.className}`} />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{label}</p>
+                    <Icon className={`h-5 w-5 shrink-0 ${ready ? 'text-[#19D98B]' : meta.className}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-[#A5AFBC]">{label}</p>
                       <p className={`text-sm font-semibold ${meta.className}`}>{meta.label}</p>
-                      {label === 'Microphone' && micTestTranscript && <p className="mt-0.5 truncate text-[10px] text-gray-500">“{micTestTranscript}”</p>}
+                      {label === 'Microphone' && micTestTranscript && <p className="mt-0.5 truncate text-[10px] text-[#687483]">“{micTestTranscript}”</p>}
                     </div>
-                    <ChevronRight className="ml-auto h-4 w-4 text-gray-600" />
+                    <ChevronRight className="ml-auto h-4 w-4 text-[#687483]" />
                   </button>
                 );
               })}
             </div>
-            <div className={`mt-4 rounded-xl border px-4 py-3 text-center text-sm font-semibold ${canStartInterview ? 'border-emerald-400/20 bg-emerald-500/5 text-emerald-400' : 'border-amber-400/20 bg-amber-500/5 text-amber-300'}`}>
-              {canStartInterview ? <><CircleCheck className="mr-2 inline h-5 w-5" />You're all set! Good luck with your interview.</> : <><AlertTriangle className="mr-2 inline h-5 w-5" />Please complete the required checks before starting.</>}
-              {backendLatency !== null && <span className="ml-2 text-xs font-normal text-gray-500">Server response: {backendLatency} ms</span>}
+
+            <div className={`mt-4 rounded-xl border px-4 py-3 text-center text-sm font-semibold relative z-10 ${canStartInterview ? 'border-[#19D98B]/30 bg-[#19D98B]/10 text-[#19D98B]' : 'border-[#FFB020]/30 bg-[#FFB020]/10 text-[#FFB020]'}`}>
+              {canStartInterview ? (
+                <><CircleCheck className="mr-2 inline h-4 w-4" />You're all set! Good luck with your interview.</>
+              ) : (
+                <><AlertTriangle className="mr-2 inline h-4 w-4" />Please complete the required checks before starting.</>
+              )}
+              {backendLatency !== null && <span className="ml-2 text-xs font-normal text-[#A5AFBC]">Server response: {backendLatency} ms</span>}
             </div>
           </section>
 
-          {/* ENVIRONMENT DETAILS — REAL CURRENT CHECK RESULTS */}
-          <section className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 shadow-xl">
+          {/* ENVIRONMENT DETAILS */}
+          <section className="mt-4 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] relative overflow-hidden">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="font-semibold">Environment Analysis</p>
-                <p className="mt-1 text-xs text-gray-500">Current browser/camera observations. No value is hard-coded as Good.</p>
+                <p className="font-bold text-sm text-[#F5F7FA]">Environment Analysis</p>
+                <p className="mt-0.5 text-xs text-[#A5AFBC]">Current browser/camera observations. No value is hard-coded as Good.</p>
               </div>
-              <button type="button" onClick={() => setShowEnvironmentDetails((v) => !v)} className="rounded-xl border border-cyan-400/30 bg-cyan-500/5 px-4 py-2 text-sm font-semibold text-cyan-300 hover:bg-cyan-500/10">{showEnvironmentDetails ? 'Hide Environment Details' : 'Get Environment Details'}</button>
+              <button
+                type="button"
+                onClick={() => setShowEnvironmentDetails((v) => !v)}
+                className="rounded-xl border border-white/[0.12] bg-[#0A0F16] px-4 py-2 text-xs font-semibold text-[#F5F7FA] hover:border-[#00E5FF]/30 transition cursor-pointer"
+              >
+                {showEnvironmentDetails ? 'Hide Environment Details' : 'Get Environment Details'}
+              </button>
             </div>
             {showEnvironmentDetails && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-gray-500">Face</p><p className={`font-semibold ${getPreflightStatus(faceStatus).className}`}>{getPreflightStatus(faceStatus).label}</p></div>
-                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-gray-500">Lighting</p><p className={`font-semibold ${getPreflightStatus(lightingStatus).className}`}>{getPreflightStatus(lightingStatus).label}</p></div>
-                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-gray-500">People</p><p className={`font-semibold ${faceStatus === 'multiple' ? 'text-red-400' : faceStatus === 'detected' ? 'text-emerald-400' : 'text-gray-300'}`}>{faceStatus === 'multiple' ? 'Multiple' : faceStatus === 'detected' ? '1 detected' : 'Not verified'}</p></div>
-                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-gray-500">Connection</p><p className={`font-semibold ${getPreflightStatus(internetStatus).className}`}>{getPreflightStatus(internetStatus).label}{backendLatency !== null ? ` • ${backendLatency} ms` : ''}</p></div>
-                <div className="rounded-xl border border-white/10 p-3"><p className="text-xs text-gray-500">Overall</p><p className={`font-semibold ${getPreflightStatus(environmentStatus).className}`}>{getPreflightStatus(environmentStatus).label}</p></div>
+              <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3"><p className="text-xs text-[#A5AFBC]">Face</p><p className={`font-semibold text-sm ${getPreflightStatus(faceStatus).className}`}>{getPreflightStatus(faceStatus).label}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3"><p className="text-xs text-[#A5AFBC]">Lighting</p><p className={`font-semibold text-sm ${getPreflightStatus(lightingStatus).className}`}>{getPreflightStatus(lightingStatus).label}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3"><p className="text-xs text-[#A5AFBC]">People</p><p className={`font-semibold text-sm ${faceStatus === 'multiple' ? 'text-[#FF4545]' : faceStatus === 'detected' ? 'text-[#19D98B]' : 'text-[#A5AFBC]'}`}>{faceStatus === 'multiple' ? 'Multiple' : faceStatus === 'detected' ? '1 detected' : 'Not verified'}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3"><p className="text-xs text-[#A5AFBC]">Connection</p><p className={`font-semibold text-sm ${getPreflightStatus(internetStatus).className}`}>{getPreflightStatus(internetStatus).label}{backendLatency !== null ? ` • ${backendLatency} ms` : ''}</p></div>
+                <div className="rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3"><p className="text-xs text-[#A5AFBC]">Overall</p><p className={`font-semibold text-sm ${getPreflightStatus(environmentStatus).className}`}>{getPreflightStatus(environmentStatus).label}</p></div>
               </div>
             )}
           </section>
 
-          {/* LOWER PREP AREA */}
-          <section className="mt-4 grid gap-4 lg:grid-cols-[0.85fr_1.25fr_0.9fr]">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
-              <h2 className="mb-4 flex items-center gap-2 font-semibold"><Lightbulb className="h-5 w-5 text-amber-300" />Interview Tips</h2>
-              <ul className="space-y-3 text-sm text-gray-300">
-                {['Speak clearly and at a normal pace', 'Maintain good eye contact', 'Take your time to think', 'Be honest and confident', 'Ensure a quiet environment', 'Dress professionally'].map((x) => <li key={x}><Check className="mr-2 inline h-4 w-4 text-violet-400" />{x}</li>)}
+          {/* LOWER PREP AREA: TIPS | START CTA | WHAT TO EXPECT */}
+          <section className="mt-5 grid gap-5 lg:grid-cols-[0.85fr_1.25fr_0.9fr]">
+            {/* TIPS */}
+            <div className="rounded-2xl border border-white/[0.08] hover:border-[#FF8A00]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+              <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(#00E5FF_1px,transparent_1px)] [background-size:14px_14px]" aria-hidden="true" />
+              <div className="pointer-events-none absolute -bottom-6 -right-6 w-24 h-24 bg-[#FF8A00]/12 rounded-full blur-xl" aria-hidden="true" />
+
+              <h2 className="mb-4 flex items-center gap-2 font-bold text-sm text-[#F5F7FA] relative z-10">
+                <Lightbulb className="h-4 w-4 text-[#FF8A00]" />
+                Interview Tips
+              </h2>
+              <ul className="space-y-3 text-xs text-[#A5AFBC] relative z-10">
+                {[
+                  'Speak clearly and at a normal pace',
+                  'Maintain good eye contact',
+                  'Take your time to think',
+                  'Be honest and confident',
+                  'Ensure a quiet environment',
+                  'Dress professionally',
+                ].map((x) => (
+                  <li key={x} className="flex items-start gap-2.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#00E5FF] shrink-0 mt-0.5" />
+                    <span>{x}</span>
+                  </li>
+                ))}
               </ul>
             </div>
-            <div className="flex flex-col items-center justify-center rounded-2xl border border-white/10 bg-slate-950/60 p-6 text-center">
-              <button
-                type="button"
-                onClick={startInterview}
-                disabled={!canStartInterview}
-                className={`w-full max-w-md rounded-2xl px-8 py-5 text-[clamp(20px,2vw,30px)] font-bold shadow-xl transition ${canStartInterview ? 'bg-gradient-to-r from-blue-600 to-violet-600 text-white hover:scale-[1.01] hover:opacity-95' : 'cursor-not-allowed bg-slate-800 text-gray-500'}`}
-              >
-                {canStartInterview ? <>Start Interview <span className="ml-3">→</span></> : <>Complete Setup <span className="ml-3">🔒</span></>}
-              </button>
-              <p className="mt-4 text-sm text-gray-400"><LockKeyhole className="mr-2 inline h-4 w-4" />Your interview will start in fullscreen mode</p>
-              <p className="mt-2 text-xs text-gray-500">Once started, the session timer begins and fullscreen rules apply.</p>
+
+            {/* START INTERVIEW CTA CARD */}
+            <div className="relative overflow-hidden rounded-2xl border border-[#FF8A00]/40 hover:border-[#FF8A00]/60 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_16px_36px_rgba(0,0,0,0.6),0_0_24px_rgba(255,138,0,0.1)] flex flex-col items-center justify-center text-center">
+              {/* Soft warm ambient glow matching Dark Cinematic Orange Accent */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#FF8A00]/14 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_600px_220px_at_50%_50%,rgba(255,138,0,0.1),transparent_70%)] pointer-events-none" />
+
+              <div className="relative z-10 w-full flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={startInterview}
+                  disabled={!canStartInterview}
+                  className={`w-full max-w-md rounded-xl px-8 py-4 text-xl sm:text-2xl font-black shadow-[0_4px_24px_rgba(255,138,0,0.42)] transition-all duration-200 cursor-pointer ${
+                    canStartInterview
+                      ? 'bg-gradient-to-r from-[#FF8A00] via-[#FF9D2E] to-[#D96A00] hover:from-[#FFA742] hover:via-[#FFB347] hover:to-[#E07200] text-black hover:-translate-y-0.5 hover:shadow-[0_6px_34px_rgba(255,138,0,0.6)] active:translate-y-0'
+                      : 'cursor-not-allowed border border-white/[0.08] bg-[#0A0F16] text-[#687483] opacity-60'
+                  }`}
+                >
+                  {canStartInterview ? (
+                    <>Start Interview <span className="ml-2">→</span></>
+                  ) : (
+                    <>Complete Setup <span className="ml-2">🔒</span></>
+                  )}
+                </button>
+                <p className="mt-4 text-xs text-[#A5AFBC] flex items-center justify-center gap-1.5">
+                  <LockKeyhole className="h-3.5 w-3.5 text-[#00E5FF]" />
+                  Your interview will start in fullscreen mode
+                </p>
+                <p className="mt-1 text-[11px] text-[#687483]">
+                  Once started, the session timer begins and fullscreen rules apply.
+                </p>
+              </div>
             </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-5">
-              <h2 className="mb-4 flex items-center gap-2 font-semibold"><CircleHelp className="h-5 w-5 text-blue-400" />What to Expect</h2>
-              <ul className="space-y-3 text-sm text-gray-300">
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will ask you {totalQuestions} questions</li>
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />{QUESTION_TIME} seconds to answer each</li>
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />You will answer every question using your voice</li>
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />AI will evaluate your responses</li>
-                <li><Check className="mr-2 inline h-4 w-4 text-violet-400" />Detailed feedback after completion</li>
+
+            {/* WHAT TO EXPECT */}
+            <div className="rounded-2xl border border-white/[0.08] hover:border-[#00E5FF]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_12px_28px_rgba(0,0,0,0.6)] relative overflow-hidden">
+              <h2 className="mb-4 flex items-center gap-2 font-bold text-sm text-[#F5F7FA]">
+                <CircleHelp className="h-4 w-4 text-[#00E5FF]" />
+                What to Expect
+              </h2>
+              <ul className="space-y-3 text-xs text-[#A5AFBC]">
+                <li><CheckCircle2 className="w-3.5 h-3.5 text-[#FF8A00] shrink-0 inline mr-2" />AI will ask you {totalQuestions} questions</li>
+                <li><CheckCircle2 className="w-3.5 h-3.5 text-[#FF8A00] shrink-0 inline mr-2" />{QUESTION_TIME} seconds to answer each</li>
+                <li><CheckCircle2 className="w-3.5 h-3.5 text-[#FF8A00] shrink-0 inline mr-2" />You will answer every question using your voice</li>
+                <li><CheckCircle2 className="w-3.5 h-3.5 text-[#FF8A00] shrink-0 inline mr-2" />AI will evaluate your responses</li>
+                <li><CheckCircle2 className="w-3.5 h-3.5 text-[#FF8A00] shrink-0 inline mr-2" />Detailed feedback after completion</li>
               </ul>
             </div>
           </section>
 
-          <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/60 px-4 py-3 text-center text-sm text-gray-400"><Info className="mr-2 inline h-5 w-5" />Once you click “Start Interview”, the session will begin and you cannot pause or go back.</div>
+          <div className="mt-5 rounded-xl border border-white/[0.06] bg-[#0A0F16]/70 px-4 py-3 text-center text-xs text-[#A5AFBC]">
+            <Info className="mr-2 inline h-4 w-4 text-[#00E5FF]" />
+            Once you click “Start Interview”, the session will begin and you cannot pause or go back.
+          </div>
         </main>
       )}
 
-      {/* ACTIVE INTERVIEW */}
+      {/* ===================================================
+          FINAL INTERVIEW (DARK CINEMATIC CYAN + ORANGE SYSTEM)
+      ==================================================== */}
       {interviewStarted && (
-        <main className="mx-auto flex w-full max-w-[1550px] flex-col px-4 sm:px-6 pt-2 pb-3 min-h-[calc(100dvh-52px)] justify-between">
+        <main className="relative z-10 mx-auto flex w-full max-w-[1550px] flex-col px-4 sm:px-6 pt-2.5 pb-4 min-h-[calc(100dvh-64px)] justify-between">
           {/* HEADER STATUS BAR */}
-          <section className="mb-2 flex shrink-0 items-center justify-between gap-3">
+          <section className="mb-3 flex shrink-0 items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#19D98B]/30 bg-[#19D98B]/10">
-                <ShieldCheck className="h-4 w-4 text-[#19D98B]" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#00E5FF]/30 bg-[#00E5FF]/10 shadow-[0_0_12px_rgba(0,229,255,0.2)]">
+                <ShieldCheck className="h-4 w-4 text-[#00E5FF]" />
               </div>
               <div>
-                <h1 className="text-sm sm:text-base font-bold text-[#19D98B] leading-tight">Interview in Progress</h1>
-                <p className="text-[11px] text-[#A8B3BF]">Answer clearly and confidently. You're doing great!</p>
+                <h1 className="text-sm sm:text-base font-bold text-[#F5F7FA] leading-tight">Interview in Progress</h1>
+                <p className="text-[11px] text-[#A5AFBC]">Answer clearly and confidently. You're doing great!</p>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 rounded-xl border border-[#168BFF]/20 bg-[#091018] px-3 py-1 shadow-[0_0_15px_rgba(22,139,255,0.04)]">
-              <Clock3 className="h-4 w-4 text-[#22D3EE]" />
+
+            <div className="flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] px-3.5 py-1.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_8px_20px_rgba(0,0,0,0.4)]">
+              <Clock3 className="h-4 w-4 text-[#FF8A00]" />
               <div className="text-right">
-                <p className="text-[9px] uppercase tracking-wider text-[#74808C]">Total Time Left</p>
+                <p className="text-[9px] uppercase tracking-wider text-[#A5AFBC] font-medium">Total Time Left</p>
                 <p className="font-mono text-base font-bold text-[#F5F7FA] leading-none">{totalTimeLabel}</p>
               </div>
             </div>
@@ -3778,83 +4106,87 @@ const AIInterview = () => {
           {/* READINESS CHECK BEFORE Q1 OR ACTIVE INTERVIEW ROOM */}
           {round3State === 'waiting_for_ready' && !currentQuestion ? (
             <section className="grid min-h-[min(560px,calc(100vh-140px))] flex-1 place-items-center py-4">
-              <div className="w-full max-w-2xl rounded-3xl border border-[#168BFF]/25 bg-[#091018] p-6 sm:p-8 text-center shadow-[0_0_30px_rgba(22,139,255,0.06)]">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-[#168BFF]/35 bg-[#168BFF]/10 shadow-[0_0_20px_rgba(22,139,255,0.15)]">
-                  <Bot className="h-8 w-8 text-[#22D3EE]" />
-                </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[#55E6FF]">Final Round Readiness</p>
-                <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-[#F5F7FA]">Are you ready for the interview?</h1>
-                <p className="mx-auto mt-2.5 max-w-xl text-sm leading-relaxed text-[#A8B3BF]">
-                  The AI interviewer will listen to your voice. Say <span className="font-semibold text-white">yes, I am ready</span> when you are ready to begin.
-                </p>
+              <div className="relative overflow-hidden w-full max-w-2xl rounded-2xl border border-white/[0.08] bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-6 sm:p-8 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.06),0_16px_36px_rgba(0,0,0,0.6)] before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+                <div className="pointer-events-none absolute -top-12 -left-12 w-48 h-48 bg-[#00E5FF]/14 rounded-full blur-3xl" aria-hidden="true" />
+                <div className="pointer-events-none absolute -bottom-12 -right-12 w-48 h-48 bg-[#FF8A00]/14 rounded-full blur-3xl" aria-hidden="true" />
 
-                <div className="mx-auto mt-5 max-w-xl rounded-2xl border border-white/10 bg-[#04080D] p-4">
-                  <div className="flex items-center justify-center gap-2.5 text-[#55E6FF]">
-                    <Volume2 className="h-4 w-4" />
-                    <span className="font-semibold text-sm">
-                      {aiSpeaking ? 'AI is speaking...' : readinessListening ? 'Listening for your answer...' : 'Waiting for your response'}
-                    </span>
+                <div className="relative z-10">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#00E5FF]/30 bg-[#00E5FF]/10 text-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.2)]">
+                    <Bot className="h-8 w-8 text-[#00E5FF]" />
                   </div>
-                  {readinessTranscript && (
-                    <p className="mt-3 rounded-xl border border-white/10 bg-[#0B131B] p-2.5 text-left text-sm text-[#F5F7FA]">
-                      {readinessTranscript}
-                    </p>
-                  )}
-                </div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#00E5FF]">Final Round Readiness</p>
+                  <h1 className="mt-2 text-2xl sm:text-3xl font-bold tracking-tight text-[#F5F7FA]">Are you ready for the interview?</h1>
+                  <p className="mx-auto mt-2.5 max-w-xl text-sm leading-relaxed text-[#A5AFBC]">
+                    The AI interviewer will listen to your voice. Say <span className="font-semibold text-white">yes, I am ready</span> when you are ready to begin.
+                  </p>
 
-                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    type="button"
-                    onClick={startReadinessListening}
-                    disabled={aiSpeaking || loading || readinessListening}
-                    className="rounded-xl border border-[#168BFF]/40 bg-[#168BFF]/10 px-5 py-2.5 font-semibold text-sm text-[#55E6FF] transition hover:bg-[#168BFF]/20 disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_0_15px_rgba(22,139,255,0.1)]"
-                  >
-                    <Mic className="mr-2 inline h-4 w-4" />
-                    {readinessListening ? 'Listening...' : 'Answer Ready Check'}
-                  </button>
-                </div>
+                  <div className="mx-auto mt-5 max-w-xl rounded-xl border border-white/[0.08] bg-[#0A0F16]/80 p-4">
+                    <div className="flex items-center justify-center gap-2.5 text-[#00E5FF]">
+                      <Volume2 className="h-4 w-4" />
+                      <span className="font-semibold text-sm">
+                        {aiSpeaking ? 'AI is speaking...' : readinessListening ? 'Listening for your answer...' : 'Waiting for your response'}
+                      </span>
+                    </div>
+                    {readinessTranscript && (
+                      <p className="mt-3 rounded-xl border border-white/[0.06] bg-[#0A0F16] p-2.5 text-left text-sm text-[#F5F7FA]">
+                        {readinessTranscript}
+                      </p>
+                    )}
+                  </div>
 
-                {error && <p className="mt-3 text-xs text-[#FF4545]">{error}</p>}
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={startReadinessListening}
+                      disabled={aiSpeaking || loading || readinessListening}
+                      className="rounded-xl bg-gradient-to-r from-[#FF8A00] via-[#FF9D2E] to-[#D96A00] hover:from-[#FFA742] hover:via-[#FFB347] hover:to-[#E07200] px-6 py-3 font-bold text-sm text-black shadow-[0_4px_24px_rgba(255,138,0,0.38)] transition hover:-translate-y-0.5 hover:shadow-[0_6px_32px_rgba(255,138,0,0.55)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                    >
+                      <Mic className="mr-2 inline h-4 w-4" />
+                      {readinessListening ? 'Listening...' : 'Answer Ready Check'}
+                    </button>
+                  </div>
+
+                  {error && <p className="mt-3 text-xs text-[#FF4545]">{error}</p>}
+                </div>
               </div>
             </section>
           ) : (
             <>
               {/* ACTIVE INTERVIEW ROOM WORKSPACE */}
-              {/* TOP WORKSPACE: LEFT (CAMERA + AI + CURRENT QUESTION + YOUR ANSWER) & RIGHT (PROGRESS + TIPS) */}
               <section className="grid items-stretch gap-3.5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
                 {/* LEFT WORKSPACE */}
                 <div className="flex flex-col gap-3.5 min-w-0">
                   {/* TOP ROW: YOUR CAMERA & AI INTERVIEWER */}
                   <div className="grid gap-3.5 sm:grid-cols-2">
-                    {/* YOUR CAMERA */}
-                    <div className="flex flex-col h-[290px] rounded-2xl border border-[#168BFF]/25 hover:border-[#168BFF]/40 bg-[#0B131B] p-3.5 shadow-[0_0_20px_rgba(22,139,255,0.04)] transition-colors relative overflow-hidden">
-                      {/* Subtle warm amber edge highlight */}
-                      <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-[#FF9A2E]/5 blur-xl" aria-hidden="true" />
+                    {/* YOUR CAMERA CARD */}
+                    <div className="flex flex-col min-h-[300px] sm:h-[315px] lg:h-[325px] rounded-2xl border border-white/[0.08] hover:border-cyan-500/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_20px_rgba(0,191,255,0.04)] transition-all relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00BFFF]/50 before:via-[#0877B8]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+                      <div className="pointer-events-none absolute -top-8 -left-8 h-28 w-28 rounded-full bg-[#00BFFF]/12 blur-xl" aria-hidden="true" />
+                      <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-full bg-[#FF8A00]/12 blur-xl" aria-hidden="true" />
 
-                      <div className="mb-2 flex shrink-0 items-center justify-between">
-                        <h2 className="flex items-center gap-2 font-bold text-xs sm:text-sm text-[#F5F7FA]">
-                          <Camera className="h-4 w-4 text-[#22D3EE]" />
+                      <div className="mb-2.5 flex shrink-0 items-center justify-between relative z-10">
+                        <h2 className="flex items-center gap-2 font-bold text-xs sm:text-sm text-white">
+                          <Camera className="h-4 w-4 text-[#FF8A00]" />
                           Your Camera
                         </h2>
                         {cameraOn ? (
-                          <span className="flex items-center gap-1.5 rounded-full border border-[#FF4545]/30 bg-[#2A0808]/80 px-2.5 py-0.5 text-[11px] font-bold text-[#FF4545] shadow-[0_0_10px_rgba(255,69,69,0.25)]">
-                            <span className="h-2 w-2 rounded-full bg-[#FF4545] animate-pulse" />
+                          <span className="flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/15 px-2.5 py-0.5 text-[11px] font-bold text-red-400 shadow-[0_0_8px_rgba(239,68,68,0.3)]">
+                            <span className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
                             LIVE
                           </span>
                         ) : (
-                          <span className="rounded-full border border-[#FF4545]/20 bg-[#2A0808]/40 px-2 py-0.5 text-[11px] font-medium text-[#FF4545]/80">
+                          <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2.5 py-0.5 text-[11px] font-medium text-red-400">
                             OFF
                           </span>
                         )}
                       </div>
 
-                      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-[#04080D] border border-white/5">
+                      <div className="relative min-h-0 flex-1 overflow-hidden rounded-xl bg-black border border-white/[0.06]">
                         <video
                           ref={handleVideoElementRef}
                           autoPlay
                           playsInline
                           muted
-                          className={`absolute inset-0 h-full w-full object-cover object-[center_25%] ${cameraOn ? 'opacity-100' : 'opacity-0'}`}
+                          className={`absolute inset-0 h-full w-full object-cover object-[center_20%] ${cameraOn ? 'opacity-100' : 'opacity-0'}`}
                         />
                         {!cameraOn && (
                           <div className="absolute inset-0 flex flex-col items-center justify-center text-[#74808C]">
@@ -3865,7 +4197,7 @@ const AIInterview = () => {
                         <button
                           type="button"
                           onClick={handleFullscreenButton}
-                          className="absolute right-2.5 top-2.5 rounded-lg border border-white/10 bg-black/60 p-1.5 text-[#F5F7FA] backdrop-blur transition hover:bg-black/80 hover:text-white"
+                          className="absolute right-2.5 top-2.5 rounded-lg border border-white/10 bg-black/60 p-1.5 text-white backdrop-blur transition hover:bg-black/80 hover:text-cyan-300 cursor-pointer"
                           aria-label="Fullscreen camera"
                         >
                           <Expand className="h-3.5 w-3.5" />
@@ -3873,15 +4205,15 @@ const AIInterview = () => {
                         <div
                           className={`absolute left-2.5 top-2.5 flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold backdrop-blur shadow-sm ${
                             faceStatus === 'detected'
-                              ? 'border-[#168BFF]/30 bg-[#071019]/85 text-[#19D98B] shadow-[0_0_10px_rgba(25,217,139,0.15)]'
+                              ? 'border-[#19D98B]/30 bg-black/75 text-[#19D98B]'
                               : faceStatus === 'multiple'
-                                ? 'border-[#FF4545]/40 bg-[#071019]/85 text-[#FF4545] shadow-[0_0_10px_rgba(255,69,69,0.2)]'
+                                ? 'border-[#FF4545]/40 bg-black/75 text-[#FF4545]'
                                 : faceStatus === 'none'
-                                  ? 'border-[#FFB020]/40 bg-[#071019]/85 text-[#FFB020] shadow-[0_0_10px_rgba(255,176,32,0.15)]'
-                                  : 'border-[#168BFF]/25 bg-[#071019]/85 text-[#22D3EE]'
+                                  ? 'border-[#FFB020]/40 bg-black/75 text-[#FFB020]'
+                                  : 'border-white/10 bg-black/75 text-[#A5AFBC]'
                           }`}
                         >
-                          <ShieldCheck className="h-3 w-3 text-[#22D3EE]" />
+                          <ShieldCheck className="h-3 w-3" />
                           <span>
                             {faceStatus === 'detected'
                               ? 'Face Detected'
@@ -3894,17 +4226,17 @@ const AIInterview = () => {
                         </div>
                       </div>
 
-                      <div className="mt-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 text-xs font-medium">
+                      <div className="mt-2.5 flex shrink-0 flex-wrap items-center justify-between gap-2 px-1 text-xs font-medium relative z-10">
                         <div className="flex items-center gap-1.5">
                           <span className={`h-2 w-2 rounded-full ${cameraOn ? 'bg-[#19D98B] shadow-[0_0_8px_rgba(25,217,139,0.5)]' : 'bg-[#FF4545]'}`} />
-                          <span className="text-[#D7DEE6]">Camera: <strong className={cameraOn ? 'text-[#19D98B]' : 'text-[#FF4545]'}>{cameraOn ? 'On' : 'Off'}</strong></span>
+                          <span className="text-[#A5AFBC]">Camera: <strong className={cameraOn ? 'text-[#19D98B]' : 'text-[#FF4545]'}>{cameraOn ? 'On' : 'Off'}</strong></span>
                         </div>
                         <div className="flex items-center gap-1.5">
                           <span className={`h-2 w-2 rounded-full ${micAvailable ? 'bg-[#19D98B] shadow-[0_0_8px_rgba(25,217,139,0.5)]' : 'bg-[#FF4545]'}`} />
-                          <span className="text-[#D7DEE6]">Mic: <strong className={micAvailable ? 'text-[#19D98B]' : 'text-[#FF4545]'}>{micAvailable ? 'Active' : 'Off'}</strong></span>
+                          <span className="text-[#A5AFBC]">Mic: <strong className={micAvailable ? 'text-[#19D98B]' : 'text-[#FF4545]'}>{micAvailable ? 'Active' : 'Off'}</strong></span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[#74808C]">Face:</span>
+                          <span className="text-[#687483]">Face:</span>
                           <span className={`font-semibold ${faceStatus === 'detected' ? 'text-[#19D98B]' : faceStatus === 'multiple' ? 'text-[#FF4545]' : 'text-[#FFB020]'}`}>
                             {faceStatus === 'detected' ? 'Detected' : faceStatus === 'multiple' ? 'Multiple' : faceStatus === 'none' ? 'Not detected' : 'Checking'}
                           </span>
@@ -3913,7 +4245,7 @@ const AIInterview = () => {
                           {[6, 14, 18, 11, 16, 9, 14, 6].map((h, idx) => (
                             <span
                               key={idx}
-                              className={`w-0.5 rounded-full transition-all duration-150 ${micAvailable ? 'bg-[#22D3EE]' : 'bg-[#74808C]'}`}
+                              className={`w-0.5 rounded-full transition-all duration-150 ${micAvailable ? 'bg-[#00E5FF]' : 'bg-white/20'}`}
                               style={{ height: `${micAvailable ? h : 3}px` }}
                             />
                           ))}
@@ -3921,31 +4253,30 @@ const AIInterview = () => {
                       </div>
                     </div>
 
-                    {/* AI INTERVIEWER */}
-                    <div className="relative flex flex-col h-[290px] items-center justify-between overflow-hidden rounded-2xl border border-[#168BFF]/25 hover:border-[#168BFF]/40 bg-[radial-gradient(ellipse_at_50%_45%,rgba(22,139,255,0.08)_0%,rgba(34,211,238,0.03)_35%,rgba(255,154,46,0.02)_60%,#0B131B_85%)] p-3.5 text-center shadow-[0_0_20px_rgba(22,139,255,0.05),0_0_12px_rgba(255,154,46,0.02)] transition-colors">
-                      {/* Subtle warm amber corner highlight */}
-                      <div className="pointer-events-none absolute -top-8 -left-8 h-24 w-24 rounded-full bg-[#FF9A2E]/5 blur-xl" aria-hidden="true" />
+                    {/* AI INTERVIEWER CARD */}
+                    <div className="relative flex flex-col min-h-[300px] sm:h-[315px] lg:h-[325px] items-center justify-between overflow-hidden rounded-2xl border border-white/[0.08] hover:border-cyan-500/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 text-center shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_20px_rgba(0,191,255,0.04)] transition-all before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00BFFF]/50 before:via-[#0877B8]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+                      <div className="pointer-events-none absolute -top-8 -left-8 h-28 w-28 rounded-full bg-[#00BFFF]/15 blur-xl" aria-hidden="true" />
+                      <div className="pointer-events-none absolute -bottom-8 -right-8 h-28 w-28 rounded-full bg-[#FF8A00]/15 blur-xl" aria-hidden="true" />
 
-                      <div className="flex w-full shrink-0 items-center justify-between font-bold text-xs sm:text-sm text-[#F5F7FA]">
+                      <div className="flex w-full shrink-0 items-center justify-between font-bold text-xs sm:text-sm text-white relative z-10">
                         <div className="flex items-center gap-2">
-                          <Bot className="h-4 w-4 text-[#22D3EE]" />
+                          <Bot className="h-4 w-4 text-[#00E5FF]" />
                           <span>AI Interviewer</span>
                         </div>
-                        <span className="flex items-center gap-1.5 rounded-full border border-[#168BFF]/35 bg-[#071019] px-2.5 py-0.5 text-[11px] font-bold text-[#F5F7FA] shadow-[0_0_10px_rgba(22,139,255,0.12)]">
-                          <span className="h-1.5 w-1.5 rounded-full bg-[#FF9A2E] shadow-[0_0_5px_#FF9A2E]" />
+                        <span className="flex items-center gap-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 px-2.5 py-0.5 text-[11px] font-medium text-[#00E5FF]">
+                          <span className="h-1.5 w-1.5 rounded-full bg-[#00E5FF]" />
                           Round 3
                         </span>
                       </div>
 
                       <div className="relative flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden">
-                        {/* Futuristic waveforms flanking the robot: left = cyan/blue dominant, right = blue + subtle amber */}
-                        <div className="pointer-events-none absolute inset-x-2 top-1/2 flex -translate-y-1/2 items-center justify-between opacity-80" aria-hidden="true">
-                          {/* Left waveform cluster (cyan/blue dominant) */}
+                        <div className="pointer-events-none absolute inset-x-2 top-1/2 flex -translate-y-1/2 items-center justify-between opacity-90" aria-hidden="true">
+                          {/* Left waveform cluster — Blue/Cyan */}
                           <div className="flex items-center gap-1">
                             {[12, 22, 34, 18, 28, 40, 24, 36, 16, 8].map((h, i) => (
                               <span
                                 key={`l-${i}`}
-                                className={`w-1 rounded-full bg-gradient-to-t from-[#168BFF] via-[#2196F3] to-[#22D3EE] ${aiSpeaking ? 'mockmind-orange-wave-bar' : 'opacity-40'}`}
+                                className={`w-1 rounded-full bg-gradient-to-t from-[#00BFFF]/30 via-[#00E5FF] to-[#08C8FF] ${aiSpeaking ? 'mockmind-orange-wave-bar' : 'opacity-40'}`}
                                 style={{
                                   height: `${h}px`,
                                   animationDelay: `${(i % 5) * 0.08}s`,
@@ -3953,12 +4284,12 @@ const AIInterview = () => {
                               />
                             ))}
                           </div>
-                          {/* Right waveform cluster (blue + subtle amber) */}
+                          {/* Right waveform cluster — Orange/Amber — clearly visible per Reference #4 */}
                           <div className="flex items-center gap-1">
                             {[8, 16, 36, 24, 40, 28, 18, 34, 22, 12].map((h, i) => (
                               <span
                                 key={`r-${i}`}
-                                className={`w-1 rounded-full bg-gradient-to-t from-[#168BFF] via-[#2AA7FF] to-[#FF9A2E] ${aiSpeaking ? 'mockmind-orange-wave-bar' : 'opacity-40'}`}
+                                className={`w-1 rounded-full bg-gradient-to-t from-[#FF8A00]/30 via-[#FF9D2E] to-[#FFB347] ${aiSpeaking ? 'mockmind-orange-wave-bar' : 'opacity-50'}`}
                                 style={{
                                   height: `${h}px`,
                                   animationDelay: `${(i % 5) * 0.08}s`,
@@ -3974,103 +4305,103 @@ const AIInterview = () => {
                         </div>
                       </div>
 
-                      {/* Reference box: Listen carefully and answer when you're ready */}
-                      <div className="shrink-0 w-full rounded-xl border border-[#168BFF]/25 bg-[#071019]/90 px-4 py-2 text-center text-xs sm:text-[13px] font-medium text-[#D7DEE6] shadow-[0_0_12px_rgba(22,139,255,0.04)]">
+                      {/* Reference box */}
+                      <div className="shrink-0 w-full rounded-xl border border-white/[0.08] bg-[#0A0F16]/90 px-4 py-2 text-center text-xs sm:text-[13px] font-medium text-[#A5AFBC] relative z-10">
                         {aiSpeaking ? '🔊 AI is speaking...' : "Listen carefully and answer when you're ready."}
                       </div>
 
-                      {/* 5 Subtle Dots */}
-                      <div className="flex items-center justify-center gap-1.5 pt-1" aria-hidden="true">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#168BFF] shadow-[0_0_6px_#168BFF]"></span>
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#2196F3]/80"></span>
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE]/70"></span>
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#2AA7FF]/50"></span>
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#FF9A2E]/50"></span>
+                      {/* 5 Subtle Dots — Cyan, Sky, Blue, Orange, Amber */}
+                      <div className="flex items-center justify-center gap-1.5 pt-1 relative z-10" aria-hidden="true">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#00E5FF]"></span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#08C8FF]"></span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#159FE8]"></span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#FF8A00]"></span>
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#FFB347]"></span>
                       </div>
                     </div>
                   </div>
 
-                  {/* CURRENT QUESTION */}
-                  <section className="rounded-2xl border border-[#168BFF]/25 hover:border-[#168BFF]/40 bg-[#0B131B] p-4 shadow-[0_0_20px_rgba(22,139,255,0.04)] transition-colors relative overflow-hidden">
-                    {/* Subtle warm amber ambient edge glow */}
-                    <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-[#FF9A2E]/5 blur-xl" aria-hidden="true" />
+                  {/* CURRENT QUESTION CARD */}
+                  <section className="rounded-2xl border border-white/[0.08] hover:border-[#FF8A00]/35 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 sm:p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_24px_rgba(255,138,0,0.08)] transition-all relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00BFFF]/50 before:via-[#0877B8]/15 before:to-[#FF8A00]/50 before:pointer-events-none before:z-10">
+                    <div className="pointer-events-none absolute -top-8 -right-8 h-28 w-28 rounded-full bg-[#FF8A00]/15 blur-xl" aria-hidden="true" />
+                    <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-[#00BFFF]/10 blur-xl" aria-hidden="true" />
 
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-[#F5F7FA]">
-                        <CircleHelp className="h-4 w-4 text-[#22D3EE]" />
+                    <div className="flex items-center justify-between gap-2 relative z-10">
+                      <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-white">
+                        <CircleHelp className="h-4 w-4 text-[#FF8A00]" />
                         <span>Current Question</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full border border-[#168BFF]/35 bg-[#071019] px-3 py-0.5 text-xs font-bold text-[#22D3EE] shadow-[0_0_10px_rgba(22,139,255,0.12)]">
+                        <span className="rounded-full border border-[#FF8A00]/40 bg-[#FF8A00]/15 px-3 py-0.5 text-xs font-bold text-[#FF9D2E] shadow-[0_0_10px_rgba(255,138,0,0.2)]">
                           Question {currentQuestionIndex + 1} of {totalQuestions}
                         </span>
                         {interviewTypeLabel && (
-                          <span className="hidden sm:inline-block rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-medium text-[#A8B3BF]">
+                          <span className="hidden sm:inline-block rounded-full border border-white/[0.08] bg-white/[0.03] px-2.5 py-0.5 text-xs font-medium text-[#A5AFBC]">
                             {interviewTypeLabel}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <p className="mt-2.5 break-words text-base sm:text-lg lg:text-xl font-bold leading-relaxed text-[#F5F7FA]">
+                    <p className="mt-2.5 break-words text-lg sm:text-xl lg:text-[22px] font-bold leading-relaxed text-[#F5F7FA] tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] relative z-10">
                       {currentQuestion}
                     </p>
 
                     {/* QUESTION TIP ROW & REPLAY */}
-                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-[#FF9A2E]/20 bg-[#071019] px-3.5 py-2 text-xs sm:text-[13px] text-[#D7DEE6] shadow-[inset_0_1px_10px_rgba(255,154,46,0.02)]">
-                        <Lightbulb className="h-4 w-4 shrink-0 text-[#FF9A2E]" />
+                    <div className="mt-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 relative z-10">
+                      <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-[#FF8A00]/35 bg-[#0A0F16]/90 px-3.5 py-2 text-xs sm:text-[13px] text-[#F5F7FA] shadow-[0_0_16px_rgba(255,138,0,0.06)]">
+                        <CheckCircle2 className="w-4 h-4 shrink-0 text-[#FF8A00]" />
                         <div>
-                          <strong className="text-[#FF9A2E]">Tip: </strong>
+                          <strong className="text-[#FF8A00] font-bold">Tip: </strong>
                           <span>Structure your thoughts clearly. State your approach, then give a concise example.</span>
                         </div>
                       </div>
                       <button
                         type="button"
                         onClick={replayQuestion}
-                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#168BFF]/30 bg-[#071019] px-3.5 py-2 text-xs font-semibold text-[#22D3EE] transition hover:bg-[#168BFF]/15 hover:border-[#168BFF]/60 shadow-[0_0_10px_rgba(22,139,255,0.08)]"
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/[0.14] bg-[#0D131B] px-3.5 py-2 text-xs font-semibold text-[#F5F7FA] hover:border-[#FF8A00]/50 hover:bg-[#FF8A00]/10 hover:shadow-[0_0_15px_rgba(255,138,0,0.25)] transition cursor-pointer"
                       >
-                        <RotateCcw className="h-3.5 w-3.5 text-[#22D3EE]" />
+                        <RotateCcw className="h-3.5 w-3.5 text-[#FF8A00]" />
                         <span>Replay Question</span>
                       </button>
                     </div>
                   </section>
 
-                  {/* YOUR ANSWER / VOICE-TO-TEXT (SPLIT: LEFT = LISTENING/WAVEFORM, RIGHT = LIVE TRANSCRIPT) */}
-                  <section className="rounded-2xl border border-[#168BFF]/25 hover:border-[#168BFF]/35 bg-[#0B131B] p-4 shadow-[0_0_20px_rgba(22,139,255,0.04)] transition-colors relative overflow-hidden">
-                    {/* Subtle warm amber ambient accent */}
-                    <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-[#FF9A2E]/4 blur-xl" aria-hidden="true" />
+                  {/* YOUR ANSWER / VOICE-TO-TEXT */}
+                  <section className="rounded-2xl border border-white/[0.08] hover:border-[#00E5FF]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 sm:p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_20px_rgba(0,229,255,0.04)] transition-all relative overflow-hidden before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/50 before:via-[#08C8FF]/15 before:to-[#FF8A00]/40 before:pointer-events-none before:z-10">
+                    <div className="pointer-events-none absolute -bottom-8 -left-8 h-28 w-28 rounded-full bg-[#00E5FF]/12 blur-xl" aria-hidden="true" />
+                    <div className="pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-[#FF8A00]/10 blur-xl" aria-hidden="true" />
 
-                    <div className="mb-3 flex items-center justify-between">
+                    <div className="mb-3 flex items-center justify-between relative z-10">
                       <h2 className="flex items-center gap-2 font-bold text-xs sm:text-sm text-[#F5F7FA]">
-                        <Mic className="h-4 w-4 text-[#22D3EE]" />
+                        <Mic className="h-4 w-4 text-[#00E5FF]" />
                         Your Answer
                       </h2>
-                      <span className="flex items-center gap-1.5 rounded-full border border-[#168BFF]/30 bg-[#071019] px-3 py-0.5 text-xs font-bold text-[#22D3EE] shadow-[0_0_10px_rgba(22,139,255,0.1)]">
-                        <Mic className="h-3.5 w-3.5" />
+                      <span className="flex items-center gap-1.5 rounded-full border border-[#00E5FF]/30 bg-[#071019]/90 px-3 py-0.5 text-xs font-medium text-[#A5AFBC] shadow-[0_0_10px_rgba(0,229,255,0.1)]">
+                        <Mic className="h-3.5 w-3.5 text-[#00E5FF]" />
                         Voice-to-Text Enabled
                       </span>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="grid gap-3 sm:grid-cols-[220px_minmax(0,1fr)] relative z-10">
                       {/* LEFT: MIC BUTTON, STATUS, WAVEFORM */}
-                      <div className="flex flex-col justify-between rounded-xl border border-[#168BFF]/20 bg-[#071019] p-3 shadow-[0_0_15px_rgba(22,139,255,0.03)]">
+                      <div className="flex flex-col justify-between rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3.5">
                         <div className="flex items-center gap-3">
                           <button
                             type="button"
                             onClick={toggleVoiceRecording}
                             disabled={!voiceSupported || loading || aiSpeaking}
-                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition ${
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border transition cursor-pointer ${
                               recording
-                                ? 'border-[#FF4545] bg-[#FF4545]/20 text-[#FF4545] shadow-[0_0_20px_rgba(255,69,69,0.4)] animate-pulse'
-                                : 'border-[#168BFF]/50 bg-[#168BFF]/15 text-[#22D3EE] hover:bg-[#168BFF]/25 shadow-[0_0_15px_rgba(22,139,255,0.2)]'
+                                ? 'border-[#FF4545] bg-[#FF4545]/20 text-[#FF4545] shadow-[0_0_24px_rgba(255,69,69,0.5)] animate-pulse'
+                                : 'border-[#00E5FF]/50 bg-[#00E5FF]/15 text-[#00E5FF] hover:bg-[#00E5FF]/25 shadow-[0_0_20px_rgba(0,229,255,0.3)]'
                             } disabled:cursor-not-allowed disabled:opacity-40`}
                             aria-label={recording ? 'Stop answering' : 'Start voice answer'}
                           >
                             {recording ? (
                               <Square className="h-5 w-5 fill-current text-[#FF4545]" />
                             ) : (
-                              <Mic className="h-5 w-5 text-[#22D3EE]" />
+                              <Mic className="h-5 w-5 text-[#00E5FF]" />
                             )}
                           </button>
 
@@ -4078,21 +4409,21 @@ const AIInterview = () => {
                             <p className="font-bold text-xs sm:text-sm text-[#F5F7FA]">
                               {recording ? 'Listening...' : voiceTranscript ? 'Answer captured' : 'Ready for answer'}
                             </p>
-                            <p className="text-[11px] text-[#A8B3BF] truncate">
+                            <p className="text-[11px] text-[#A5AFBC] truncate">
                               {recording ? 'Speak now clearly' : voiceTranscript ? 'Voice captured' : 'Click mic to answer'}
                             </p>
                           </div>
                         </div>
 
-                        {/* WAVEFORM */}
-                        <div className="mt-3 flex h-7 items-center justify-center gap-1 rounded-lg bg-[#04080D] px-2.5 border border-white/5" aria-hidden="true">
+                        {/* WAVEFORM — Blue/cyan with orange accents */}
+                        <div className="mt-3 flex h-7 items-center justify-center gap-1 rounded-lg bg-[#071019] px-2.5 border border-white/5" aria-hidden="true">
                           {Array.from({ length: 24 }).map((_, i) => (
                             <span
                               key={i}
                               className={`w-0.5 rounded-full ${
                                 recording
-                                  ? 'mockmind-orange-wave-bar bg-gradient-to-t from-[#168BFF] via-[#22D3EE] to-[#FF9A2E]'
-                                  : 'bg-[#168BFF]/25'
+                                  ? 'mockmind-orange-wave-bar bg-gradient-to-t from-[#00E5FF] via-[#08C8FF] to-[#FF8A00]'
+                                  : 'bg-white/20'
                               }`}
                               style={{
                                 height: `${5 + ((i * 7) % 18)}px`,
@@ -4104,10 +4435,10 @@ const AIInterview = () => {
                       </div>
 
                       {/* RIGHT: LIVE TRANSCRIPT */}
-                      <div className="flex flex-col min-h-[105px] rounded-xl border border-[#168BFF]/20 bg-[#071019] p-3 shadow-[0_0_15px_rgba(22,139,255,0.03)]">
-                        <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#A8B3BF]">
+                      <div className="flex flex-col min-h-[105px] rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-3.5">
+                        <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#A5AFBC]">
                           <span className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#22D3EE]" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#00E5FF]" />
                             Live Transcript
                           </span>
                           {voiceTranscript && (
@@ -4122,43 +4453,52 @@ const AIInterview = () => {
                             {voiceTranscript}
                           </div>
                         ) : (
-                          <div className="flex flex-1 items-center justify-center text-center text-xs sm:text-[13px] text-[#74808C] italic">
+                          <div className="flex flex-1 items-center justify-center text-center text-xs sm:text-[13px] text-[#687483] italic">
                             Your voice response will transcribe here in real time...
                           </div>
                         )}
                       </div>
                     </div>
 
-                    {error && <p className="mt-1.5 text-center text-xs text-[#FF4545]">{error}</p>}
+                    {error && <p className="mt-2 text-center text-xs text-[#FF4545] relative z-10">{error}</p>}
                   </section>
                 </div>
 
                 {/* RIGHT WORKSPACE: PROGRESS + TIPS */}
                 <div className="flex flex-col gap-3.5 min-w-0 h-full">
-                  {/* INTERVIEW PROGRESS (FIXED HEIGHT CARD WITH INTERNAL AUTO-SCROLL) */}
-                  <div className="flex h-[390px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[#168BFF]/25 bg-[#0B131B] p-4 shadow-[0_0_20px_rgba(22,139,255,0.04)]">
+                  {/* INTERVIEW PROGRESS */}
+                  <div className="flex h-[390px] shrink-0 flex-col overflow-hidden rounded-2xl border border-white/[0.08] hover:border-[#00E5FF]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 sm:p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_20px_rgba(0,229,255,0.04)] transition-all before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/50 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10 relative">
                     <div className="flex shrink-0 items-center justify-between">
                       <h2 className="font-bold text-xs sm:text-sm text-[#F5F7FA]">Interview Progress</h2>
-                      <span className="rounded-full border border-[#168BFF]/35 bg-[#071019] px-2.5 py-0.5 text-[11px] font-bold text-[#22D3EE] shadow-[0_0_10px_rgba(22,139,255,0.12)]">
-                        {Math.round(((currentQuestionIndex) / totalQuestions) * 100)}%
-                      </span>
+                      <div className="flex items-center gap-1.5 rounded-full border border-[#00E5FF]/35 bg-[#0A0F16]/90 px-3 py-1 shadow-[0_0_14px_rgba(0,229,255,0.22)] mockmind-badge-pulse">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[#FF8A00] animate-pulse" />
+                        <span className="text-xs font-bold text-[#00E5FF] tracking-tight">
+                          {Math.round(((currentQuestionIndex) / totalQuestions) * 100)}%
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Circular Progress Indicator */}
-                    <div className="relative mx-auto my-2.5 flex h-24 w-24 shrink-0 items-center justify-center">
-                      <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
+                    {/* Circular Progress Indicator with Dark Oceanic / Futuristic Styling */}
+                    <div className="relative mx-auto my-2 flex h-24 w-24 shrink-0 items-center justify-center rounded-full shadow-[0_0_24px_rgba(0,229,255,0.2)]">
+                      {/* Subtle pulse ring */}
+                      <div className="absolute inset-0 rounded-full bg-[#00E5FF]/5 mockmind-ring-pulse pointer-events-none" />
+                      <svg className="h-full w-full -rotate-90 relative z-10" viewBox="0 0 100 100">
                         <defs>
-                          <linearGradient id="mockmindBlueProgress" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stopColor="#168BFF" />
-                            <stop offset="80%" stopColor="#22D3EE" />
-                            <stop offset="100%" stopColor="#FF9A2E" />
+                          <linearGradient id="mockmindOceanProgress" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#00E5FF" />
+                            <stop offset="45%" stopColor="#08C8FF" />
+                            <stop offset="80%" stopColor="#FF8A00" />
+                            <stop offset="100%" stopColor="#FF9D2E" />
                           </linearGradient>
+                          <filter id="glowProgress" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="0" stdDeviation="2.5" floodColor="#FF8A00" floodOpacity="0.4" />
+                          </filter>
                         </defs>
                         <circle
                           cx="50"
                           cy="50"
                           r="38"
-                          stroke="rgba(22, 139, 255, 0.12)"
+                          stroke="rgba(255, 255, 255, 0.06)"
                           strokeWidth="6"
                           fill="none"
                         />
@@ -4166,25 +4506,26 @@ const AIInterview = () => {
                           cx="50"
                           cy="50"
                           r="38"
-                          stroke="url(#mockmindBlueProgress)"
+                          stroke="url(#mockmindOceanProgress)"
                           strokeWidth="6"
                           strokeDasharray={238.76}
                           strokeDashoffset={238.76 - (238.76 * (currentQuestionIndex + 1)) / totalQuestions}
                           strokeLinecap="round"
                           fill="none"
+                          filter="url(#glowProgress)"
                           className="transition-all duration-500 ease-out"
                         />
                       </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <p className="text-lg font-extrabold text-[#F5F7FA] leading-none">{currentQuestionIndex + 1} / {totalQuestions}</p>
-                        <p className="text-[10px] uppercase tracking-wider text-[#A8B3BF] mt-1 font-medium">Questions</p>
+                      <div className="absolute inset-2 rounded-full bg-[#071019] border border-white/[0.08] flex flex-col items-center justify-center text-center shadow-inner z-20">
+                        <p className="text-base font-extrabold text-[#F5F7FA] leading-none">{currentQuestionIndex + 1} / {totalQuestions}</p>
+                        <p className="text-[9px] uppercase tracking-wider text-[#A5AFBC] mt-0.5 font-medium">Questions</p>
                       </div>
                     </div>
 
                     {/* Questions list title */}
-                    <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#A8B3BF]">
+                    <div className="mb-1.5 flex items-center justify-between text-xs font-semibold text-[#A5AFBC]">
                       <span>Questions</span>
-                      <span className="text-[#74808C]">{currentQuestionIndex + 1} of {totalQuestions}</span>
+                      <span className="text-[#687483]">{currentQuestionIndex + 1} of {totalQuestions}</span>
                     </div>
 
                     {/* Questions scrollable list (Internal scroll only, auto-scrolls to active question) */}
@@ -4202,29 +4543,29 @@ const AIInterview = () => {
                             ref={isActive ? activeQuestionRef : null}
                             className={`flex items-center gap-2.5 rounded-xl border px-3 py-1.5 transition-colors ${
                               isActive
-                                ? 'border-[#168BFF] bg-[#168BFF]/15 shadow-[0_0_12px_rgba(22,139,255,0.15)]'
+                                ? 'border-[#FF8A00]/50 bg-[#FF8A00]/15 shadow-[0_0_12px_rgba(255,138,0,0.25)]'
                                 : isCompleted
                                   ? 'border-[#19D98B]/20 bg-[#19D98B]/5'
-                                  : 'border-white/5 bg-[#091018]/60'
+                                  : 'border-white/5 bg-[#0A0F16]/60'
                             }`}
                           >
                             {isCompleted ? (
                               <CircleCheck className="h-4 w-4 shrink-0 text-[#19D98B]" />
                             ) : isActive ? (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#FFB84D] to-[#FF9A2E] text-[10px] font-bold text-black shadow-[0_0_8px_rgba(255,154,46,0.35)]">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FF8A00] to-[#FF9D2E] text-[10px] font-black text-black shadow-[0_0_8px_rgba(255,138,0,0.5)]">
                                 {i + 1}
                               </span>
                             ) : (
-                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/10 text-[10px] text-[#74808C]">
+                              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/10 text-[10px] text-[#687483]">
                                 {i + 1}
                               </span>
                             )}
 
                             <div className="min-w-0 flex-1">
-                              <p className={`text-xs ${isActive ? 'font-bold text-[#F5F7FA]' : isCompleted ? 'text-[#D7DEE6]' : 'text-[#74808C]'}`}>
+                              <p className={`text-xs ${isActive ? 'font-bold text-[#F5F7FA]' : isCompleted ? 'text-[#A5AFBC]' : 'text-[#687483]'}`}>
                                 Question {i + 1}
                               </p>
-                              <p className={`text-[10px] ${isActive ? 'text-[#FF9A2E] font-medium' : isCompleted ? 'text-[#19D98B]/80' : 'text-[#74808C]'}`}>
+                              <p className={`text-[10px] ${isActive ? 'text-[#FF8A00] font-semibold' : isCompleted ? 'text-[#19D98B]/80' : 'text-[#687483]'}`}>
                                 {isActive ? 'In Progress' : isCompleted ? 'Completed' : 'Pending'}
                               </p>
                             </div>
@@ -4234,19 +4575,19 @@ const AIInterview = () => {
                     </div>
 
                     {/* Answer Time */}
-                    <div className="mt-2.5 shrink-0 rounded-xl border border-[#168BFF]/20 bg-[#071019] p-2.5">
-                      <div className="flex items-center justify-between text-xs text-[#A8B3BF]">
+                    <div className="mt-2.5 shrink-0 rounded-xl border border-white/[0.06] bg-[#0A0F16]/80 p-2.5">
+                      <div className="flex items-center justify-between text-xs text-[#A5AFBC]">
                         <span className="flex items-center gap-1.5 font-semibold text-[11px]">
-                          <Clock3 className="h-3.5 w-3.5 text-[#22D3EE]" />
+                          <Clock3 className="h-3.5 w-3.5 text-[#00E5FF]" />
                           Answer Time
                         </span>
-                        <span className="font-mono font-bold text-xs text-[#22D3EE]">
-                          {formatTime(timeLeft)} <span className="text-[10px] font-normal text-[#74808C]">/ 01:00</span>
+                        <span className="font-mono font-bold text-xs text-[#FF8A00]">
+                          {formatTime(timeLeft)} <span className="text-[10px] font-normal text-[#687483]">/ 01:00</span>
                         </span>
                       </div>
                       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
                         <div
-                          className="h-full rounded-full bg-gradient-to-r from-[#168BFF] via-[#22D3EE] to-[#FF9A2E] transition-all duration-300 shadow-[0_0_8px_rgba(34,211,238,0.4)]"
+                          className="h-full rounded-full bg-gradient-to-r from-[#00E5FF] via-[#08C8FF] to-[#FF8A00] transition-all duration-300 shadow-[0_0_8px_rgba(255,138,0,0.4)]"
                           style={{ width: `${answerProgress}%` }}
                         />
                       </div>
@@ -4254,47 +4595,43 @@ const AIInterview = () => {
                   </div>
 
                   {/* TIPS FOR A GREAT ANSWER (RESPONSIVE FLEXIBLE HEIGHT) */}
-                  <div className="relative overflow-hidden rounded-2xl border border-[#168BFF]/25 bg-[#0B131B] p-4 shadow-[0_0_20px_rgba(22,139,255,0.04)] flex-1 min-h-[185px] flex flex-col justify-between">
-                    {/* Subtle cyan/blue dotted technology pattern */}
-                    <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[radial-gradient(#168BFF_1px,transparent_1px)] [background-size:12px_12px]" aria-hidden="true" />
+                  <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-[#FF8A00]/30 bg-gradient-to-b from-[#101720] via-[#0D131B] to-[#0A0F16] p-4 sm:p-5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.08),0_14px_32px_rgba(0,0,0,0.65),0_0_20px_rgba(0,229,255,0.04)] flex-1 min-h-[185px] flex flex-col justify-start gap-2 before:absolute before:inset-x-0 before:top-0 before:h-[1px] before:bg-gradient-to-r before:from-[#00E5FF]/45 before:via-[#08C8FF]/15 before:to-[#FF8A00]/45 before:pointer-events-none before:z-10">
+                    <div className="pointer-events-none absolute inset-0 opacity-12 bg-[radial-gradient(#00E5FF_1px,transparent_1px)] [background-size:14px_14px]" aria-hidden="true" />
 
-                    {/* Subtle decorative flowing wave in corner behind content */}
-                    <svg className="pointer-events-none absolute -bottom-2 -right-2 h-36 w-48 opacity-25" viewBox="0 0 200 120" fill="none" aria-hidden="true">
+                    {/* Flowing Cyan + Orange decorative wave — Orange wave clearly visible near lower/right per Section 26 */}
+                    <svg className="pointer-events-none absolute -bottom-2 -right-2 h-36 w-48 opacity-45" viewBox="0 0 200 120" fill="none" aria-hidden="true">
                       <defs>
-                        <linearGradient id="mockmindTipsWaveBlue" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#18D5FF" stopOpacity="0" />
-                          <stop offset="50%" stopColor="#168BFF" stopOpacity="0.8" />
-                          <stop offset="100%" stopColor="#22D3EE" stopOpacity="0.4" />
-                        </linearGradient>
-                        <linearGradient id="mockmindTipsWaveAmber" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#FF9A2E" stopOpacity="0" />
-                          <stop offset="60%" stopColor="#FF9A2E" stopOpacity="0.6" />
-                          <stop offset="100%" stopColor="#FFB84D" stopOpacity="0" />
+                        <linearGradient id="mockmindTipsWaveDual" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#00E5FF" stopOpacity="0" />
+                          <stop offset="35%" stopColor="#00E5FF" stopOpacity="0.45" />
+                          <stop offset="70%" stopColor="#FF8A00" stopOpacity="0.85" />
+                          <stop offset="100%" stopColor="#FF9D2E" stopOpacity="0.95" />
                         </linearGradient>
                       </defs>
-                      <path d="M0,80 Q50,40 100,70 T200,45" stroke="url(#mockmindTipsWaveBlue)" strokeWidth="2" />
-                      <path d="M0,95 Q60,60 120,85 T200,65" stroke="url(#mockmindTipsWaveAmber)" strokeWidth="1.5" />
+                      <path d="M0,80 Q50,40 100,70 T200,45" stroke="url(#mockmindTipsWaveDual)" strokeWidth="2.5" />
+                      <path d="M0,95 Q60,60 120,85 T200,65" stroke="url(#mockmindTipsWaveDual)" strokeWidth="1.8" />
                     </svg>
 
-                    <div className="pointer-events-none absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-gradient-to-tl from-[#22D3EE]/15 via-[#168BFF]/10 to-[#FF9A2E]/5 blur-xl" aria-hidden="true" />
+                    <div className="pointer-events-none absolute -right-6 -bottom-6 h-32 w-32 rounded-full bg-[#FF8A00]/15 blur-xl" aria-hidden="true" />
+                    <div className="pointer-events-none absolute -left-6 -top-6 h-28 w-28 rounded-full bg-[#00E5FF]/10 blur-xl" aria-hidden="true" />
                     
-                    {/* Reference decorative "Good Luck!" stamp */}
-                    <div className="pointer-events-none absolute right-3 bottom-3 flex flex-col items-center justify-center rounded-xl border border-[#168BFF]/25 bg-[#071019]/85 px-3 py-1.5 backdrop-blur-sm shadow-[0_0_15px_rgba(22,139,255,0.1)] select-none" aria-hidden="true">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#22D3EE] leading-none">GOOD</span>
-                      <span className="text-[13px] font-black uppercase tracking-wider text-[#FF9A2E] leading-tight">LUCK!</span>
+                    {/* Decorative "Good Luck!" stamp */}
+                    <div className="pointer-events-none absolute right-3 bottom-3 flex flex-col items-center justify-center rounded-xl border border-white/[0.08] bg-[#0A0F16]/90 px-3 py-1.5 backdrop-blur-sm shadow-sm select-none" aria-hidden="true">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#A5AFBC] leading-none">GOOD</span>
+                      <span className="text-[13px] font-black uppercase tracking-wider text-[#FF8A00] leading-tight">LUCK!</span>
                     </div>
 
                     <div className="relative z-10">
                       <div className="mb-2.5 flex items-center gap-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-[#168BFF]/35 bg-[#168BFF]/15 shadow-[0_0_10px_rgba(22,139,255,0.15)]">
-                          <Lightbulb className="h-3.5 w-3.5 text-[#22D3EE]" />
+                        <div className="flex h-6 w-6 items-center justify-center rounded-lg border border-[#FF8A00]/30 bg-[#FF8A00]/10 shadow-[0_0_10px_rgba(255,138,0,0.25)]">
+                          <Lightbulb className="h-3.5 w-3.5 text-[#FF8A00]" />
                         </div>
                         <h2 className="font-bold text-xs sm:text-sm text-[#F5F7FA]">
                           Tips for a Great Answer
                         </h2>
                       </div>
 
-                      <ul className="space-y-1.5 text-xs text-[#D7DEE6] max-w-[220px]">
+                      <ul className="space-y-1.5 text-xs text-[#A5AFBC] max-w-[220px]">
                         {[
                           'Speak clearly and confidently',
                           'Maintain good eye contact',
@@ -4303,7 +4640,7 @@ const AIInterview = () => {
                           'Give structured answers',
                         ].map((tip) => (
                           <li key={tip} className="flex items-center gap-2">
-                            <Check className="h-3.5 w-3.5 shrink-0 text-[#22D3EE]" />
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#00E5FF]" />
                             <span>{tip}</span>
                           </li>
                         ))}
@@ -4311,73 +4648,97 @@ const AIInterview = () => {
                     </div>
 
                     <div className="relative z-10 mt-auto pt-3">
-                      <div className="h-0.5 w-full rounded-full bg-gradient-to-r from-[#168BFF]/40 via-[#22D3EE]/20 to-transparent" />
+                      <div className="h-0.5 w-full rounded-full bg-gradient-to-r from-[#00E5FF]/30 via-[#08C8FF]/15 to-transparent" />
                     </div>
                   </div>
                 </div>
               </section>
 
-              {/* BOTTOM ACTION BAR */}
-              <section className="mt-3.5 grid gap-3 sm:grid-cols-[1fr_1.6fr_1fr]">
-                <button
-                  type="button"
-                  onClick={handleSkipQuestion}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-3 rounded-2xl border border-[#168BFF]/35 bg-[#091018] px-5 py-3 text-xs sm:text-sm font-bold text-[#F5F7FA] transition hover:bg-[#168BFF]/15 hover:border-[#168BFF]/60 disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_0_15px_rgba(22,139,255,0.06)] min-h-[64px]"
-                >
-                  <SkipForward className="h-5 w-5 shrink-0 text-[#22D3EE]" />
-                  <div className="text-left">
-                    <p className="font-bold leading-tight text-[#F5F7FA]">Skip Question</p>
-                    <p className="text-[11px] font-normal text-[#A8B3BF]">Skip and move to next</p>
-                  </div>
-                </button>
+              {/* BOTTOM ACTION BAR (WITH SUBTLE FLOWING WAVES BEHIND IT PER SECTION 30) */}
+              <div className="relative mt-3.5">
+                {/* Subtle flowing waves behind the bottom action area per Section 30 */}
+                <div className="pointer-events-none absolute inset-x-0 -bottom-4 h-24 overflow-hidden opacity-30 select-none z-0" aria-hidden="true">
+                  <svg className="w-full h-full" viewBox="0 0 1200 100" fill="none" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="bottomCyanWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#00E5FF" stopOpacity="0" />
+                        <stop offset="30%" stopColor="#00E5FF" stopOpacity="0.55" />
+                        <stop offset="70%" stopColor="#08C8FF" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="#00BFFF" stopOpacity="0" />
+                      </linearGradient>
+                      <linearGradient id="bottomOrangeWaveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#FF8A00" stopOpacity="0" />
+                        <stop offset="40%" stopColor="#FF9D2E" stopOpacity="0.65" />
+                        <stop offset="80%" stopColor="#FF8A00" stopOpacity="0.45" />
+                        <stop offset="100%" stopColor="#FF8A00" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M0,50 C300,15 550,80 850,35 C1050,10 1150,65 1200,45" stroke="url(#bottomCyanWaveGrad)" strokeWidth="1.8" />
+                    <path d="M0,70 C320,95 600,40 900,80 C1080,95 1160,50 1200,65" stroke="url(#bottomOrangeWaveGrad)" strokeWidth="1.6" strokeDasharray="5 7" />
+                  </svg>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={handleSubmitAndNext}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#FFB84D] via-[#FF9A2E] to-[#F27A18] px-5 py-3 text-xs sm:text-sm font-extrabold text-black shadow-[0_0_25px_rgba(255,154,46,0.35)] transition hover:brightness-110 hover:shadow-[0_0_35px_rgba(255,154,46,0.5)] disabled:cursor-not-allowed disabled:opacity-40 min-h-[64px]"
-                >
-                  {loading ? (
-                    <Loader2 className="h-5 w-5 animate-spin text-black" />
-                  ) : (
-                    <div className="text-center">
-                      <p className="font-extrabold text-sm sm:text-base leading-tight">
-                        {currentQuestionIndex === totalQuestions - 1 ? 'Submit & Finish Interview' : 'Next Question →'}
-                      </p>
-                      <p className="text-[11px] font-medium text-black/80">
-                        {currentQuestionIndex === totalQuestions - 1 ? 'Final submission' : 'Save answer and go to next'}
-                      </p>
+                <section className="relative z-10 grid gap-3 sm:grid-cols-[1fr_1.6fr_1fr]">
+                  <button
+                    type="button"
+                    onClick={handleSkipQuestion}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 rounded-2xl border border-white/[0.12] bg-[#0A0F16] px-5 py-3 text-xs sm:text-sm font-bold text-[#F5F7FA] transition hover:border-[#00E5FF]/40 hover:bg-white/[0.03] disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_4px_16px_rgba(0,0,0,0.3)] min-h-[64px] cursor-pointer"
+                  >
+                    <SkipForward className="h-5 w-5 shrink-0 text-[#A5AFBC]" />
+                    <div className="text-left">
+                      <p className="font-bold leading-tight text-white">Skip Question</p>
+                      <p className="text-[11px] font-normal text-[#A5AFBC]">Skip and move to next</p>
                     </div>
-                  )}
-                </button>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={handleSubmitInterview}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-3 rounded-2xl border border-[#19D98B]/40 bg-[#091018] px-5 py-3 text-xs sm:text-sm font-bold text-[#19D98B] transition hover:bg-[#19D98B]/15 hover:border-[#19D98B]/70 disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_0_15px_rgba(25,217,139,0.08)] min-h-[64px]"
-                >
-                  <Check className="h-5 w-5 shrink-0" />
-                  <div className="text-left">
-                    <p className="font-bold leading-tight">Submit Interview</p>
-                    <p className="text-[11px] font-normal text-[#19D98B]/75">Submit and finish interview</p>
-                  </div>
-                </button>
-              </section>
+                  <button
+                    type="button"
+                    onClick={handleSubmitAndNext}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-[#FF8A00] via-[#FF9D2E] to-[#D96A00] hover:from-[#FFA742] hover:via-[#FFB347] hover:to-[#E07200] px-5 py-3 text-xs sm:text-sm font-bold text-black shadow-[0_4px_24px_rgba(255,138,0,0.45)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_6px_34px_rgba(255,138,0,0.65)] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 min-h-[64px] cursor-pointer"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-black" />
+                    ) : (
+                      <div className="text-center">
+                        <p className="font-black text-sm sm:text-base leading-tight text-black">
+                          {currentQuestionIndex === totalQuestions - 1 ? 'Submit & Finish Interview' : 'Next Question →'}
+                        </p>
+                        <p className="text-[11px] font-semibold text-black/80">
+                          {currentQuestionIndex === totalQuestions - 1 ? 'Final submission' : 'Save answer and go to next'}
+                        </p>
+                      </div>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSubmitInterview}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-3 rounded-2xl border border-[#19D98B]/40 bg-[#19D98B]/10 px-5 py-3 text-xs sm:text-sm font-bold text-[#19D98B] transition hover:bg-[#19D98B]/20 hover:border-[#19D98B]/70 disabled:cursor-not-allowed disabled:opacity-40 shadow-[0_0_15px_rgba(25,217,139,0.18)] min-h-[64px] cursor-pointer"
+                  >
+                    <Check className="h-5 w-5 shrink-0" />
+                    <div className="text-left">
+                      <p className="font-bold leading-tight text-[#19D98B]">Submit Interview</p>
+                      <p className="text-[11px] font-normal text-[#19D98B]/80">Submit and finish interview</p>
+                    </div>
+                  </button>
+                </section>
+              </div>
 
               {/* SECURITY FOOTER */}
-              <div className="mt-2.5 flex items-center justify-center gap-2 text-center text-xs text-[#74808C]">
-                <LockKeyhole className="h-3.5 w-3.5 text-[#22D3EE]" />
+              <div className="mt-2.5 flex items-center justify-center gap-2 text-center text-xs text-[#A5AFBC]">
+                <LockKeyhole className="h-3.5 w-3.5 text-[#00E5FF]" />
                 <span>Your video and audio are secure and encrypted. Only used for this interview session.</span>
               </div>
             </>
           )}
         </main>
       )}
-        </>
-      )}
-    </div>
+    </>
+  )}
+</div>
   );
 };
 
