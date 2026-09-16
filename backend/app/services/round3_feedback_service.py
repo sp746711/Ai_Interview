@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+import json
 import re
+
+import httpx
+
+
+OLLAMA_URL = "http://localhost:11434"
+OLLAMA_MODEL = "qwen3:4b"
+OLLAMA_TIMEOUT = 240.0
 
 
 class Round3FeedbackService:
@@ -75,6 +83,275 @@ class Round3FeedbackService:
             "communication": communication,
             "camera_engagement": camera_engagement,
             "interview_presence": interview_presence,
+        }
+
+    # =========================================================
+    # STEP 5 — QWEN QUALITATIVE FEEDBACK
+    # =========================================================
+
+    @staticmethod
+    async def generate_qualitative_feedback(
+        responses: Optional[List[Dict[str, Any]]],
+        analytics: Optional[Dict[str, Any]],
+        role: Optional[str] = None,
+        interview_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate qualitative Round 3 feedback from the candidate's actual
+        interview evidence using the configured local Qwen3:4b model.
+
+        This method deliberately has NO predefined strengths, weaknesses,
+        improvements, coaching, or summary. If Ollama fails or returns an
+        unusable response, the method returns empty qualitative fields plus
+        an explicit error/status instead of inventing feedback.
+        """
+
+        responses = responses if isinstance(responses, list) else []
+        analytics = analytics if isinstance(analytics, dict) else {}
+
+        answered = []
+        for response in responses:
+            if not isinstance(response, dict):
+                continue
+            status = str(response.get("status", "") or "").strip().lower()
+            answer = str(
+                response.get("answer", response.get("transcript", "")) or ""
+            ).strip()
+            if status == "answered" and answer:
+                answered.append(response)
+
+        if not answered:
+            return {
+                "strengths": [],
+                "weaknesses": [],
+                "improvements": [],
+                "coaching": [],
+                "summary": "",
+                "llm_status": "no_evidence",
+                "llm_error": "No answered Round 3 responses are available for qualitative analysis.",
+                "generation_source": "none",
+            }
+
+        evidence = []
+        for index, response in enumerate(answered, start=1):
+            evidence.append({
+                "question_number": response.get(
+                    "question_number", response.get("questionNumber", index)
+                ),
+                "question": str(response.get("question", "") or "").strip(),
+                "answer": str(
+                    response.get("answer", response.get("transcript", "")) or ""
+                ).strip()[:1800],
+                "score": response.get("score"),
+                "evaluation_feedback": str(
+                    response.get("feedback", "") or ""
+                ).strip()[:900],
+                "answer_quality": response.get("answer_quality", {}),
+                "communication": response.get("communication", {}),
+                "camera_metrics": response.get("camera_metrics", {}),
+                "duration_seconds": response.get("duration_seconds"),
+            })
+
+        evidence_text = json.dumps(
+            evidence, ensure_ascii=False, separators=(",", ":")
+        )
+        # Bound total prompt evidence while preserving all questions in a
+        # compact form. Individual answers are already bounded above.
+        if len(evidence_text) > 14000:
+            evidence_text = evidence_text[:14000]
+
+        analytics_text = json.dumps(
+            analytics, ensure_ascii=False, separators=(",", ":")
+        )[:6000]
+
+        selected_role = str(role or "").strip() or "Not specified"
+        selected_type = str(interview_type or "").strip() or "technical"
+        skipped_count = max(0, len(responses) - len(answered))
+
+        prompt = f"""
+You are the qualitative feedback engine for a mock interview platform.
+Analyze ONLY the candidate evidence supplied below.
+
+Candidate interview type: {selected_type}
+Candidate target role/domain: {selected_role}
+Answered questions: {len(answered)}
+Skipped/unanswered saved responses: {skipped_count}
+
+ROUND 3 NUMERIC ANALYTICS (already calculated from real data):
+{analytics_text}
+
+ACTUAL ANSWER EVIDENCE:
+{evidence_text}
+
+Rules:
+1. Every statement must be grounded in the supplied answers, evaluations, or numeric analytics.
+2. Do not invent skills, achievements, experience, projects, technologies, answers, transcripts, scores, or measurements.
+3. Do not assume an answer contains information that is not present.
+4. Use the numeric analytics as evidence, but do not repeat a metric unless it helps explain a qualitative conclusion.
+5. Strengths must identify genuine strengths visible in this candidate's actual performance.
+6. Weaknesses must identify genuine weaknesses visible in this candidate's actual performance.
+7. Improvements must be specific actions directly addressing the observed weaknesses.
+8. Coaching must be personalized practice guidance derived from the observed performance.
+9. If evidence is insufficient for a point, omit that point instead of guessing.
+10. Mention skipped questions only when they materially affect the interpretation.
+11. Do not make medical, psychological, or mental-state diagnoses.
+12. Confidence-related observations must be phrased as observable interview-performance evidence only.
+13. Return at most 5 items in each list. Five is a maximum, not a requirement.
+14. Each list item must be a complete, concise sentence.
+15. The summary must describe this candidate's actual Round 3 performance, not a generic interview.
+16. Return ONLY valid JSON.
+
+Required JSON shape:
+{{
+  "strengths": ["..."],
+  "weaknesses": ["..."],
+  "improvements": ["..."],
+  "coaching": ["..."],
+  "summary": "..."
+}}
+""".strip()
+
+        payload = {
+            "model": OLLAMA_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "format": "json",
+            "think": False,
+            "keep_alive": "10m",
+            "options": {
+                "temperature": 0.2,
+                "num_predict": 1400,
+                "num_ctx": 8192,
+            },
+        }
+
+        try:
+            timeout = httpx.Timeout(
+                connect=10.0,
+                read=OLLAMA_TIMEOUT,
+                write=30.0,
+                pool=10.0,
+            )
+
+            print(
+                "TASK 18 STEP 5: calling Ollama "
+                f"{OLLAMA_URL}/api/generate with {OLLAMA_MODEL}"
+            )
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                response = await client.post(
+                    f"{OLLAMA_URL}/api/generate",
+                    json=payload,
+                )
+
+            response.raise_for_status()
+            data = response.json()
+            raw_output = str(data.get("response", "") or "").strip()
+
+            parsed = Round3FeedbackService._extract_json_object(raw_output)
+            normalized = Round3FeedbackService._normalize_qualitative_result(parsed)
+
+            if not normalized["strengths"] and not normalized["weaknesses"] and not normalized["improvements"] and not normalized["coaching"] and not normalized["summary"]:
+                raise ValueError("Qwen returned an empty qualitative feedback result.")
+
+            normalized["llm_status"] = "success"
+            normalized["llm_error"] = None
+            normalized["generation_source"] = "qwen3:4b"
+            return normalized
+
+        except Exception as exc:
+            print(
+                "TASK 18 STEP 5 QWEN ERROR:",
+                str(exc),
+            )
+            return {
+                "strengths": [],
+                "weaknesses": [],
+                "improvements": [],
+                "coaching": [],
+                "summary": "",
+                "llm_status": "error",
+                "llm_error": str(exc),
+                "generation_source": "qwen3:4b",
+            }
+
+    @staticmethod
+    def _extract_json_object(raw_output: str) -> Dict[str, Any]:
+        if not isinstance(raw_output, str) or not raw_output.strip():
+            raise ValueError("Qwen returned an empty response.")
+
+        text = raw_output.strip()
+        text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*```$", "", text)
+
+        try:
+            data = json.loads(text)
+            if isinstance(data, dict):
+                return data
+        except json.JSONDecodeError:
+            pass
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start >= 0 and end > start:
+            data = json.loads(text[start:end + 1])
+            if isinstance(data, dict):
+                return data
+
+        raise ValueError("Qwen did not return a valid JSON object.")
+
+    @staticmethod
+    def _clean_qualitative_list(value: Any, limit: int = 5) -> List[str]:
+        if isinstance(value, str):
+            value = [value]
+        if not isinstance(value, list):
+            return []
+
+        result = []
+        seen = set()
+        for item in value:
+            if item is None:
+                continue
+            if isinstance(item, dict):
+                item = item.get("text") or item.get("title") or item.get("tip") or ""
+            text = re.sub(r"\s+", " ", str(item).strip())
+            if not text:
+                continue
+            key = text.casefold()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(text)
+            if len(result) >= limit:
+                break
+        return result
+
+    @staticmethod
+    def _normalize_qualitative_result(data: Dict[str, Any]) -> Dict[str, Any]:
+        strengths = Round3FeedbackService._clean_qualitative_list(
+            data.get("strengths", [])
+        )
+        weaknesses = Round3FeedbackService._clean_qualitative_list(
+            data.get("weaknesses", [])
+        )
+        improvements = Round3FeedbackService._clean_qualitative_list(
+            data.get("improvements", data.get("areas_to_improve", []))
+        )
+        coaching = Round3FeedbackService._clean_qualitative_list(
+            data.get("coaching", data.get("recommendations", []))
+        )
+        summary = data.get(
+            "summary",
+            data.get("final_summary", data.get("assessment_summary", "")),
+        )
+        summary = str(summary or "").strip()
+
+        return {
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "improvements": improvements,
+            "coaching": coaching,
+            "summary": summary,
         }
 
     # =========================================================
@@ -688,4 +965,3 @@ class Round3FeedbackService:
             sum(numeric_values) / len(numeric_values),
             2,
         )
-        

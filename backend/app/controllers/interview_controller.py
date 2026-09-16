@@ -961,6 +961,214 @@ class InterviewController:
         if not isinstance(round3_analytics, dict):
             round3_analytics = {}
 
+        # =====================================================
+        # STEP 5 — ROUND 3 QWEN QUALITATIVE FEEDBACK
+        # =====================================================
+        # Qwen receives the candidate's REAL answered responses and the
+        # deterministic analytics calculated above. No predefined
+        # strengths, weaknesses, improvements, coaching, or summary are
+        # created here. If Qwen fails, the qualitative fields remain
+        # empty and the failure is explicitly returned.
+        # =====================================================
+
+        stored_round3_qualitative = interview.get(
+            "round3_qualitative_feedback",
+            {},
+        )
+
+        if not isinstance(stored_round3_qualitative, dict):
+            stored_round3_qualitative = {}
+
+        qualitative_status = str(
+            stored_round3_qualitative.get(
+                "llm_status",
+                "",
+            )
+            or ""
+        ).strip().lower()
+
+        qualitative_started_at = stored_round3_qualitative.get(
+            "llm_started_at",
+            0,
+        )
+
+        try:
+            qualitative_started_at = float(
+                qualitative_started_at or 0
+            )
+        except (TypeError, ValueError):
+            qualitative_started_at = 0
+
+        qualitative_stale = (
+            qualitative_status == "processing"
+            and qualitative_started_at > 0
+            and (time.time() - qualitative_started_at) > 240
+        )
+
+        should_generate_round3_qualitative = (
+            answered_count > 0
+            and (
+                qualitative_status not in {
+                    "success",
+                    "processing",
+                }
+                or qualitative_stale
+            )
+        )
+
+        if should_generate_round3_qualitative:
+            now = time.time()
+
+            claim_filter = {
+                "_id": oid,
+            }
+
+            if qualitative_stale:
+                claim_filter[
+                    "round3_qualitative_feedback.llm_status"
+                ] = "processing"
+                claim_filter[
+                    "round3_qualitative_feedback.llm_started_at"
+                ] = qualitative_started_at
+            else:
+                claim_filter[
+                    "round3_qualitative_feedback.llm_status"
+                ] = {
+                    "$nin": [
+                        "success",
+                        "processing",
+                    ]
+                }
+
+            claim_result = await db["interviews"].update_one(
+                claim_filter,
+                {
+                    "$set": {
+                        "round3_qualitative_feedback.llm_status":
+                            "processing",
+                        "round3_qualitative_feedback.llm_error":
+                            None,
+                        "round3_qualitative_feedback.llm_started_at":
+                            now,
+                    }
+                },
+            )
+
+            if claim_result.modified_count == 1:
+                print(
+                    "TASK 18 STEP 5: generating qualitative Round 3 feedback",
+                    {
+                        "interview_id": str(interview["_id"]),
+                        "answered": answered_count,
+                        "skipped": skipped_count,
+                    },
+                )
+
+                qualitative_result = await Round3FeedbackService.generate_qualitative_feedback(
+                    responses=ai_responses,
+                    analytics=round3_analytics,
+                    role=interview.get("role"),
+                    interview_type=interview.get(
+                        "interview_type",
+                        "technical",
+                    ),
+                )
+
+                if not isinstance(qualitative_result, dict):
+                    qualitative_result = {
+                        "strengths": [],
+                        "weaknesses": [],
+                        "improvements": [],
+                        "coaching": [],
+                        "summary": "",
+                        "llm_status": "error",
+                        "llm_error": "Invalid qualitative feedback result.",
+                        "generation_source": "qwen3:4b",
+                    }
+
+                qualitative_result["llm_started_at"] = now
+                qualitative_result["llm_finished_at"] = time.time()
+                qualitative_result.pop("llm_started_at_persisted", None)
+
+                await db["interviews"].update_one(
+                    {"_id": oid},
+                    {
+                        "$set": {
+                            "round3_qualitative_feedback": qualitative_result,
+                        }
+                    },
+                )
+
+                stored_round3_qualitative = qualitative_result
+                qualitative_status = str(
+                    qualitative_result.get(
+                        "llm_status",
+                        "error",
+                    )
+                    or "error"
+                ).strip().lower()
+
+            else:
+                # Another request owns the active generation. Keep the
+                # response empty until that generation is persisted.
+                stored_round3_qualitative = {
+                    "strengths": [],
+                    "weaknesses": [],
+                    "improvements": [],
+                    "coaching": [],
+                    "summary": "",
+                    "llm_status": "processing",
+                    "llm_error": None,
+                    "generation_source": "qwen3:4b",
+                }
+                qualitative_status = "processing"
+
+        # Normalize only the LLM-produced fields. Do not synthesize any
+        # qualitative content when Qwen has not successfully returned it.
+        round3_strengths = stored_round3_qualitative.get(
+            "strengths",
+            [],
+        )
+        round3_weaknesses = stored_round3_qualitative.get(
+            "weaknesses",
+            [],
+        )
+        round3_improvements = stored_round3_qualitative.get(
+            "improvements",
+            stored_round3_qualitative.get(
+                "areas_to_improve",
+                [],
+            ),
+        )
+        round3_coaching = stored_round3_qualitative.get(
+            "coaching",
+            stored_round3_qualitative.get(
+                "recommendations",
+                [],
+            ),
+        )
+        round3_summary = stored_round3_qualitative.get(
+            "summary",
+            stored_round3_qualitative.get(
+                "final_summary",
+                stored_round3_qualitative.get(
+                    "assessment_summary",
+                    "",
+                ),
+            ),
+        )
+
+        if not isinstance(round3_strengths, list):
+            round3_strengths = []
+        if not isinstance(round3_weaknesses, list):
+            round3_weaknesses = []
+        if not isinstance(round3_improvements, list):
+            round3_improvements = []
+        if not isinstance(round3_coaching, list):
+            round3_coaching = []
+        if not isinstance(round3_summary, str):
+            round3_summary = str(round3_summary or "")
+
         round3_result = {
             "overall_score": ai_s,
             "interview_score": ai_s,
@@ -968,6 +1176,15 @@ class InterviewController:
             "answered_questions": answered_count,
             "skipped_questions": skipped_count,
             "average_score": round3_average_score,
+
+            # Step 5 — real Qwen-generated qualitative feedback.
+            "strengths": round3_strengths[:5],
+            "weaknesses": round3_weaknesses[:5],
+            "improvements": round3_improvements[:5],
+            "coaching": round3_coaching[:5],
+            "summary": round3_summary,
+            "qualitative_feedback": stored_round3_qualitative,
+            "qualitative_status": qualitative_status or "",
 
             # Real deterministic Round 3 analytics.
             "answer_quality": round3_analytics.get(
