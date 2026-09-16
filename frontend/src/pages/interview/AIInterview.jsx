@@ -709,6 +709,11 @@ const AIInterview = () => {
   const faceWorkerBusyRef = useRef(false);
   const faceWorkerInitRef = useRef(null);
   const cameraFrameTimerRef = useRef(null);
+
+  // Separate Face Landmarker for Round 3 gaze-proxy analytics.
+  // The existing FaceDetector continues to handle face-presence checks.
+  const gazeLandmarkerRef = useRef(null);
+  const gazeLandmarkerInitRef = useRef(null);
   const preflightCanvasRef = useRef(null);
   const preflightAudioContextRef = useRef(null);
   const micTestRecognitionRef = useRef(null);
@@ -716,6 +721,137 @@ const AIInterview = () => {
   const micConfirmationSpokenRef = useRef(false);
   const micConfirmationInProgressRef = useRef(false);
   const setupCompletionSpokenRef = useRef(false);
+
+  /* =======================================================
+     ROUND 3 CAMERA ANALYTICS — STEP 3
+     -------------------------------------------------------
+     Collects only observable camera data during the active interview.
+     No fabricated eye-contact or gaze scores are generated because the
+     existing detector is a face-presence detector, not a gaze tracker.
+     ======================================================= */
+  const cameraAnalyticsRef = useRef({
+    sampleAttempts: 0,
+    stableSamples: 0,
+    faceDetectedSamples: 0,
+    noFaceSamples: 0,
+    multipleFaceSamples: 0,
+    gazeSamples: 0,
+    eyeContactSamples: 0,
+    lookingAwaySamples: 0,
+    startedAt: null,
+  });
+
+  // The camera detection loop is intentionally created only when the camera
+  // becomes available. Keep the latest Round 3 state in a ref so the loop
+  // never uses a stale React-state value when deciding whether to record
+  // interview analytics.
+  const round3StateRef = useRef(round3State);
+
+  useEffect(() => {
+    round3StateRef.current = round3State;
+  }, [round3State]);
+
+  const resetCameraAnalytics = () => {
+    cameraAnalyticsRef.current = {
+      sampleAttempts: 0,
+      stableSamples: 0,
+      faceDetectedSamples: 0,
+      noFaceSamples: 0,
+      multipleFaceSamples: 0,
+      gazeSamples: 0,
+      eyeContactSamples: 0,
+      lookingAwaySamples: 0,
+      startedAt: Date.now(),
+    };
+  };
+
+  const recordCameraObservation = (result) => {
+    if (
+      !interviewStartedRef.current ||
+      round3StateRef.current !== 'interview_active'
+    ) {
+      return;
+    }
+
+    const metrics = cameraAnalyticsRef.current;
+    metrics.sampleAttempts += 1;
+
+    if (result?.cameraStable) {
+      metrics.stableSamples += 1;
+    }
+
+    if (result?.faceCount === 1) {
+      metrics.faceDetectedSamples += 1;
+
+      if (result?.gaze?.available) {
+        metrics.gazeSamples += 1;
+        if (result.gaze.eyeContact) metrics.eyeContactSamples += 1;
+        if (result.gaze.lookingAway) metrics.lookingAwaySamples += 1;
+      }
+    } else if (result?.faceCount === 0) {
+      metrics.noFaceSamples += 1;
+    } else if (result?.faceCount > 1) {
+      metrics.multipleFaceSamples += 1;
+    }
+  };
+
+  const buildCameraMetrics = () => {
+    const metrics = cameraAnalyticsRef.current;
+    const observations =
+      metrics.faceDetectedSamples +
+      metrics.noFaceSamples +
+      metrics.multipleFaceSamples;
+
+    const faceVisibility = observations > 0
+      ? Math.round((metrics.faceDetectedSamples / observations) * 100)
+      : null;
+
+    const cameraStability = metrics.sampleAttempts > 0
+      ? Math.round((metrics.stableSamples / metrics.sampleAttempts) * 100)
+      : null;
+
+    const eyeContact = metrics.gazeSamples > 0
+      ? Math.round((metrics.eyeContactSamples / metrics.gazeSamples) * 100)
+      : null;
+
+    const lookingAway = metrics.gazeSamples > 0
+      ? Math.round((metrics.lookingAwaySamples / metrics.gazeSamples) * 100)
+      : null;
+
+    const cameraComponents = [
+      faceVisibility,
+      eyeContact,
+      cameraStability,
+    ].filter((value) => value !== null);
+
+    const cameraScore = cameraComponents.length > 0
+      ? Math.round(
+          cameraComponents.reduce((sum, value) => sum + value, 0) /
+            cameraComponents.length
+        )
+      : null;
+
+    return {
+      score: cameraScore,
+      face_visibility: faceVisibility,
+      eye_contact: eyeContact,
+      looking_away: lookingAway,
+      camera_stability: cameraStability,
+      samples: observations,
+      stable_samples: metrics.stableSamples,
+      face_detected_samples: metrics.faceDetectedSamples,
+      no_face_samples: metrics.noFaceSamples,
+      multiple_face_samples: metrics.multipleFaceSamples,
+      gaze_samples: metrics.gazeSamples,
+      eye_contact_samples: metrics.eyeContactSamples,
+      looking_away_samples: metrics.lookingAwaySamples,
+      measurement_note:
+        'Face visibility and camera stability are measured from the existing face detector. Eye contact and looking away are estimated from facial/iris landmarks as gaze proxies, not definitive gaze measurements.',
+      started_at: metrics.startedAt
+        ? new Date(metrics.startedAt).toISOString()
+        : null,
+    };
+  };
 
   /* =======================================================
      REFS
@@ -1754,6 +1890,11 @@ const AIInterview = () => {
       interview_id: interviewId,
       question: payload.question,
       answer: payload.answer,
+      transcript: payload.transcript,
+      duration_seconds: payload.duration_seconds,
+      // STEP 3: send the real per-question camera observations to the
+      // existing AIAnswerSubmit.camera_metrics field.
+      camera_metrics: payload.camera_metrics,
     };
 
     return apiRequest('/api/interview/answer', {
@@ -1954,6 +2095,114 @@ const AIInterview = () => {
     return faceWorkerInitRef.current;
   };
 
+  const createGazeLandmarker = () => {
+    if (gazeLandmarkerRef.current) {
+      return Promise.resolve(gazeLandmarkerRef.current);
+    }
+
+    if (gazeLandmarkerInitRef.current) {
+      return gazeLandmarkerInitRef.current;
+    }
+
+    gazeLandmarkerInitRef.current = (async () => {
+      try {
+        const { FaceLandmarker, FilesetResolver } = await import(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/+esm'
+        );
+
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+        );
+
+        const landmarker = await FaceLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath:
+              'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+          },
+          runningMode: 'VIDEO',
+          numFaces: 1,
+          minFaceDetectionConfidence: 0.25,
+          minFacePresenceConfidence: 0.25,
+          minTrackingConfidence: 0.25,
+        });
+
+        gazeLandmarkerRef.current = landmarker;
+        return landmarker;
+      } catch (error) {
+        gazeLandmarkerRef.current = null;
+        console.warn('Round 3 gaze landmarker unavailable:', error);
+        return null;
+      } finally {
+        gazeLandmarkerInitRef.current = null;
+      }
+    })();
+
+    return gazeLandmarkerInitRef.current;
+  };
+
+  const estimateGazeProxy = (landmarks) => {
+    if (!Array.isArray(landmarks) || landmarks.length < 478) {
+      return { available: false, eyeContact: false, lookingAway: false };
+    }
+
+    const averagePoint = (indices) => {
+      const points = indices.map((index) => landmarks[index]).filter(Boolean);
+      if (!points.length) return null;
+      return {
+        x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+        y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+      };
+    };
+
+    const leftOuter = landmarks[33];
+    const leftInner = landmarks[133];
+    const rightInner = landmarks[362];
+    const rightOuter = landmarks[263];
+    const leftTop = landmarks[159];
+    const leftBottom = landmarks[145];
+    const rightTop = landmarks[386];
+    const rightBottom = landmarks[374];
+    const leftIris = averagePoint([468, 469, 470, 471, 472]);
+    const rightIris = averagePoint([473, 474, 475, 476, 477]);
+
+    if (
+      !leftOuter || !leftInner || !rightInner || !rightOuter ||
+      !leftTop || !leftBottom || !rightTop || !rightBottom ||
+      !leftIris || !rightIris
+    ) {
+      return { available: false, eyeContact: false, lookingAway: false };
+    }
+
+    const normalize = (point, start, end) => {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const lengthSquared = dx * dx + dy * dy;
+      if (lengthSquared < 0.000001) return null;
+      return ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared;
+    };
+
+    const leftX = normalize(leftIris, leftOuter, leftInner);
+    const rightX = normalize(rightIris, rightInner, rightOuter);
+    const leftY = normalize(leftIris, leftTop, leftBottom);
+    const rightY = normalize(rightIris, rightTop, rightBottom);
+
+    if ([leftX, rightX, leftY, rightY].some((value) => value === null)) {
+      return { available: false, eyeContact: false, lookingAway: false };
+    }
+
+    const centered =
+      leftX >= 0.25 && leftX <= 0.75 &&
+      rightX >= 0.25 && rightX <= 0.75 &&
+      leftY >= 0.25 && leftY <= 0.75 &&
+      rightY >= 0.25 && rightY <= 0.75;
+
+    return {
+      available: true,
+      eyeContact: centered,
+      lookingAway: !centered,
+    };
+  };
+
   const checkFace = async () => {
     const video = videoRef.current;
 
@@ -2011,6 +2260,45 @@ const AIInterview = () => {
 
       const result = detector.detect(canvas);
       const detections = result?.detections || [];
+
+      let gaze = {
+        available: false,
+        eyeContact: false,
+        lookingAway: false,
+      };
+
+      // Only perform gaze-proxy analysis during the active interview and
+      // when exactly one face is visible. Pre-flight remains face detection only.
+      if (
+        detections.length === 1 &&
+        interviewStartedRef.current &&
+        round3StateRef.current === 'interview_active'
+      ) {
+        try {
+          const gazeLandmarker = await createGazeLandmarker();
+          if (gazeLandmarker) {
+            const gazeResult = gazeLandmarker.detectForVideo(
+              canvas,
+              Math.round(performance.now())
+            );
+            gaze = estimateGazeProxy(gazeResult?.faceLandmarks?.[0]);
+          }
+        } catch (gazeError) {
+          console.warn('Round 3 gaze sample failed:', gazeError);
+        }
+      }
+
+      // STEP 3: record only observable camera/face data for the active
+      // question. Gaze values are recorded only when real landmarks exist.
+      recordCameraObservation({
+        cameraStable: Boolean(
+          video.readyState >= 2 &&
+          video.videoWidth >= 2 &&
+          mediaStreamRef.current?.getVideoTracks?.()[0]?.readyState === 'live'
+        ),
+        faceCount: detections.length,
+        gaze,
+      });
 
       if (detections.length === 0) {
         setFaceStatus('none');
@@ -2555,6 +2843,11 @@ const AIInterview = () => {
         : 0;
 
       setTotalQuestions(resolvedTotalQuestions);
+
+      // STEP 3: begin camera analytics only when the first interview question
+      // becomes active. Readiness/setup observations are excluded.
+      resetCameraAnalytics();
+
       setCurrentQuestionIndex(nextIndex);
       setCurrentQuestion(question);
       setVoiceTranscript('');
@@ -2914,6 +3207,10 @@ const AIInterview = () => {
         return;
       }
 
+      // STEP 3: each question gets its own camera analytics window so the
+      // feedback service can aggregate real per-answer observations.
+      resetCameraAnalytics();
+
       setCurrentQuestionIndex(nextIndex);
       setCurrentQuestion(nextQuestion);
       setVoiceTranscript('');
@@ -2947,7 +3244,11 @@ const AIInterview = () => {
       transcript: answer,
       status,
       time_remaining: timeLeft,
+      duration_seconds: Math.max(0, QUESTION_TIME - timeLeft),
       submitted_at: new Date().toISOString(),
+      // STEP 3: persist only real camera observations collected while
+      // answering this question. Missing gaze data stays null.
+      camera_metrics: buildCameraMetrics(),
     };
 
     const response = await persistRound3Answer(payload);
@@ -3260,6 +3561,12 @@ const AIInterview = () => {
       }
 
       stopMediaStream();
+
+      try {
+        gazeLandmarkerRef.current?.close?.();
+      } catch {}
+      gazeLandmarkerRef.current = null;
+      gazeLandmarkerInitRef.current = null;
 
       // Safety: if this page unmounts, restore MainLayout navbar.
       sessionStorage.removeItem('ai_interview_active');

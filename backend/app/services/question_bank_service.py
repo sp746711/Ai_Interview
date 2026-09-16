@@ -53,88 +53,195 @@ class QuestionBankService:
     @classmethod
     def normalize_domain(cls, domain: str) -> str:
         """
-        Normalize the selected domain so small formatting differences
-        do not prevent the correct CSV from being found.
+        Normalize frontend/domain labels to the canonical DOMAIN_FILES keys.
+
+        The frontend may send labels such as:
+        - Artificial Intelligence & Machine Learning
+        - Full-Stack Development
+        - DevOps Engineering
+        - Generative AI / LLM Engineering
+        - Human Resources (HR)
+
+        The backend stores canonical names such as AI/ML, Full Stack
+        Development, DevOps, GenAI/LLM and HR.
         """
 
         value = str(domain or "").strip()
 
+        if not value:
+            return value
+
+        # First handle common frontend labels explicitly.
         aliases = {
+            # Software
             "software engineering": "Software Engineering",
             "software_engineering": "Software Engineering",
 
+            # Data
             "data analytics": "Data Analytics",
             "data_analytics": "Data Analytics",
+            "data analyst": "Data Analytics",
+            "data analysis": "Data Analytics",
 
             "data science": "Data Science",
             "data_science": "Data Science",
+            "data scientist": "Data Science",
 
+            # AI / ML
             "ai/ml": "AI/ML",
             "ai ml": "AI/ML",
             "ai_ml": "AI/ML",
             "artificial intelligence and machine learning": "AI/ML",
+            "artificial intelligence & machine learning": "AI/ML",
+            "artificial intelligence machine learning": "AI/ML",
+            "artificial intelligence & machine-learning": "AI/ML",
 
+            # Full stack
             "full stack": "Full Stack Development",
             "full stack development": "Full Stack Development",
+            "full-stack development": "Full Stack Development",
             "full_stack": "Full Stack Development",
+            "full_stack_development": "Full Stack Development",
 
+            # Frontend
             "frontend": "Frontend Development",
             "frontend development": "Frontend Development",
             "front end development": "Frontend Development",
+            "front-end development": "Frontend Development",
             "frontend_development": "Frontend Development",
 
+            # Backend
             "backend": "Backend Development",
             "backend development": "Backend Development",
             "back end development": "Backend Development",
+            "back-end development": "Backend Development",
             "backend_development": "Backend Development",
 
+            # Cloud
             "cloud": "Cloud Computing",
             "cloud computing": "Cloud Computing",
+            "cloud_computing": "Cloud Computing",
 
+            # DevOps
             "devops": "DevOps",
+            "devops engineering": "DevOps",
+            "devops_engineering": "DevOps",
 
+            # Cybersecurity
             "cybersecurity": "Cybersecurity",
             "cyber security": "Cybersecurity",
+            "cyber security engineering": "Cybersecurity",
+            "cybersecurity engineering": "Cybersecurity",
 
+            # Data Engineering
             "data engineering": "Data Engineering",
             "data_engineering": "Data Engineering",
+            "data engineer": "Data Engineering",
 
+            # Generative AI / LLM
             "genai/llm": "GenAI/LLM",
             "genai": "GenAI/LLM",
             "gen ai": "GenAI/LLM",
             "llm": "GenAI/LLM",
             "genai_llm": "GenAI/LLM",
+            "generative ai": "GenAI/LLM",
+            "generative ai / llm engineering": "GenAI/LLM",
+            "generative ai/llm engineering": "GenAI/LLM",
+            "generative ai and llm engineering": "GenAI/LLM",
+            "generative ai & llm engineering": "GenAI/LLM",
+            "genai / llm": "GenAI/LLM",
 
+            # HR
             "hr": "HR",
             "human resources": "HR",
+            "human resources (hr)": "HR",
+            "human resources hr": "HR",
 
-            "sales & business development": (
-                "Sales & Business Development"
-            ),
-            "sales and business development": (
-                "Sales & Business Development"
-            ),
-            "sales_business_development": (
-                "Sales & Business Development"
-            ),
+            # Sales
+            "sales & business development": "Sales & Business Development",
+            "sales and business development": "Sales & Business Development",
+            "sales_business_development": "Sales & Business Development",
+            "sales business development": "Sales & Business Development",
 
+            # Marketing
             "digital marketing": "Digital Marketing",
             "digital_marketing": "Digital Marketing",
 
+            # Business Analysis
             "business analysis": "Business Analysis",
+            "business analyst": "Business Analysis",
             "business_analysis": "Business Analysis",
 
+            # Project Management
             "project management": "Project Management",
             "project_management": "Project Management",
+            "project manager": "Project Management",
 
+            # Operations
             "operations management": "Operations Management",
             "operations_management": "Operations Management",
+            "operations manager": "Operations Management",
         }
 
-        return aliases.get(
-            value.lower(),
-            value,
+        lowered = value.lower()
+
+        # Direct alias match.
+        if lowered in aliases:
+            return aliases[lowered]
+
+        # Safe fallback normalization for punctuation/spacing differences.
+        normalized = (
+            lowered
+            .replace("&", " and ")
+            .replace("-", " ")
+            .replace("_", " ")
+            .replace("/", " ")
+            .replace("(", " ")
+            .replace(")", " ")
         )
+        normalized = " ".join(normalized.split())
+
+        normalized_aliases = {
+            "software engineering": "Software Engineering",
+            "data analytics": "Data Analytics",
+            "data analyst": "Data Analytics",
+            "data analysis": "Data Analytics",
+            "data science": "Data Science",
+            "data scientist": "Data Science",
+            "ai ml": "AI/ML",
+            "artificial intelligence and machine learning": "AI/ML",
+            "full stack": "Full Stack Development",
+            "full stack development": "Full Stack Development",
+            "frontend": "Frontend Development",
+            "frontend development": "Frontend Development",
+            "front end development": "Frontend Development",
+            "backend": "Backend Development",
+            "backend development": "Backend Development",
+            "back end development": "Backend Development",
+            "cloud": "Cloud Computing",
+            "cloud computing": "Cloud Computing",
+            "devops": "DevOps",
+            "devops engineering": "DevOps",
+            "cybersecurity": "Cybersecurity",
+            "cyber security": "Cybersecurity",
+            "data engineering": "Data Engineering",
+            "data engineer": "Data Engineering",
+            "genai llm": "GenAI/LLM",
+            "generative ai": "GenAI/LLM",
+            "generative ai llm engineering": "GenAI/LLM",
+            "hr": "HR",
+            "human resources": "HR",
+            "sales and business development": "Sales & Business Development",
+            "digital marketing": "Digital Marketing",
+            "business analysis": "Business Analysis",
+            "business analyst": "Business Analysis",
+            "project management": "Project Management",
+            "project manager": "Project Management",
+            "operations management": "Operations Management",
+            "operations manager": "Operations Management",
+        }
+
+        return normalized_aliases.get(normalized, value)
 
     @classmethod
     def get_csv_path(cls, domain: str) -> Path:

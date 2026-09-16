@@ -738,6 +738,12 @@ class AIController:
             "score": evaluation["normalized_score"],
             "score_10": evaluation["score"],
             "feedback": evaluation["feedback"],
+            # Server-generated Round 3 analytics.
+            # These values come from AIService.evaluate_answer()
+            # and are stored so Round3FeedbackService can aggregate
+            # them later for the final feedback page.
+            "answer_quality": evaluation.get("answer_quality"),
+            "communication": evaluation.get("communication"),
             "status": "answered",
         }
 

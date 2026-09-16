@@ -2707,6 +2707,53 @@ const Feedback = () => {
     const coachingList = Array.isArray(round3?.coaching) && round3.coaching.length > 0 ? round3.coaching : [];
     const summaryText = round3?.summary || round3?.assessment_summary || round3?.final_summary || null;
 
+    // =========================================================
+    // TASK 18 / STEP 4.3 — ROUND 3 ANALYTICS
+    // Values come directly from backend Round3FeedbackService.
+    // Missing evidence remains unavailable; no demo/fallback scores.
+    // =========================================================
+    const round3Analytics =
+      round3?.analytics && typeof round3.analytics === 'object'
+        ? round3.analytics
+        : round3;
+
+    const answerQuality =
+      round3Analytics?.answer_quality && typeof round3Analytics.answer_quality === 'object'
+        ? round3Analytics.answer_quality
+        : {};
+
+    const communication =
+      round3Analytics?.communication && typeof round3Analytics.communication === 'object'
+        ? round3Analytics.communication
+        : {};
+
+    const cameraEngagement =
+      round3Analytics?.camera_engagement && typeof round3Analytics.camera_engagement === 'object'
+        ? round3Analytics.camera_engagement
+        : {};
+
+    const interviewPresence =
+      round3Analytics?.interview_presence && typeof round3Analytics.interview_presence === 'object'
+        ? round3Analytics.interview_presence
+        : {};
+
+    const analyticsNumber = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : null;
+    };
+
+    const analyticsDisplay = (value) => {
+      const number = analyticsNumber(value);
+      return number === null ? '--' : `${Math.round(number)}%`;
+    };
+
+    const analyticsWidth = (value) => {
+      const number = analyticsNumber(value);
+      return number === null ? '0%' : `${number}%`;
+    };
+
+
     return (
       <section className="relative">
 
@@ -3000,7 +3047,7 @@ const Feedback = () => {
 
         {/* =====================================================
             PART 4 — FOUR PERFORMANCE CARDS
-            (Answer Quality | Communication | Camera Engagement | Interview Presence)
+            Backend-driven Round 3 analytics.
         ===================================================== */}
         <div className="mb-5 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
 
@@ -3016,27 +3063,26 @@ const Feedback = () => {
                     Answer Quality
                   </h3>
                 </div>
-                <span className="text-sm font-bold text-cyan-400">--</span>
+                <span className="text-sm font-bold text-cyan-400">
+                  {analyticsDisplay(answerQuality.score)}
+                </span>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  'Relevance',
-                  'Completeness',
-                  'Technical Accuracy',
-                  'Examples & Clarity',
-                ].map((metric) => (
-                  <div
-                    key={metric}
-                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
-                  >
+                  ['Relevance', answerQuality.relevance],
+                  ['Completeness', answerQuality.completeness],
+                  ['Technical Accuracy', answerQuality.technical_accuracy],
+                  ['Examples & Clarity', answerQuality.examples_clarity],
+                ].map(([metric, value]) => (
+                  <div key={metric} className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#94A3B8]">
-                        {metric}
-                      </span>
-                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                      <span className="text-xs font-medium text-[#94A3B8]">{metric}</span>
+                      <span className="text-xs font-bold text-[#64748B]">{analyticsDisplay(value)}</span>
                     </div>
-                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]">
+                      <div className="h-full rounded-full bg-cyan-400" style={{ width: analyticsWidth(value) }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3055,27 +3101,26 @@ const Feedback = () => {
                     Communication
                   </h3>
                 </div>
-                <span className="text-sm font-bold text-violet-400">--</span>
+                <span className="text-sm font-bold text-violet-400">
+                  {analyticsDisplay(communication.score)}
+                </span>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  'Speaking Pace',
-                  'Filler Words',
-                  'Clarity',
-                  'Response Length',
-                ].map((metric) => (
-                  <div
-                    key={metric}
-                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
-                  >
+                  ['Speaking Pace', communication.speaking_pace],
+                  ['Filler Words', communication.filler_words],
+                  ['Clarity', communication.clarity],
+                  ['Response Length', communication.response_length],
+                ].map(([metric, value]) => (
+                  <div key={metric} className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#94A3B8]">
-                        {metric}
-                      </span>
-                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                      <span className="text-xs font-medium text-[#94A3B8]">{metric}</span>
+                      <span className="text-xs font-bold text-[#64748B]">{analyticsDisplay(value)}</span>
                     </div>
-                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]">
+                      <div className="h-full rounded-full bg-violet-400" style={{ width: analyticsWidth(value) }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3088,7 +3133,6 @@ const Feedback = () => {
               <div className="flex items-center justify-between mb-3.5">
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 items-center justify-center rounded-lg border border-cyan-400/30 bg-cyan-400/10">
-                    {/* Camera icon */}
                     <svg className="h-3.5 w-3.5 text-cyan-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
@@ -3097,27 +3141,26 @@ const Feedback = () => {
                     Camera Engagement
                   </h3>
                 </div>
-                <span className="text-sm font-bold text-cyan-400">--</span>
+                <span className="text-sm font-bold text-cyan-400">
+                  {analyticsDisplay(cameraEngagement.score)}
+                </span>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  'Face Visibility',
-                  'Eye Contact',
-                  'Looking Away',
-                  'Camera Stability',
-                ].map((metric) => (
-                  <div
-                    key={metric}
-                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
-                  >
+                  ['Face Visibility', cameraEngagement.face_visibility],
+                  ['Eye Contact', cameraEngagement.eye_contact],
+                  ['Looking Away', cameraEngagement.looking_away],
+                  ['Camera Stability', cameraEngagement.camera_stability],
+                ].map(([metric, value]) => (
+                  <div key={metric} className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#94A3B8]">
-                        {metric}
-                      </span>
-                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                      <span className="text-xs font-medium text-[#94A3B8]">{metric}</span>
+                      <span className="text-xs font-bold text-[#64748B]">{analyticsDisplay(value)}</span>
                     </div>
-                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]">
+                      <div className="h-full rounded-full bg-cyan-400" style={{ width: analyticsWidth(value) }} />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3136,27 +3179,26 @@ const Feedback = () => {
                     Interview Presence
                   </h3>
                 </div>
-                <span className="text-sm font-bold text-amber-400">--</span>
+                <span className="text-sm font-bold text-amber-400">
+                  {analyticsDisplay(interviewPresence.overall_presence)}
+                </span>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  'Consistency',
-                  'Confidence (Estimated)',
-                  'Engagement',
-                  'Overall Presence',
-                ].map((metric) => (
-                  <div
-                    key={metric}
-                    className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5"
-                  >
+                  ['Consistency', interviewPresence.consistency],
+                  ['Confidence (Estimated)', interviewPresence.confidence_estimated],
+                  ['Engagement', interviewPresence.engagement],
+                  ['Overall Presence', interviewPresence.overall_presence],
+                ].map(([metric, value]) => (
+                  <div key={metric} className="rounded-xl border border-white/[0.05] bg-[#070A10]/60 p-2.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#94A3B8]">
-                        {metric}
-                      </span>
-                      <span className="text-xs font-bold text-[#64748B]">--</span>
+                      <span className="text-xs font-medium text-[#94A3B8]">{metric}</span>
+                      <span className="text-xs font-bold text-[#64748B]">{analyticsDisplay(value)}</span>
                     </div>
-                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]" />
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#161B26]">
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: analyticsWidth(value) }} />
+                    </div>
                   </div>
                 ))}
               </div>

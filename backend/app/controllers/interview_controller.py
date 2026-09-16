@@ -16,6 +16,9 @@ from backend.app.services.resume_intelligence_service import (
 from backend.app.services.test_feedback_service import (
     generate_test_feedback,
 )
+from backend.app.services.round3_feedback_service import (
+    Round3FeedbackService,
+)
 
 
 class InterviewController:
@@ -860,34 +863,6 @@ class InterviewController:
         if not isinstance(ai_responses, list):
             ai_responses = []
 
-        valid_ai_scores = []
-
-        for response in ai_responses:
-
-            if not isinstance(response, dict):
-                continue
-
-            try:
-                score = float(
-                    response.get("score", 0) or 0
-                )
-
-                valid_ai_scores.append(score)
-
-            except (TypeError, ValueError):
-                continue
-
-        ai_s = (
-            sum(valid_ai_scores)
-            / len(valid_ai_scores)
-
-            if valid_ai_scores
-
-            else 0
-        )
-
-        ai_s = int(round(ai_s))
-
         # =====================================================
         # TASK 18 — ROUND 3 BASIC RESULT SUMMARY
         # =====================================================
@@ -967,6 +942,25 @@ class InterviewController:
             else 0
         )
 
+        # Round 3 overall score must use answered questions only.
+        # Skipped responses must never contribute their default score.
+        ai_s = round3_average_score
+
+        # =====================================================
+        # TASK 18 — ROUND 3 DETERMINISTIC ANALYTICS
+        # =====================================================
+        # Preserve the existing Step 1 score/statistics logic above.
+        # Add the real analytics generated from the saved responses.
+        # This does not call Ollama/Qwen.
+        # =====================================================
+
+        round3_analytics = Round3FeedbackService.generate_feedback(
+            ai_responses
+        )
+
+        if not isinstance(round3_analytics, dict):
+            round3_analytics = {}
+
         round3_result = {
             "overall_score": ai_s,
             "interview_score": ai_s,
@@ -974,6 +968,24 @@ class InterviewController:
             "answered_questions": answered_count,
             "skipped_questions": skipped_count,
             "average_score": round3_average_score,
+
+            # Real deterministic Round 3 analytics.
+            "answer_quality": round3_analytics.get(
+                "answer_quality",
+                {},
+            ),
+            "communication": round3_analytics.get(
+                "communication",
+                {},
+            ),
+            "camera_engagement": round3_analytics.get(
+                "camera_engagement",
+                {},
+            ),
+            "interview_presence": round3_analytics.get(
+                "interview_presence",
+                {},
+            ),
         }
 
         # =====================================================
